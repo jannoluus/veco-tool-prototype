@@ -313,6 +313,29 @@
       font-size: 12px;
     }
 
+    .object-mini-calendar {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(58px, 1fr));
+      gap: 7px;
+    }
+
+    .object-mini-day {
+      min-height: 96px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fbfcfd;
+      padding: 7px;
+      display: grid;
+      align-content: start;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .object-mini-day.drop-ready {
+      border-color: var(--blue);
+      background: #eef6ff;
+    }
+
     .day {
       min-height: 530px;
       border: 1px solid var(--line);
@@ -2162,10 +2185,28 @@
         </div>
         <div class="kv"><span>Märkus</span><strong>${escapeHtml(object.note || "-")}</strong></div>
         <div class="kv"><span>Kontakt</span><strong>${escapeHtml(client?.contact || "-")} · ${escapeHtml(client?.phone || "-")}</strong></div>
+        <p class="section-title">Objekti kalender</p>
+        <div class="object-mini-calendar">
+          ${Array.from({ length: 5 }, (_, index) => {
+            const date = dateKey(addDays(startOfWeek(calendarCursor), index));
+            const dayJobs = objectJobs(object).filter(job => job.date === date);
+            return `
+              <div class="object-mini-day" data-drop-date="${date}">
+                <strong>${escapeHtml(formatShortDate(new Date(`${date}T12:00:00`)))}</strong>
+                ${dayJobs.map(job => `
+                  <button class="mini-job" data-object-job="${job.id}">
+                    <strong>${escapeHtml(job.time)} ${escapeHtml(job.asset || job.buildingPart || "")}</strong>
+                    <span>${escapeHtml(statusLabels[job.status])}</span>
+                  </button>
+                `).join("") || `<span class="job-meta">-</span>`}
+              </div>
+            `;
+          }).join("")}
+        </div>
         <p class="section-title">Planeeritud ja ootel tööd</p>
         <div class="timeline">
           ${jobsForObject.map(job => `
-            <div class="event-row">
+            <div class="event-row" ${job.status === "ootel" ? `draggable="true" data-drag-job="${job.id}"` : ""}>
               <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(statusLabels[job.status])}</strong>
               <span>${escapeHtml(job.technician)} · ${escapeHtml(job.asset || job.buildingPart || "-")}</span>
               <span class="job-meta">${escapeHtml(job.description)}</span>
@@ -2198,6 +2239,30 @@
         setDetailCollapsed(false);
         renderAll();
       }));
+      $$("[data-object-job]").forEach(btn => btn.addEventListener("click", () => {
+        selectedId = btn.dataset.objectJob;
+        detailJobId = selectedId;
+        switchView("calendar");
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+      $$("[data-drag-job]").forEach(row => {
+        row.addEventListener("dragstart", event => {
+          event.dataTransfer.setData("text/plain", row.dataset.dragJob);
+        });
+      });
+      $$("[data-drop-date]").forEach(day => {
+        day.addEventListener("dragover", event => {
+          event.preventDefault();
+          day.classList.add("drop-ready");
+        });
+        day.addEventListener("dragleave", () => day.classList.remove("drop-ready"));
+        day.addEventListener("drop", event => {
+          event.preventDefault();
+          day.classList.remove("drop-ready");
+          scheduleDraggedJob(event.dataTransfer.getData("text/plain"), day.dataset.dropDate);
+        });
+      });
     }
 
     function renderAi() {
@@ -2593,6 +2658,21 @@ Summa: 2 075,34 €`;
           job.status = job.status === "uus" ? "planeeritud" : job.status;
           slotIndex += 1;
         });
+      renderAll();
+    }
+
+    function scheduleDraggedJob(jobId, date) {
+      const job = jobs.find(item => item.id === jobId);
+      if (!job) return;
+      const current = job.technician || technicians()[0] || "";
+      const chosen = window.prompt(`Määra tehnik tööle ${job.id}`, current);
+      if (chosen === null) return;
+      job.date = date;
+      job.time = job.time || "09:00";
+      job.technician = chosen.trim() || current;
+      job.status = "planeeritud";
+      selectedId = job.id;
+      detailJobId = selectedId;
       renderAll();
     }
 
