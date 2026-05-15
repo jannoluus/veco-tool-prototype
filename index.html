@@ -70,14 +70,18 @@
       background: transparent;
       width: 100%;
       text-align: left;
+      border-radius: 7px;
+    }
+
+    .brand:hover {
+      background: rgba(255,255,255,.07);
     }
 
     .brand img {
-      width: 164px;
+      width: 174px;
       max-width: 100%;
       height: auto;
       display: block;
-      filter: brightness(0) invert(1);
     }
 
     .nav {
@@ -770,6 +774,71 @@
 
     .hidden { display: none !important; }
 
+    body.theme-dark {
+      --ink: #e8edf1;
+      --muted: #a7b2bc;
+      --line: #34414a;
+      --panel: #172129;
+      --bg: #0f151a;
+      --shadow: 0 16px 36px rgba(0,0,0,.24);
+    }
+
+    body.theme-dark .topbar {
+      background: rgba(15,21,26,.94);
+    }
+
+    body.theme-dark .panel,
+    body.theme-dark .dialog,
+    body.theme-dark .dialog-head,
+    body.theme-dark .dialog-actions,
+    body.theme-dark .field,
+    body.theme-dark .select,
+    body.theme-dark textarea,
+    body.theme-dark .job-card,
+    body.theme-dark .mini-job,
+    body.theme-dark .mobile-card,
+    body.theme-dark .person-card,
+    body.theme-dark .event-row,
+    body.theme-dark .act-preview,
+    body.theme-dark .act-box {
+      background: #172129;
+      color: var(--ink);
+    }
+
+    body.theme-dark .day,
+    body.theme-dark .month-cell,
+    body.theme-dark .year-cell,
+    body.theme-dark .object-mini-day,
+    body.theme-dark .paste-zone,
+    body.theme-dark .photo-tile {
+      background: #101820;
+    }
+
+    body.theme-dark .day-head {
+      background: #1f2b34;
+    }
+
+    body.theme-dark .btn {
+      background: #22303a;
+      color: var(--ink);
+      border-color: #34414a;
+    }
+
+    body.theme-dark .btn.primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    body.theme-dark .btn.danger {
+      background: #3a2022;
+      color: #ffb7b2;
+      border-color: #6f3633;
+    }
+
+    body.theme-dark .sidebar {
+      background: #0b1218;
+    }
+
     @media (max-width: 1120px) {
       .app { grid-template-columns: 1fr; }
       .app.sidebar-collapsed .sidebar { display: none; }
@@ -864,7 +933,7 @@
   <div class="app" id="appShell">
     <aside class="sidebar">
       <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
-        <img src="assets/veco-logo.png" alt="VECO kinnisvara hooldus">
+        <img src="assets/veco-logo-transparent.png" alt="VECO kinnisvara hooldus">
       </button>
       <nav class="nav" aria-label="Põhivaated">
         <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
@@ -899,6 +968,7 @@
           <button class="btn" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
           <label class="btn" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
           <input id="importDataFile" type="file" accept="application/json" class="hidden">
+          <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
           <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
         </div>
       </header>
@@ -1692,6 +1762,7 @@
     let emailAgentDraftId = null;
     const STORAGE_KEY = "vecoPilotDataV1";
     const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
+    const THEME_KEY = "vecoThemeV1";
     let supabaseClient = null;
     let remoteSaveTimer = null;
     let remoteLoadTimer = null;
@@ -2920,6 +2991,21 @@
       window.location.reload();
     }
 
+    function applyTheme(theme) {
+      document.body.classList.toggle("theme-dark", theme === "dark");
+      localStorage.setItem(THEME_KEY, theme);
+      const btn = $("#themeToggleBtn");
+      if (btn) {
+        btn.innerHTML = theme === "dark"
+          ? `<span class="icon">◐</span> Hele`
+          : `<span class="icon">◐</span> Tume`;
+      }
+    }
+
+    function toggleTheme() {
+      applyTheme(document.body.classList.contains("theme-dark") ? "light" : "dark");
+    }
+
     function exportPilotData() {
       savePilotData();
       const payload = JSON.stringify({ exportedAt: new Date().toISOString(), people, peopleEvents, clients, jobs }, null, 2);
@@ -3740,12 +3826,14 @@ Summa: 2 075,34 €`;
 
     fillSelects();
     loadPilotData();
+    applyTheme(localStorage.getItem(THEME_KEY) || "light");
     setDetailCollapsed(true);
     renderAll();
     initSupabaseClient();
     if (supabaseClient) loadPilotDataFromDatabase(false);
 
     $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
+    $("#themeToggleBtn").addEventListener("click", toggleTheme);
     $("#newJobBtn").addEventListener("click", () => openJobModal());
     $("#newPersonBtn").addEventListener("click", () => openPersonModal());
     $("#newEventBtn").addEventListener("click", () => openEventModal());
