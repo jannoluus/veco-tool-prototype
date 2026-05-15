@@ -851,6 +851,7 @@
           </select>
           <button class="btn ghost" id="todayBtn"><span class="icon">⌖</span> Täna</button>
           <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+          <button class="btn" id="databaseBtn"><span class="icon">↔</span> Andmebaas: lokaalne</button>
           <button class="btn" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
           <label class="btn" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
           <input id="importDataFile" type="file" accept="application/json" class="hidden">
@@ -1194,6 +1195,38 @@
     </main>
   </div>
 
+  <div class="modal" id="databaseModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="databaseModalTitle">
+      <div class="dialog-head">
+        <h2 id="databaseModalTitle">Andmebaasi ühendus</h2>
+        <button class="btn ghost" data-close="databaseModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="databaseForm">
+        <div class="dialog-body">
+          <div class="mobile-card">
+            <strong>Supabase piloodi ühendus</strong>
+            <span class="job-meta">See MVP salvestab kogu piloodi andmestiku ühte Supabase tabeli kirjesse. Sobib ühe admini ja ühe tehnikuga töövoo katsetamiseks.</span>
+          </div>
+          <div class="form-grid">
+            <label>Supabase URL<input class="field" name="url" placeholder="https://...supabase.co"></label>
+            <label>Anon / publishable key<input class="field" name="anonKey" placeholder="eyJ..."></label>
+            <label>Piloodi tööruumi ID<input class="field" name="workspaceId" value="veco-pilot"></label>
+            <label>Olek<input class="field" id="databaseStatusField" value="Lokaalne brauser" readonly></label>
+          </div>
+          <div class="mobile-card">
+            <strong>Enne ühendamist</strong>
+            <span class="job-meta">Supabases peab olema loodud tabel `pilot_state`. Selle SQL-i panin faili `supabase/schema.sql`.</span>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn" type="button" id="loadDatabaseBtn"><span class="icon">⇩</span> Laadi DB-st</button>
+          <button class="btn" type="button" id="pushDatabaseBtn"><span class="icon">⇧</span> Salvesta DB-sse</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta ühendus</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="jobModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="jobModalTitle">
       <div class="dialog-head">
@@ -1462,6 +1495,7 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     let people = [
       { id: "U-01", name: "Aleksei", role: "Tehnik", phone: "+372 5551 1001", email: "aleksei@veco.ee", region: "Tallinn", skills: "HVAC, automaatika", active: true },
@@ -1583,6 +1617,11 @@
     let importedImageName = "";
     let emailAgentDraftId = null;
     const STORAGE_KEY = "vecoPilotDataV1";
+    const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
+    let supabaseClient = null;
+    let remoteSaveTimer = null;
+    let suppressRemoteSave = false;
+    let databaseStatus = "Lokaalne brauser";
 
     const demoData = {
       people: JSON.parse(JSON.stringify(people)),
@@ -2434,24 +2473,166 @@
     function renderStats() {
       $("#todayCount").textContent = jobs.filter(job => job.date === "2026-05-14").length;
       $("#doneCount").textContent = jobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
+      renderDatabaseStatus();
+    }
+
+    function pilotPayload() {
+      return { people, peopleEvents, clients, jobs };
+    }
+
+    function applyPilotPayload(data) {
+      people = data.people || people;
+      peopleEvents = data.peopleEvents || peopleEvents;
+      clients = data.clients || clients;
+      jobs = data.jobs || jobs;
+      selectedId = jobs.find(job => job.id === selectedId)?.id || jobs[0]?.id || "";
+      selectedClientId = clients.find(client => client.id === selectedClientId)?.id || clients[0]?.id || "";
+      selectedObjectKey = allObjects().find(object => object.key === selectedObjectKey)?.key || allObjects()[0]?.key || "";
     }
 
     function savePilotData() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ people, peopleEvents, clients, jobs }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pilotPayload()));
+      scheduleRemoteSave();
     }
 
     function loadPilotData() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return;
       try {
-        const data = JSON.parse(saved);
-        people = data.people || people;
-        peopleEvents = data.peopleEvents || peopleEvents;
-        clients = data.clients || clients;
-        jobs = data.jobs || jobs;
+        applyPilotPayload(JSON.parse(saved));
       } catch (error) {
         console.warn("VECO piloodi andmeid ei saanud laadida", error);
       }
+    }
+
+    function readSupabaseConfig() {
+      try {
+        const config = JSON.parse(localStorage.getItem(SUPABASE_CONFIG_KEY) || "{}");
+        return {
+          url: config.url || "",
+          anonKey: config.anonKey || "",
+          workspaceId: config.workspaceId || "veco-pilot"
+        };
+      } catch (error) {
+        return { url: "", anonKey: "", workspaceId: "veco-pilot" };
+      }
+    }
+
+    function writeSupabaseConfig(config) {
+      localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(config));
+    }
+
+    function initSupabaseClient() {
+      const config = readSupabaseConfig();
+      if (!config.url || !config.anonKey || !window.supabase) {
+        supabaseClient = null;
+        databaseStatus = "Lokaalne brauser";
+        renderDatabaseStatus();
+        return false;
+      }
+      supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+      databaseStatus = "Ühendatud: " + config.workspaceId;
+      renderDatabaseStatus();
+      return true;
+    }
+
+    function renderDatabaseStatus() {
+      const button = $("#databaseBtn");
+      if (button) {
+        button.innerHTML = `<span class="icon">↔</span> Andmebaas: ${escapeHtml(supabaseClient ? "sees" : "lokaalne")}`;
+        button.title = databaseStatus;
+      }
+      const field = $("#databaseStatusField");
+      if (field) field.value = databaseStatus;
+    }
+
+    function scheduleRemoteSave() {
+      if (!supabaseClient || suppressRemoteSave) return;
+      clearTimeout(remoteSaveTimer);
+      remoteSaveTimer = setTimeout(() => pushPilotDataToDatabase(false), 900);
+    }
+
+    async function pushPilotDataToDatabase(showAlert = true) {
+      if (!supabaseClient && !initSupabaseClient()) {
+        if (showAlert) alert("Sisesta esmalt Supabase ühenduse andmed.");
+        return;
+      }
+      const config = readSupabaseConfig();
+      databaseStatus = "Salvestan andmebaasi...";
+      renderDatabaseStatus();
+      const { error } = await supabaseClient
+        .from("pilot_state")
+        .upsert({
+          id: config.workspaceId || "veco-pilot",
+          data: pilotPayload(),
+          updated_at: new Date().toISOString()
+        });
+      if (error) {
+        databaseStatus = "DB viga: " + error.message;
+        renderDatabaseStatus();
+        if (showAlert) alert(databaseStatus);
+        return;
+      }
+      databaseStatus = "Sünkroniseeritud: " + new Date().toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" });
+      renderDatabaseStatus();
+      if (showAlert) alert("Andmed salvestati Supabase andmebaasi.");
+    }
+
+    async function loadPilotDataFromDatabase(showAlert = true) {
+      if (!supabaseClient && !initSupabaseClient()) {
+        if (showAlert) alert("Sisesta esmalt Supabase ühenduse andmed.");
+        return;
+      }
+      const config = readSupabaseConfig();
+      databaseStatus = "Laen andmebaasist...";
+      renderDatabaseStatus();
+      const { data, error } = await supabaseClient
+        .from("pilot_state")
+        .select("data")
+        .eq("id", config.workspaceId || "veco-pilot")
+        .maybeSingle();
+      if (error) {
+        databaseStatus = "DB viga: " + error.message;
+        renderDatabaseStatus();
+        if (showAlert) alert(databaseStatus);
+        return;
+      }
+      if (!data?.data) {
+        await pushPilotDataToDatabase(false);
+        if (showAlert) alert("Andmebaasis polnud veel piloodi andmeid. Lõin algse kirje.");
+        return;
+      }
+      suppressRemoteSave = true;
+      applyPilotPayload(data.data);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pilotPayload()));
+      renderAll();
+      suppressRemoteSave = false;
+      databaseStatus = "Laetud andmebaasist";
+      renderDatabaseStatus();
+      if (showAlert) alert("Andmed laaditi Supabase andmebaasist.");
+    }
+
+    function openDatabaseModal() {
+      const config = readSupabaseConfig();
+      const form = $("#databaseForm");
+      form.elements.url.value = config.url;
+      form.elements.anonKey.value = config.anonKey;
+      form.elements.workspaceId.value = config.workspaceId;
+      renderDatabaseStatus();
+      $("#databaseModal").classList.add("open");
+      $("#databaseModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveDatabaseSettings(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      writeSupabaseConfig({
+        url: form.elements.url.value.trim(),
+        anonKey: form.elements.anonKey.value.trim(),
+        workspaceId: form.elements.workspaceId.value.trim() || "veco-pilot"
+      });
+      initSupabaseClient();
+      pushPilotDataToDatabase(true);
     }
 
     function exportPilotData() {
@@ -3185,6 +3366,8 @@ Summa: 2 075,34 €`;
     loadPilotData();
     setDetailCollapsed(true);
     renderAll();
+    initSupabaseClient();
+    if (supabaseClient) loadPilotDataFromDatabase(false);
 
     $("#newJobBtn").addEventListener("click", () => openJobModal());
     $("#newPersonBtn").addEventListener("click", () => openPersonModal());
@@ -3195,6 +3378,10 @@ Summa: 2 075,34 €`;
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
     $("#newObjectJobBtn").addEventListener("click", openObjectJobModal);
     $("#importJobBtn").addEventListener("click", openImportJobModal);
+    $("#databaseBtn").addEventListener("click", openDatabaseModal);
+    $("#databaseForm").addEventListener("submit", saveDatabaseSettings);
+    $("#loadDatabaseBtn").addEventListener("click", () => loadPilotDataFromDatabase(true));
+    $("#pushDatabaseBtn").addEventListener("click", () => pushPilotDataToDatabase(true));
     $("#exportDataBtn").addEventListener("click", exportPilotData);
     $("#resetDemoBtn").addEventListener("click", resetPilotDemo);
     $("#importDataFile").addEventListener("change", importPilotData);
