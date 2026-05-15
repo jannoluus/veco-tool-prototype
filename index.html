@@ -66,30 +66,18 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 0 4px;
+      padding: 4px 2px 8px;
+      background: transparent;
+      width: 100%;
+      text-align: left;
     }
 
-    .brand-mark {
-      width: 34px;
-      height: 34px;
-      display: grid;
-      place-items: center;
-      border-radius: 7px;
-      background: #e7f3ff;
-      color: #0f527f;
-      font-weight: 800;
-    }
-
-    .brand strong {
+    .brand img {
+      width: 164px;
+      max-width: 100%;
+      height: auto;
       display: block;
-      font-size: 15px;
-    }
-
-    .brand span {
-      display: block;
-      color: #aebdc8;
-      font-size: 12px;
-      margin-top: 2px;
+      filter: brightness(0) invert(1);
     }
 
     .nav {
@@ -158,12 +146,6 @@
       background: rgba(245,247,248,.94);
       backdrop-filter: blur(10px);
       border-bottom: 1px solid var(--line);
-    }
-
-    .topbar h1 {
-      margin: 0;
-      font-size: 22px;
-      letter-spacing: 0;
     }
 
     .toolbar {
@@ -881,13 +863,9 @@
 <body>
   <div class="app" id="appShell">
     <aside class="sidebar">
-      <div class="brand">
-        <div class="brand-mark">V</div>
-        <div>
-          <strong>VECO</strong>
-          <span>Tööde kalender</span>
-        </div>
-      </div>
+      <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
+        <img src="assets/veco-logo.png" alt="VECO kinnisvara hooldus">
+      </button>
       <nav class="nav" aria-label="Põhivaated">
         <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
@@ -909,9 +887,6 @@
 
     <main>
       <header class="topbar">
-        <div>
-          <h1>Operatiivne tööde kalender</h1>
-        </div>
         <div class="toolbar">
           <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
           <button class="btn ghost" id="toggleDetailBtn"><span class="icon">▣</span> Peida detail</button>
@@ -2937,6 +2912,14 @@
       pushPilotDataToDatabase(true);
     }
 
+    function refreshFromBrand() {
+      if (supabaseClient) {
+        loadPilotDataFromDatabase(true);
+        return;
+      }
+      window.location.reload();
+    }
+
     function exportPilotData() {
       savePilotData();
       const payload = JSON.stringify({ exportedAt: new Date().toISOString(), people, peopleEvents, clients, jobs }, null, 2);
@@ -3762,6 +3745,7 @@ Summa: 2 075,34 €`;
     initSupabaseClient();
     if (supabaseClient) loadPilotDataFromDatabase(false);
 
+    $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
     $("#newJobBtn").addEventListener("click", () => openJobModal());
     $("#newPersonBtn").addEventListener("click", () => openPersonModal());
     $("#newEventBtn").addEventListener("click", () => openEventModal());
