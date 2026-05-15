@@ -270,6 +270,35 @@
 
     .calendar {
       padding: 12px;
+      position: relative;
+    }
+
+    .week-edge-drop {
+      position: absolute;
+      top: 12px;
+      bottom: 12px;
+      width: 34px;
+      z-index: 3;
+      display: none;
+      place-items: center;
+      border: 1px dashed var(--blue);
+      background: rgba(23, 105, 170, .08);
+      color: var(--blue);
+      font-weight: 800;
+      pointer-events: none;
+    }
+
+    .calendar.dragging .week-edge-drop {
+      display: grid;
+      pointer-events: auto;
+    }
+
+    .week-edge-drop.left { left: 12px; }
+    .week-edge-drop.right { right: 12px; }
+
+    .day.drop-ready {
+      border-color: var(--blue);
+      box-shadow: inset 0 0 0 2px rgba(23,105,170,.18);
     }
 
     .week-grid {
@@ -386,6 +415,28 @@
       box-shadow: 0 0 0 3px rgba(23,105,170,.14);
     }
 
+    .resize-row {
+      display: grid;
+      grid-template-columns: 32px 1fr 32px;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .resize-row button {
+      min-height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #eef3f5;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .resize-row span {
+      text-align: center;
+    }
+
     .job-time {
       color: var(--muted);
       font-size: 12px;
@@ -425,6 +476,7 @@
     .status.täidetud { background: #e3f4ec; color: #176144; }
     .status.akt { background: #e5f4f6; color: #0d6570; }
     .status.saadetud { background: #edf0f2; color: #4b5962; }
+    .status.arhiveeritud { background: #eef0f1; color: #586570; }
 
     .detail {
       display: flex;
@@ -980,11 +1032,14 @@
                 <option value="täidetud">Täidetud</option>
                 <option value="akt">Akt genereeritud</option>
                 <option value="saadetud">Saadetud</option>
+                <option value="arhiveeritud">Arhiveeritud</option>
               </select>
               <input class="field" id="searchField" placeholder="Otsi klienti, objekti..." aria-label="Otsing">
             </div>
           </div>
           <div class="calendar">
+            <div class="week-edge-drop left" data-week-edge="-1">‹</div>
+            <div class="week-edge-drop right" data-week-edge="1">›</div>
             <div class="week-grid" id="weekGrid"></div>
           </div>
         </div>
@@ -1261,9 +1316,9 @@
             <label>Kontaktisik<input class="field" name="contact"></label>
             <label>Telefon<input class="field" name="phone"></label>
             <label>Töö kuupäev<input class="field" name="date" type="date" required></label>
-            <label>Kellaaeg<input class="field" name="time" type="time" required></label>
-            <label>SLA tähtaeg<input class="field" name="dueDate" type="datetime-local"></label>
-            <label>SLA tunnid<input class="field" name="slaHours" type="number" min="1" placeholder="nt 4"></label>
+            <label>Töö algus<select class="select" name="time" required></select></label>
+            <label>Töö lõpp<select class="select" name="endTime"></select></label>
+            <label>Kestvus tundides<input class="field" name="durationHours" type="number" min="0.25" step="0.25" placeholder="nt 2"></label>
             <label>Tehnik<select class="select" name="technician" required></select></label>
             <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
             <label>Korduvus<select class="select" name="recurrence"><option>Ühekordne</option><option>Iganädalane</option><option>Igakuine</option><option>Kvartaalne</option><option>Aastane</option></select></label>
@@ -1276,6 +1331,7 @@
               <option value="täidetud">Täidetud</option>
               <option value="akt">Akt genereeritud</option>
               <option value="saadetud">Saadetud</option>
+              <option value="arhiveeritud">Arhiveeritud</option>
             </select></label>
             <label>Tööaeg<input class="field" name="hours" placeholder="nt 2.5 h"></label>
             <label>Transpordi aeg<input class="field" name="travelTime" placeholder="nt 0.5 h"></label>
@@ -1524,7 +1580,7 @@
             <label>Algus<input class="field" name="startDate" type="date" required></label>
             <label>Lõpp<input class="field" name="endDate" type="date"></label>
             <label>Kordade arv<input class="field" name="count" type="number" min="1" value="1"></label>
-            <label>Kellaaeg<input class="field" name="time" type="time" value="09:00"></label>
+            <label>Töö algus<input class="field" name="time" type="time" value="09:00"></label>
             <label>Tehnik<select class="select" name="technician" required></select></label>
             <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
             <label class="full">Töö kirjeldus<textarea name="description" required>Planeeritud hooldustöö.</textarea></label>
@@ -1588,23 +1644,23 @@
     let jobs = [
       {
         id: "VK-1024", client: "KÜ Pargi 12", referenceNo: "KUTSE-4458", address: "Pargi 12, Tallinn", buildingPart: "Ventilatsiooniruum", asset: "SV-01 ventilatsiooniseade",
-        contact: "Maarika Tamm", phone: "+372 5551 2211", date: "2026-05-14", time: "09:00",
-        technician: "Aleksei", priority: "Kõrge", status: "planeeritud", dueDate: "2026-05-14T11:00", slaHours: "2", recurrence: "Ühekordne",
+        contact: "Maarika Tamm", phone: "+372 5551 2211", date: "2026-05-14", time: "09:00", endTime: "11:00", durationHours: "2",
+        technician: "Aleksei", priority: "Kõrge", status: "planeeritud", recurrence: "Ühekordne",
         description: "Ventilatsiooniseadme häire, kontrollida automaatikat ja filtrite seisukorda.",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       },
       {
         id: "VK-1025", client: "Baltic Office OÜ", referenceNo: "PR-2041", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "AC-3F-02 konditsioneer",
-        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "12:30",
-        technician: "Marek", priority: "Tavaline", status: "töös", dueDate: "2026-05-14T16:00", slaHours: "4", recurrence: "Kvartaalne",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "12:30", endTime: "14:00", durationHours: "1.5",
+        technician: "Marek", priority: "Tavaline", status: "töös", recurrence: "Kvartaalne",
         description: "Konditsioneeri hooldus ja lekke kontroll.",
         workDone: "Seade puhastatud, lekke tunnuseid ei leitud.", materials: "Filtrikomplekt F7", hours: "1.5 h", travelTime: "0.5 h",
         timeLogs: [{ start: "2026-05-14T12:30:00", end: "2026-05-14T14:00:00" }], photos: "enne: IMG_2201, pärast: IMG_2207", approvedBy: "", ezefsRef: "EZ-PR-2041"
       },
       {
         id: "VK-1026", client: "Nord Clinic", referenceNo: "NC-HOOL-19", address: "Tartu mnt 18, Tallinn", buildingPart: "Soojussõlm", asset: "P-02 ringluspump",
-        contact: "Liina Saar", phone: "+372 5888 1020", date: "2026-05-13", time: "15:00",
-        technician: "Sergei", priority: "Tavaline", status: "täidetud", dueDate: "2026-05-13T18:00", slaHours: "8", recurrence: "Aastane",
+        contact: "Liina Saar", phone: "+372 5888 1020", date: "2026-05-13", time: "15:00", endTime: "17:00", durationHours: "2",
+        technician: "Sergei", priority: "Tavaline", status: "täidetud", recurrence: "Aastane",
         description: "Soojussõlme ringluspumba kontroll.",
         workDone: "Pumba töö kontrollitud, ühendusklemmid pingutatud, süsteem töötab normaalselt.",
         materials: "Klemmikomplekt, isolatsiooniteip", hours: "2 h", travelTime: "0.75 h",
@@ -1612,37 +1668,37 @@
       },
       {
         id: "VK-1027", client: "KÜ Merevaade", referenceNo: "", address: "Ranna tee 4, Viimsi", buildingPart: "Katus", asset: "Katuseventilaator KV-2",
-        contact: "Jaanus Põld", phone: "+372 5123 1000", date: "2026-05-15", time: "10:00",
-        technician: "Aleksei", priority: "Tavaline", status: "ootel", dueDate: "2026-05-17T12:00", slaHours: "48", recurrence: "Ühekordne",
+        contact: "Jaanus Põld", phone: "+372 5123 1000", date: "2026-05-15", time: "10:00", endTime: "12:00", durationHours: "2",
+        technician: "Aleksei", priority: "Tavaline", status: "ootel", recurrence: "Ühekordne",
         description: "Katuseventilaatori rihm vajab vahetust, varuosa tellimisel.",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       },
       {
         id: "VK-1028", client: "Baltic Office OÜ", referenceNo: "BO-HOOL-05", address: "Laki 6, Tallinn", buildingPart: "Katus", asset: "SV-2 ventilatsiooniseade",
-        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-16", time: "09:00",
-        technician: "Sergei", priority: "Tavaline", status: "planeeritud", dueDate: "2026-05-16T14:00", slaHours: "5", recurrence: "Kvartaalne",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-16", time: "09:00", endTime: "12:00", durationHours: "3",
+        technician: "Sergei", priority: "Tavaline", status: "planeeritud", recurrence: "Kvartaalne",
         description: "Ventilatsiooniseadme kvartaalne hooldus, filtrite ja rihmade kontroll.",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       },
       {
         id: "VK-1029", client: "Baltic Office OÜ", referenceNo: "BO-AUTO-17", address: "Laki 6, Tallinn", buildingPart: "Tehnoruum", asset: "Kilp A-1 automaatika",
-        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "15:00",
-        technician: "Aleksei", priority: "Kõrge", status: "ootel", dueDate: "2026-05-14T18:00", slaHours: "3", recurrence: "Ühekordne",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "15:00", endTime: "18:00", durationHours: "3",
+        technician: "Aleksei", priority: "Kõrge", status: "ootel", recurrence: "Ühekordne",
         description: "Automaatikakilbi häirelogi kontroll, ootel kliendi ligipääsu kinnitust.",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       },
       {
         id: "VK-1030", client: "Baltic Office OÜ", referenceNo: "BO-PUMP-04", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "P-4 kondensaadipump",
-        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-13", time: "11:00",
-        technician: "Marek", priority: "Tavaline", status: "täidetud", dueDate: "2026-05-13T16:00", slaHours: "5", recurrence: "Ühekordne",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-13", time: "11:00", endTime: "12:20", durationHours: "1.33",
+        technician: "Marek", priority: "Tavaline", status: "täidetud", recurrence: "Ühekordne",
         description: "Kondensaadipumba töö kontroll ja puhastus.",
         workDone: "Pump puhastatud, äravool kontrollitud, testkäivitus korras.", materials: "Puhastusvahend, voolikuklamber", hours: "1 h 20 min", travelTime: "0.5 h",
         timeLogs: [{ start: "2026-05-13T11:00:00", end: "2026-05-13T12:20:00" }], photos: "enne: BO_PUMP_01, pärast: BO_PUMP_02", approvedBy: "Kaur Lepp", ezefsRef: ""
       },
       {
         id: "VK-1031", client: "Baltic Office OÜ", referenceNo: "BO-AC-22", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "AC-3F-02 konditsioneer",
-        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-17", time: "10:30",
-        technician: "Marek", priority: "Madal", status: "uus", dueDate: "2026-05-20T12:00", slaHours: "72", recurrence: "Igakuine",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-17", time: "10:30", endTime: "12:30", durationHours: "2",
+        technician: "Marek", priority: "Madal", status: "uus", recurrence: "Igakuine",
         description: "Konditsioneeri filtri vahetus ja kasutaja kaebuse kontroll.",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       }
@@ -1666,6 +1722,8 @@
     let remoteLoadTimer = null;
     let remoteBusy = false;
     let lastRemoteLoadAt = "";
+    let draggedCalendarJobId = null;
+    let weekEdgeTimer = null;
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
 
@@ -1684,7 +1742,8 @@
       ootel: "Ootel",
       täidetud: "Täidetud",
       akt: "Akt genereeritud",
-      saadetud: "Saadetud"
+      saadetud: "Saadetud",
+      arhiveeritud: "Arhiveeritud"
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -1799,20 +1858,84 @@
         .map(person => person.name);
     }
 
-    function slaText(job) {
-      if (!job.dueDate) return "SLA puudub";
-      const due = new Date(job.dueDate);
-      const planned = new Date(`${job.date}T${job.time || "00:00"}`);
-      return planned > due ? "SLA risk" : `SLA ${formatDateTime(job.dueDate)}`;
-    }
-
     function priorityScore(job) {
       let score = 20;
       if (job.priority === "Kõrge") score += 45;
       if (job.status === "uus") score += 15;
-      if (slaText(job) === "SLA risk") score += 30;
       if (isPersonUnavailable(job.technician, job.date)) score += 20;
       return Math.min(score, 100);
+    }
+
+    function timeToMinutes(time) {
+      const [hours, minutes] = String(time || "00:00").split(":").map(Number);
+      return (hours || 0) * 60 + (minutes || 0);
+    }
+
+    function minutesToTime(minutes) {
+      const normalized = Math.max(0, Math.min(23 * 60 + 59, Math.round(minutes)));
+      const h = String(Math.floor(normalized / 60)).padStart(2, "0");
+      const m = String(normalized % 60).padStart(2, "0");
+      return `${h}:${m}`;
+    }
+
+    function buildTimeOptions() {
+      const times = [];
+      for (let minutes = 7 * 60; minutes <= 19 * 60; minutes += 30) {
+        const time = minutesToTime(minutes);
+        times.push(`<option value="${time}">${time}</option>`);
+      }
+      return times.join("");
+    }
+
+    function addDurationToTime(time, durationHours) {
+      const duration = Number(durationHours || 0);
+      if (!duration) return "";
+      return minutesToTime(timeToMinutes(time) + duration * 60);
+    }
+
+    function inferDurationHours(start, end) {
+      if (!start || !end) return "";
+      const minutes = timeToMinutes(end) - timeToMinutes(start);
+      return minutes > 0 ? String(minutes / 60) : "";
+    }
+
+    function displayWorkWindow(job) {
+      const end = job.endTime || addDurationToTime(job.time, job.durationHours);
+      if (job.time && end) return `${job.time}-${end}`;
+      return job.time || "";
+    }
+
+    function nextBusinessDate(date) {
+      const result = new Date(date);
+      do {
+        result.setDate(result.getDate() + 1);
+      } while ([0, 6].includes(result.getDay()));
+      return result;
+    }
+
+    function nextFreeSlot(technician = technicians()[0] || "") {
+      const slots = ["09:00", "11:00", "13:00", "15:00"];
+      let day = new Date();
+      day.setHours(12, 0, 0, 0);
+      const now = new Date();
+      let candidates = slots;
+      if (now.getHours() >= 15) {
+        day = nextBusinessDate(day);
+      } else if (dateKey(day) === dateKey(now)) {
+        candidates = slots.filter(slot => timeToMinutes(slot) > now.getHours() * 60 + now.getMinutes());
+        if (!candidates.length) {
+          day = nextBusinessDate(day);
+          candidates = slots;
+        }
+      }
+      for (let i = 0; i < 10; i += 1) {
+        const date = dateKey(day);
+        const free = candidates.find(slot => !jobs.some(job => job.date === date && job.time === slot && job.technician === technician));
+        if (free) return { date, time: free };
+        day = nextBusinessDate(day);
+        candidates = slots;
+      }
+      return { date: dateKey(day), time: "09:00" };
     }
 
     function photoTiles(job) {
@@ -1839,6 +1962,7 @@
 
     function fillSelects() {
       const techOptions = technicians().map(name => `<option value="${name}">${name}</option>`).join("");
+      const timeOptions = buildTimeOptions();
       const selectedTech = $("#technicianFilter").value || "all";
       const selectedMobileTech = $("#mobileTech").value || technicians()[0] || "";
       const selectedActsTech = $("#actsTechFilter").value || "all";
@@ -1849,6 +1973,8 @@
       $("#mobileTech").innerHTML = techOptions;
       $("#mobileTech").value = technicians().includes(selectedMobileTech) ? selectedMobileTech : technicians()[0] || "";
       document.querySelector("[name='technician']").innerHTML = techOptions;
+      document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
+      document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
       document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions;
       document.querySelector("[name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
       document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("");
@@ -1888,19 +2014,24 @@
       $("#weekGrid").innerHTML = weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const cards = dayJobs.map(job => `
-          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}">
+          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true">
             <span class="job-time"><span>${escapeHtml(job.time)}</span><span>${escapeHtml(job.technician)}</span></span>
             <span class="job-title">${escapeHtml(job.client)}</span>
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
             <span class="job-meta">${escapeHtml(job.address)}</span>
             ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
             ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
-            <span class="job-meta">${escapeHtml(slaText(job))}</span>
+            <span class="job-meta">${escapeHtml(displayWorkWindow(job))}</span>
+            <span class="resize-row">
+              <button type="button" data-resize-job="${job.id}" data-resize-minutes="-30">−</button>
+              <span>Kestvus ${escapeHtml(formatMinutes(Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60))}</span>
+              <button type="button" data-resize-job="${job.id}" data-resize-minutes="30">+</button>
+            </span>
             <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
           </button>
         `).join("");
         return `
-          <div class="day">
+          <div class="day" data-calendar-day="${date}">
             <div class="day-head"><strong>${day}</strong><span>${label}</span></div>
             ${unavailableNames(date).length ? `<div class="job-meta" style="padding:8px 10px;">Puudub: ${escapeHtml(unavailableNames(date).join(", "))}</div>` : ""}
             ${cards || `<div class="job-meta" style="padding:12px;">Töid ei ole</div>`}
@@ -1908,14 +2039,9 @@
         `;
       }).join("");
 
-      $$(".job-card").forEach(card => {
-        card.addEventListener("click", () => {
-          selectedId = card.dataset.job;
-          detailJobId = selectedId;
-          setDetailCollapsed(false);
-          renderAll();
-        });
-      });
+      bindCalendarSelection();
+      bindCalendarDrag();
+      bindDurationResize();
     }
 
     function bindCalendarSelection() {
@@ -1929,6 +2055,101 @@
           renderAll();
         });
       });
+    }
+
+    function clearWeekEdgeTimer() {
+      if (weekEdgeTimer) clearTimeout(weekEdgeTimer);
+      weekEdgeTimer = null;
+    }
+
+    function bindCalendarDrag() {
+      $$("#weekGrid [data-job]").forEach(card => {
+        card.addEventListener("dragstart", event => {
+          draggedCalendarJobId = card.dataset.job;
+          event.dataTransfer.setData("text/plain", draggedCalendarJobId);
+          event.dataTransfer.effectAllowed = "move";
+          $(".calendar").classList.add("dragging");
+        });
+        card.addEventListener("dragend", () => {
+          draggedCalendarJobId = null;
+          clearWeekEdgeTimer();
+          $(".calendar").classList.remove("dragging");
+        });
+      });
+
+      $$("[data-calendar-day]").forEach(day => {
+        day.addEventListener("dragover", event => {
+          if (!draggedCalendarJobId) return;
+          event.preventDefault();
+          day.classList.add("drop-ready");
+        });
+        day.addEventListener("dragleave", () => day.classList.remove("drop-ready"));
+        day.addEventListener("drop", event => {
+          event.preventDefault();
+          day.classList.remove("drop-ready");
+          moveCalendarJob(draggedCalendarJobId || event.dataTransfer.getData("text/plain"), day.dataset.calendarDay);
+        });
+      });
+
+      $$("[data-week-edge]").forEach(edge => {
+        edge.addEventListener("dragover", event => {
+          if (!draggedCalendarJobId) return;
+          event.preventDefault();
+          if (weekEdgeTimer) return;
+          weekEdgeTimer = setTimeout(() => {
+            calendarCursor = addDays(calendarCursor, Number(edge.dataset.weekEdge) * 7);
+            clearWeekEdgeTimer();
+            renderAll();
+            $(".calendar").classList.add("dragging");
+          }, 700);
+        });
+        edge.addEventListener("dragleave", clearWeekEdgeTimer);
+        edge.addEventListener("drop", event => {
+          event.preventDefault();
+          clearWeekEdgeTimer();
+        });
+      });
+    }
+
+    function moveCalendarJob(jobId, targetDate) {
+      const job = jobs.find(item => item.id === jobId);
+      if (!job || !targetDate) return;
+      if (job.date === targetDate) {
+        const nextTime = window.prompt(`Uus algusaeg töökäsule ${job.id}`, job.time || "09:00");
+        if (nextTime === null) return;
+        const cleanTime = nextTime.trim();
+        if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
+          job.time = cleanTime.padStart(5, "0");
+          if (job.durationHours) job.endTime = addDurationToTime(job.time, job.durationHours);
+        }
+      } else {
+        job.date = targetDate;
+      }
+      selectedId = job.id;
+      detailJobId = job.id;
+      setDetailCollapsed(false);
+      renderAll();
+    }
+
+    function resizeJobDuration(jobId, deltaMinutes) {
+      const job = jobs.find(item => item.id === jobId);
+      if (!job) return;
+      const currentMinutes = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+      const nextMinutes = Math.max(30, Math.min(12 * 60, currentMinutes + deltaMinutes));
+      job.durationHours = String(nextMinutes / 60);
+      job.endTime = addDurationToTime(job.time || "09:00", job.durationHours);
+      selectedId = job.id;
+      detailJobId = job.id;
+      setDetailCollapsed(false);
+      renderAll();
+    }
+
+    function bindDurationResize() {
+      $$("[data-resize-job]").forEach(btn => btn.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        resizeJobDuration(btn.dataset.resizeJob, Number(btn.dataset.resizeMinutes));
+      }));
     }
 
     function renderMonthCalendar(visible) {
@@ -1993,10 +2214,9 @@
         <div class="kv"><span>Viitenumber</span><strong>${escapeHtml(job.referenceNo || "puudub")}</strong></div>
         <div class="kv"><span>Hooneosa</span><strong>${escapeHtml(job.buildingPart || "määramata")}</strong></div>
         <div class="kv"><span>Seade</span><strong>${escapeHtml(job.asset || "sidumata")}</strong></div>
-        <div class="kv"><span>SLA</span><strong>${escapeHtml(slaText(job))}</strong></div>
         <div class="kv"><span>Korduvus</span><strong>${escapeHtml(job.recurrence || "Ühekordne")}</strong></div>
         <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}</strong></div>
-        <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(job.time)}</strong></div>
+        <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))}</strong></div>
         <div class="kv"><span>Kontakt</span><strong>${escapeHtml(job.contact)} · ${escapeHtml(job.phone)}</strong></div>
         <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
         <p class="section-title">Tellimus</p>
@@ -2064,7 +2284,7 @@
         <div class="mobile-card">
           <strong>${escapeHtml(job.client)}</strong>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
-          <span class="job-meta">${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(statusLabels[job.status])}</span>
+          <span class="job-meta">${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))} · ${escapeHtml(statusLabels[job.status])}</span>
           <span class="job-meta">${escapeHtml(job.address)}</span>
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
           ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
@@ -2099,7 +2319,8 @@
       const buildingPart = $("#actsBuildingPartFilter").value.trim().toLowerCase();
       const address = $("#actsAddressFilter").value.trim().toLowerCase();
       const visibleActs = jobs.filter(job => {
-        if (!["täidetud", "akt", "saadetud"].includes(job.status)) return false;
+        if (!["täidetud", "akt", "saadetud", "arhiveeritud"].includes(job.status)) return false;
+        if (job.status === "arhiveeritud" && !date && tech === "all" && !buildingPart && !address) return false;
         if (tech !== "all" && job.technician !== tech) return false;
         if (date && job.date !== date) return false;
         if (buildingPart && !String(job.buildingPart || "").toLowerCase().includes(buildingPart)) return false;
@@ -2132,6 +2353,7 @@
                 <div class="mobile-actions">
                   <button class="btn primary" data-open-act="${job.id}"><span class="icon">▣</span> Ava akt</button>
                   <button class="btn ghost" data-edit-act-job="${job.id}"><span class="icon">✎</span> Muuda</button>
+                  <button class="btn danger" data-archive-act="${job.id}"><span class="icon">×</span> Arhiveeri</button>
                 </div>
               </div>
             `).join("")}
@@ -2147,6 +2369,7 @@
         selectedId = btn.dataset.editActJob;
         openJobModal(selectedId);
       }));
+      $$("#actsList [data-archive-act]").forEach(btn => btn.addEventListener("click", () => archiveAct(btn.dataset.archiveAct)));
     }
 
     function renderPeople() {
@@ -2472,7 +2695,7 @@
             <span class="ai-score">${score}</span>
           </div>
           <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
-          <div class="kv"><span>SLA</span><strong>${escapeHtml(slaText(job))}</strong></div>
+          <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))}</strong></div>
           <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}${isPersonUnavailable(job.technician, job.date) ? " · puudub" : ""}</strong></div>
           <div class="mobile-card">${escapeHtml(aiReason(job))}</div>
           <div class="person-actions">
@@ -2505,7 +2728,6 @@
     function aiReason(job) {
       const reasons = [];
       if (job.priority === "Kõrge") reasons.push("kõrge prioriteet");
-      if (slaText(job) === "SLA risk") reasons.push("SLA risk");
       if (isPersonUnavailable(job.technician, job.date)) reasons.push("tehnik pole saadaval");
       if (!reasons.length) reasons.push("töö sobib planeeritud järjekorda");
       return `Soovitus: ${reasons.join(", ")}.`;
@@ -2516,9 +2738,6 @@
       jobs.forEach(job => {
         if (job.priority === "Kõrge" && !["täidetud", "akt", "saadetud"].includes(job.status)) {
           items.push({ kind: "Prioriteet", title: `${job.id} vajab tähelepanu`, body: `${job.client}, ${job.address}` });
-        }
-        if (slaText(job) === "SLA risk") {
-          items.push({ kind: "SLA", title: `${job.id} võib hilineda`, body: `Tähtaeg ${formatDateTime(job.dueDate)}` });
         }
         if (isPersonUnavailable(job.technician, job.date)) {
           items.push({ kind: "Saadavus", title: `${job.technician} puudub`, body: `${job.id} tuleks ümber planeerida.` });
@@ -2861,6 +3080,17 @@
       renderAll();
     }
 
+    function archiveAct(id) {
+      const job = jobs.find(item => item.id === id);
+      if (!job) return;
+      const ok = window.confirm(`Kas arhiveerida akt ${job.id}?\n\n${job.client} · ${job.address}\n\nArhiveeritud akt kaob tavalisest aktide nimekirjast, aga andmed jäävad alles.`);
+      if (!ok) return;
+      job.status = "arhiveeritud";
+      selectedId = job.id;
+      detailJobId = null;
+      renderAll();
+    }
+
     function nextJobId() {
       const max = jobs.reduce((num, job) => Math.max(num, Number(job.id.split("-")[1]) || 0), 0);
       return `VK-${max + 1}`;
@@ -2871,14 +3101,19 @@
       const form = $("#jobForm");
       form.reset();
       $("#jobModalTitle").textContent = id ? "Muuda / täida töökäsk" : "Lisa töökäsk";
+      const defaultSlot = nextFreeSlot(technicians()[0] || "");
       const job = id ? jobs.find(item => item.id === id) : {
-        client: "", referenceNo: "", address: "", buildingPart: "", contact: "", phone: "", date: "2026-05-14", time: "09:00",
+        client: "", referenceNo: "", address: "", buildingPart: "", contact: "", phone: "", date: defaultSlot.date, time: defaultSlot.time,
+        endTime: "", durationHours: "2",
         technician: technicians()[0] || "", priority: "Tavaline", status: "uus", description: "",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       };
       Object.entries(job).forEach(([key, value]) => {
         if (form.elements[key]) form.elements[key].value = value;
       });
+      if (!id && form.elements.durationHours.value) {
+        form.elements.endTime.value = addDurationToTime(form.elements.time.value, form.elements.durationHours.value);
+      }
       $("#jobModal").classList.add("open");
       $("#jobModal").setAttribute("aria-hidden", "false");
     }
@@ -2995,10 +3230,10 @@ Prioriteet: tavaline`;
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
         phone: detectedContact.phone || client.phone,
-        date: dateKey(calendarCursor),
-        time: "09:00",
-        dueDate: "",
-        slaHours: "",
+        date: nextFreeSlot(technicians()[0] || "").date,
+        time: nextFreeSlot(technicians()[0] || "").time,
+        endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
+        durationHours: "2",
         technician: technicians()[0] || "",
         priority,
         recurrence: "Ühekordne",
@@ -3037,10 +3272,10 @@ Prioriteet: tavaline`;
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
         phone: detectedContact.phone || client.phone,
-        date: dateKey(calendarCursor),
-        time: "09:00",
-        dueDate: "",
-        slaHours: "",
+        date: nextFreeSlot(technicians()[0] || "").date,
+        time: nextFreeSlot(technicians()[0] || "").time,
+        endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
+        durationHours: "2",
         technician: technicians()[0] || "",
         priority,
         recurrence: "Ühekordne",
@@ -3090,9 +3325,31 @@ Summa: 2 075,34 €`;
       $(`#${id}`).setAttribute("aria-hidden", "true");
     }
 
+    function syncJobTimeFields(source) {
+      const form = $("#jobForm");
+      const start = form.elements.time.value;
+      const end = form.elements.endTime.value;
+      const duration = form.elements.durationHours.value;
+      if (source === "duration" && start && duration) {
+        form.elements.endTime.value = addDurationToTime(start, duration);
+      }
+      if (source === "start" && start && duration) {
+        form.elements.endTime.value = addDurationToTime(start, duration);
+      }
+      if (source === "end" && start && end) {
+        form.elements.durationHours.value = inferDurationHours(start, end);
+      }
+    }
+
     function saveJob(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
+      if (data.time && data.durationHours && !data.endTime) {
+        data.endTime = addDurationToTime(data.time, data.durationHours);
+      }
+      if (data.time && data.endTime && !data.durationHours) {
+        data.durationHours = inferDurationHours(data.time, data.endTime);
+      }
       if (editingId) {
         const job = jobs.find(item => item.id === editingId);
         Object.assign(job, data);
@@ -3384,8 +3641,6 @@ Summa: 2 075,34 €`;
       let created = 0;
 
       while (created < countLimit && (!endDate || cursor <= endDate)) {
-        const due = new Date(cursor);
-        due.setHours(Number(data.time.slice(0, 2)) + 2, Number(data.time.slice(3, 5)), 0, 0);
         const job = {
           id: nextJobId(),
           client: client.name,
@@ -3397,8 +3652,8 @@ Summa: 2 075,34 €`;
           phone: client.phone,
           date: dateKey(cursor),
           time: data.time,
-          dueDate: due.toISOString().slice(0, 16),
-          slaHours: "2",
+          endTime: addDurationToTime(data.time, 2),
+          durationHours: "2",
           technician: data.technician,
           priority: data.priority,
           recurrence: recurrenceLabel(data.frequency, interval),
@@ -3532,6 +3787,9 @@ Summa: 2 075,34 €`;
     $("#toggleDetailBtn").addEventListener("click", toggleDetail);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#jobForm").addEventListener("submit", saveJob);
+    $("#jobForm").elements.time.addEventListener("change", () => syncJobTimeFields("start"));
+    $("#jobForm").elements.durationHours.addEventListener("input", () => syncJobTimeFields("duration"));
+    $("#jobForm").elements.endTime.addEventListener("change", () => syncJobTimeFields("end"));
     $("#techFillForm").addEventListener("submit", saveTechFill);
     $("#importJobForm").addEventListener("submit", createImportedJobDraft);
     $("#personForm").addEventListener("submit", savePerson);
