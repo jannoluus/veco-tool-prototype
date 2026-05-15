@@ -191,6 +191,16 @@
       color: #fff;
     }
 
+    .btn.danger {
+      background: #fdebea;
+      color: var(--red);
+      border-color: #f2c7c3;
+    }
+
+    .btn.danger:hover {
+      background: #f8d7d3;
+    }
+
     .btn.primary:hover { background: var(--blue-2); }
     .btn.ghost { background: transparent; border-color: var(--line); }
 
@@ -1981,6 +1991,7 @@
           <button class="btn" data-status="täidetud"><span class="icon">✓</span> Lõpeta töökäsk</button>
           <button class="btn primary" id="generateActBtn"><span class="icon">▣</span> Genereeri akt</button>
           <button class="btn ghost" id="remoteFillBtn"><span class="icon">✎</span> Lisa täitmise info</button>
+          <button class="btn danger" id="deleteJobBtn"><span class="icon">×</span> Kustuta</button>
         </div>
       `;
       $$("[data-status]").forEach(btn => btn.addEventListener("click", () => {
@@ -1992,6 +2003,7 @@
       }));
       $("#generateActBtn").addEventListener("click", openAct);
       $("#remoteFillBtn").addEventListener("click", () => openJobModal(job.id));
+      $("#deleteJobBtn").addEventListener("click", deleteSelectedJob);
     }
 
     function renderMobile() {
@@ -2032,6 +2044,7 @@
           <button class="btn primary" id="mobileFillBtn"><span class="icon">✓</span> Täida töökäsk</button>
           <button class="btn" id="mobileCompleteBtn"><span class="icon">✓</span> Lõpeta töökäsk</button>
           <button class="btn ghost" id="mobileActBtn"><span class="icon">▣</span> Akt</button>
+          <button class="btn danger" id="mobileDeleteBtn"><span class="icon">×</span> Kustuta</button>
         </div>
       `;
       $$("[data-mobile-status]").forEach(btn => btn.addEventListener("click", () => {
@@ -2044,6 +2057,7 @@
       $("#mobileFillBtn").addEventListener("click", () => openJobModal(job.id));
       $("#mobileCompleteBtn").addEventListener("click", completeSelectedJob);
       $("#mobileActBtn").addEventListener("click", openAct);
+      $("#mobileDeleteBtn").addEventListener("click", deleteSelectedJob);
     }
 
     function renderActs() {
@@ -2757,6 +2771,17 @@
       updateStatus("täidetud");
       detailJobId = null;
       setDetailCollapsed(true);
+    }
+
+    function deleteSelectedJob() {
+      const job = selectedJob();
+      const ok = window.confirm(`Kas kustutada töökäsk ${job.id}?\n\n${job.client} · ${job.address}\n\nSeda toimingut ei saa tagasi võtta.`);
+      if (!ok) return;
+      jobs = jobs.filter(item => item.id !== job.id);
+      selectedId = jobs[0]?.id || "";
+      detailJobId = null;
+      setDetailCollapsed(true);
+      renderAll();
     }
 
     function nextJobId() {
