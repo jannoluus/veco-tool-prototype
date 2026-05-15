@@ -1,0 +1,3009 @@
+<!doctype html>
+<html lang="et">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VECO Tööde Kalender</title>
+  <style>
+    :root {
+      --ink: #172026;
+      --muted: #61707c;
+      --line: #dce3e8;
+      --panel: #ffffff;
+      --bg: #f5f7f8;
+      --blue: #1769aa;
+      --blue-2: #0f527f;
+      --green: #1c7c54;
+      --amber: #a86712;
+      --red: #b23a36;
+      --teal: #147c84;
+      --shadow: 0 16px 36px rgba(20, 33, 44, .10);
+      --radius: 8px;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+    }
+
+    button, input, select, textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 248px minmax(0, 1fr);
+    }
+
+    .app.sidebar-collapsed {
+      grid-template-columns: 1fr;
+    }
+
+    .app.sidebar-collapsed .sidebar {
+      display: none;
+    }
+
+    .sidebar {
+      background: #101820;
+      color: #f8fbfc;
+      padding: 22px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 4px;
+    }
+
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 7px;
+      background: #e7f3ff;
+      color: #0f527f;
+      font-weight: 800;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .brand span {
+      display: block;
+      color: #aebdc8;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .nav {
+      display: grid;
+      gap: 7px;
+    }
+
+    .nav button {
+      width: 100%;
+      color: #cdd8df;
+      background: transparent;
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .nav button.active,
+    .nav button:hover {
+      color: #fff;
+      background: rgba(255,255,255,.11);
+    }
+
+    .side-stats {
+      margin-top: auto;
+      display: grid;
+      gap: 10px;
+    }
+
+    .side-stat {
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: rgba(255,255,255,.05);
+    }
+
+    .side-stat span {
+      display: block;
+      color: #aebdc8;
+      font-size: 12px;
+    }
+
+    .side-stat strong {
+      display: block;
+      font-size: 23px;
+      margin-top: 5px;
+    }
+
+    main {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      justify-content: space-between;
+      padding: 16px 22px;
+      background: rgba(245,247,248,.94);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .topbar h1 {
+      margin: 0;
+      font-size: 22px;
+      letter-spacing: 0;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      min-height: 38px;
+      padding: 0 13px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #e7edf1;
+      color: var(--ink);
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      color: #fff;
+    }
+
+    .btn.primary:hover { background: var(--blue-2); }
+    .btn.ghost { background: transparent; border-color: var(--line); }
+
+    .icon {
+      width: 18px;
+      height: 18px;
+      display: inline-block;
+      line-height: 1;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .content {
+      padding: 20px 22px 30px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 370px;
+      gap: 18px;
+    }
+
+    .content.detail-collapsed {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .content.detail-collapsed > aside.detail {
+      display: none;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .panel-head {
+      min-height: 58px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .panel-head h2 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .filters {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .field, .select {
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 0 10px;
+      color: var(--ink);
+      min-width: 0;
+    }
+
+    .calendar {
+      padding: 12px;
+    }
+
+    .week-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 10px;
+    }
+
+    .calendar-grid.month {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(110px, 1fr));
+      gap: 10px;
+    }
+
+    .calendar-grid.year {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(170px, 1fr));
+      gap: 10px;
+    }
+
+    .month-cell {
+      min-height: 118px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      padding: 9px;
+      display: grid;
+      align-content: start;
+      gap: 7px;
+    }
+
+    .year-cell {
+      min-height: 150px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      padding: 11px;
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .mini-job {
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      background: #fff;
+      padding: 7px;
+      text-align: left;
+      display: grid;
+      gap: 3px;
+      font-size: 12px;
+    }
+
+    .day {
+      min-height: 530px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .day-head {
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #eef3f5;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .day-head strong { font-size: 14px; }
+
+    .job-card {
+      margin: 9px;
+      padding: 10px;
+      border-radius: 7px;
+      background: #fff;
+      border: 1px solid var(--line);
+      display: grid;
+      gap: 7px;
+      text-align: left;
+      box-shadow: 0 8px 18px rgba(18, 30, 40, .06);
+    }
+
+    .job-card:hover,
+    .job-card.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(23,105,170,.14);
+    }
+
+    .job-time {
+      color: var(--muted);
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .job-title {
+      font-weight: 750;
+      font-size: 14px;
+      line-height: 1.25;
+    }
+
+    .job-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .status {
+      width: max-content;
+      max-width: 100%;
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      background: #e7edf1;
+      color: #3a4a55;
+    }
+
+    .status.uus { background: #e8eef4; color: #335167; }
+    .status.planeeritud { background: #e4f0fb; color: #145b91; }
+    .status.töös { background: #fff2dc; color: #8b540c; }
+    .status.pausil { background: #f1ecff; color: #5a3b91; }
+    .status.ootel { background: #fdebea; color: #9c312e; }
+    .status.täidetud { background: #e3f4ec; color: #176144; }
+    .status.akt { background: #e5f4f6; color: #0d6570; }
+    .status.saadetud { background: #edf0f2; color: #4b5962; }
+
+    .detail {
+      display: flex;
+      flex-direction: column;
+      min-height: 650px;
+    }
+
+    .detail-body {
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .detail-title {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .detail-title h2 {
+      margin: 0;
+      font-size: 19px;
+      line-height: 1.25;
+    }
+
+    .kv {
+      display: grid;
+      grid-template-columns: 118px minmax(0, 1fr);
+      gap: 9px;
+      font-size: 13px;
+    }
+
+    .kv span { color: var(--muted); }
+    .kv strong { font-weight: 650; }
+
+    .section-title {
+      margin: 6px 0 0;
+      padding-top: 13px;
+      border-top: 1px solid var(--line);
+      font-size: 13px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    .mobile-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      background: #f8fafb;
+      display: grid;
+      gap: 10px;
+    }
+
+    .mobile-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .people-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+
+    .person-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 13px;
+      background: #fff;
+      display: grid;
+      gap: 10px;
+    }
+
+    .person-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .person-top h3 {
+      margin: 0;
+      font-size: 15px;
+    }
+
+    .person-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .timeline {
+      display: grid;
+      gap: 8px;
+    }
+
+    .event-row {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      padding: 10px;
+      background: #f8fafb;
+      display: grid;
+      gap: 4px;
+      font-size: 13px;
+    }
+
+    .photo-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+      gap: 8px;
+    }
+
+    .photo-tile {
+      min-height: 70px;
+      border: 1px dashed #aab7c0;
+      border-radius: 7px;
+      background: #f3f7f8;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding: 8px;
+    }
+
+    .ai-score {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      height: 28px;
+      padding: 0 8px;
+      border-radius: 999px;
+      background: #fff1d6;
+      color: #7d4b00;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .paste-zone {
+      min-height: 170px;
+      border: 2px dashed #9fb0ba;
+      border-radius: var(--radius);
+      background: #f7fafb;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 16px;
+      color: var(--muted);
+      outline: none;
+    }
+
+    .paste-zone:focus {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(23,105,170,.14);
+    }
+
+    .image-preview {
+      max-width: 100%;
+      max-height: 260px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      display: none;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+    }
+
+    label.full { grid-column: 1 / -1; }
+
+    textarea {
+      min-height: 76px;
+      resize: vertical;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(10, 18, 24, .56);
+    }
+
+    .modal.open { display: flex; }
+
+    .dialog {
+      width: min(920px, 100%);
+      max-height: min(820px, 92vh);
+      overflow: hidden;
+      background: #fff;
+      border-radius: var(--radius);
+      box-shadow: 0 24px 70px rgba(0,0,0,.28);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .dialog-head,
+    .dialog-actions {
+      padding: 15px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      flex: 0 0 auto;
+      background: #fff;
+      z-index: 2;
+    }
+
+    .dialog-actions {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+      justify-content: flex-end;
+    }
+
+    .dialog-head h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .dialog-body {
+      padding: 18px;
+      overflow: auto;
+      min-height: 0;
+    }
+
+    .act-preview {
+      background: #fff;
+      color: #111;
+      border: 1px solid var(--line);
+      padding: 28px;
+      min-height: 560px;
+    }
+
+    .act-top {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      border-bottom: 2px solid #111;
+      padding-bottom: 18px;
+      margin-bottom: 18px;
+    }
+
+    .act-logo {
+      font-size: 28px;
+      font-weight: 850;
+      letter-spacing: 0;
+    }
+
+    .act-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px 26px;
+      margin: 18px 0;
+    }
+
+    .act-box {
+      border: 1px solid #c9d2d8;
+      padding: 12px;
+      min-height: 78px;
+    }
+
+    .act-box span {
+      display: block;
+      color: #59646d;
+      font-size: 12px;
+      margin-bottom: 6px;
+    }
+
+    .signature-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 28px;
+      margin-top: 56px;
+    }
+
+    .signature {
+      border-top: 1px solid #111;
+      padding-top: 7px;
+      font-size: 13px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 1120px) {
+      .app { grid-template-columns: 1fr; }
+      .app.sidebar-collapsed .sidebar { display: none; }
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-direction: row;
+        align-items: center;
+        padding: 12px;
+        overflow-x: auto;
+      }
+      .nav {
+        display: flex;
+        min-width: max-content;
+      }
+      .nav button { width: auto; }
+      .side-stats { display: none; }
+      .content,
+      .content.detail-collapsed { grid-template-columns: 1fr; }
+      .detail { min-height: 0; }
+    }
+
+    @media (max-width: 760px) {
+      .topbar {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 14px;
+      }
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+      .toolbar .btn,
+      .toolbar .select {
+        width: 100%;
+      }
+      .content { padding: 12px; }
+      .panel-head {
+        align-items: stretch;
+        flex-direction: column;
+      }
+      .filters {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+      .week-grid {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+      }
+      .day {
+        min-width: 82vw;
+        min-height: 430px;
+        scroll-snap-align: start;
+      }
+      .form-grid,
+      .act-grid,
+      .signature-row {
+        grid-template-columns: 1fr;
+      }
+      .kv {
+        grid-template-columns: 96px minmax(0, 1fr);
+      }
+      .mobile-actions {
+        grid-template-columns: 1fr;
+      }
+      .person-actions {
+        grid-template-columns: 1fr;
+      }
+      .act-preview {
+        padding: 18px;
+      }
+      .act-top {
+        flex-direction: column;
+      }
+    }
+
+    @media print {
+      body * { visibility: hidden; }
+      #actPreview, #actPreview * { visibility: visible; }
+      #actPreview {
+        position: absolute;
+        inset: 0;
+        border: 0;
+        padding: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark">V</div>
+        <div>
+          <strong>VECO</strong>
+          <span>Tööde kalender</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Põhivaated">
+        <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
+        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
+        <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
+        <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
+        <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
+        <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
+        <button data-view="acts"><span class="icon">▧</span> Aktid</button>
+        <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
+        <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
+      </nav>
+      <div class="side-stats">
+        <div class="side-stat"><span>Tänased tööd</span><strong id="todayCount">0</strong></div>
+        <div class="side-stat"><span>Täidetud</span><strong id="doneCount">0</strong></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h1>Operatiivne tööde kalender</h1>
+        </div>
+        <div class="toolbar">
+          <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
+          <button class="btn ghost" id="toggleDetailBtn"><span class="icon">▣</span> Peida detail</button>
+          <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+            <option value="all">Kõik tehnikud</option>
+          </select>
+          <button class="btn ghost" id="todayBtn"><span class="icon">⌖</span> Täna</button>
+          <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+          <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+        </div>
+      </header>
+
+      <section class="content" id="calendarView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 id="calendarTitle">Nädal 20 · 2026</h2>
+            <div class="filters">
+              <button class="btn ghost" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn ghost" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
+              <select class="select" id="calendarMode" aria-label="Kalendri vaade">
+                <option value="week">Nädal</option>
+                <option value="month">Kuu</option>
+                <option value="year">Aasta</option>
+              </select>
+              <select class="select" id="statusFilter" aria-label="Staatuse filter">
+                <option value="all">Kõik staatused</option>
+                <option value="uus">Uus</option>
+                <option value="planeeritud">Planeeritud</option>
+                <option value="töös">Töös</option>
+                <option value="pausil">Pausil</option>
+                <option value="ootel">Ootel</option>
+                <option value="täidetud">Täidetud</option>
+                <option value="akt">Akt genereeritud</option>
+                <option value="saadetud">Saadetud</option>
+              </select>
+              <input class="field" id="searchField" placeholder="Otsi klienti, objekti..." aria-label="Otsing">
+            </div>
+          </div>
+          <div class="calendar">
+            <div class="week-grid" id="weekGrid"></div>
+          </div>
+        </div>
+
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Töökäsk</h2>
+            <button class="btn ghost" id="editSelectedBtn"><span class="icon">✎</span> Muuda</button>
+          </div>
+          <div class="detail-body" id="detailBody"></div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="vacationsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Puhkuste ja puudumiste vaade</h2>
+            <div class="filters">
+              <select class="select" id="vacationTypeFilter" aria-label="Puudumise tüüp">
+                <option value="all">Kõik tüübid</option>
+                <option>Puhkus</option>
+                <option>Haigus</option>
+                <option>Koolitus</option>
+                <option>Tähtpäev</option>
+                <option>Muu</option>
+              </select>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="vacationGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Ajajoon</h2>
+            <button class="btn primary" id="newVacationEventBtn"><span class="icon">＋</span> Lisa puudumine</button>
+          </div>
+          <div class="detail-body">
+            <div class="timeline" id="vacationTimeline"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="mobileView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Tehniku mobiilivaade</h2>
+            <div class="filters">
+              <select class="select" id="mobileTech"></select>
+            </div>
+          </div>
+          <div class="detail-body" id="mobileJobs"></div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Kiirtäitmine objektil</h2>
+          </div>
+          <div class="detail-body" id="quickFill"></div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="actsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Aktid</h2>
+            <div class="filters">
+              <select class="select" id="actsTechFilter" aria-label="Akti tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <input class="field" id="actsDateFilter" type="date" aria-label="Akti kuupäeva filter">
+              <input class="field" id="actsBuildingPartFilter" placeholder="Hooneosa" aria-label="Hooneosa filter">
+              <input class="field" id="actsAddressFilter" placeholder="Aadress" aria-label="Aadressi filter">
+              <button class="btn ghost" id="clearActsFiltersBtn"><span class="icon">×</span> Tühjenda</button>
+            </div>
+          </div>
+          <div class="detail-body" id="actsList"></div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Saadetav dokument</h2>
+          </div>
+          <div class="detail-body">
+            <div class="mobile-card">
+              <strong>PDF akt</strong>
+              <span class="job-meta">Prototüübis avaneb akt eelvaatena ja brauseri printimise kaudu saab selle PDF-iks salvestada.</span>
+              <button class="btn primary" id="printActSideBtn"><span class="icon">⎙</span> Prindi / salvesta PDF</button>
+            </div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="peopleView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Tehnikute administreerimine</h2>
+            <div class="filters">
+              <select class="select" id="peopleStatusFilter" aria-label="Kasutajate filter">
+                <option value="all">Kõik kasutajad</option>
+                <option value="active">Aktiivsed</option>
+                <option value="inactive">Deaktiveeritud</option>
+              </select>
+              <button class="btn primary" id="newPersonBtn"><span class="icon">＋</span> Lisa tehnik</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="peopleGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Puudumised ja tähtpäevad</h2>
+            <button class="btn primary" id="newEventBtn"><span class="icon">＋</span> Lisa sündmus</button>
+          </div>
+          <div class="detail-body">
+            <div class="timeline" id="peopleEvents"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="clientsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Klientide administreerimine</h2>
+            <div class="filters">
+              <select class="select" id="clientStatusFilter" aria-label="Klientide filter">
+                <option value="all">Kõik kliendid</option>
+                <option value="active">Aktiivsed</option>
+                <option value="inactive">Deaktiveeritud</option>
+              </select>
+              <input class="field" id="clientSearchField" placeholder="Otsi klienti..." aria-label="Kliendi otsing">
+              <button class="btn primary" id="newClientBtn"><span class="icon">＋</span> Lisa klient</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="clientsGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Kontaktid ja objektid</h2>
+            <div class="filters">
+              <button class="btn" id="newClientPlanBtn"><span class="icon">▦</span> Planeeri tööd</button>
+              <button class="btn primary" id="newClientItemBtn"><span class="icon">＋</span> Lisa kirje</button>
+            </div>
+          </div>
+          <div class="detail-body" id="clientDetail"></div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="objectsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Objektide töövaade</h2>
+            <div class="filters">
+              <input class="field" id="objectSearchField" placeholder="Otsi objekti või aadressi..." aria-label="Objekti otsing">
+              <select class="select" id="objectStatusFilter" aria-label="Objekti tööde filter">
+                <option value="active">Planeeritud ja ootel</option>
+                <option value="all">Kõik tööd</option>
+                <option value="waiting">Ainult ootel</option>
+              </select>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="objectsGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Objekti detail</h2>
+            <button class="btn primary" id="newObjectJobBtn"><span class="icon">＋</span> Lisa töö objektile</button>
+          </div>
+          <div class="detail-body" id="objectDetail"></div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="aiView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>AI planeerimine ja teavitused</h2>
+            <div class="filters">
+              <button class="btn" id="simulateEmailBtn"><span class="icon">✉</span> Simuleeri saabunud kiri</button>
+              <button class="btn primary" id="autoScheduleBtn"><span class="icon">✦</span> Mahuta tööd automaatselt</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="aiSuggestions"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head"><h2>Teavitused</h2></div>
+          <div class="detail-body">
+            <div class="timeline" id="notificationsList"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="ezefsView">
+        <div class="panel">
+          <div class="panel-head"><h2>EZEFSi liidestuse valmidus</h2></div>
+          <div class="detail-body">
+            <div class="mobile-card">
+              <strong>Välised viited töökäsul</strong>
+              <span class="job-meta">Igal töökäsul on koht tulevastele väljadele: EZEFSi klient, projekt, objekt ja tellimus. See hoiab integratsiooni hiljem eraldi kihis.</span>
+            </div>
+            <div class="mobile-card">
+              <strong>Sünkroonimise logi</strong>
+              <span class="job-meta">Tulevases versioonis saab iga akti või töökäsu juures näha, millal see EZEFSi saadeti ning kas saatmine õnnestus.</span>
+            </div>
+            <div class="mobile-card">
+              <strong>PDF ja andmed</strong>
+              <span class="job-meta">Akt jääb VECOs genereeritavaks PDF-iks, aga sama töökäsu andmestiku saab hiljem saata ka masinloetavalt.</span>
+            </div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head"><h2>Näidisväljad</h2></div>
+          <div class="detail-body">
+            <div class="kv"><span>ezefs_client_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>ezefs_project_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>ezefs_order_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>sync_status</span><strong>pole saadetud</strong></div>
+          </div>
+        </aside>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal" id="jobModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="jobModalTitle">
+      <div class="dialog-head">
+        <h2 id="jobModalTitle">Lisa töökäsk</h2>
+        <button class="btn ghost" data-close="jobModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="jobForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Klient<input class="field" name="client" required></label>
+            <label>Kliendi/projekti viide<input class="field" name="referenceNo" placeholder="nt PO-2481 või PR-17"></label>
+            <label>Objekt / aadress<input class="field" name="address" required></label>
+            <label>Hooneosa<input class="field" name="buildingPart" placeholder="nt katlamaja, B-korpus"></label>
+            <label>Seade<input class="field" name="asset" placeholder="nt SV-01, konditsioneer"></label>
+            <label>Kontaktisik<input class="field" name="contact"></label>
+            <label>Telefon<input class="field" name="phone"></label>
+            <label>Töö kuupäev<input class="field" name="date" type="date" required></label>
+            <label>Kellaaeg<input class="field" name="time" type="time" required></label>
+            <label>SLA tähtaeg<input class="field" name="dueDate" type="datetime-local"></label>
+            <label>SLA tunnid<input class="field" name="slaHours" type="number" min="1" placeholder="nt 4"></label>
+            <label>Tehnik<select class="select" name="technician" required></select></label>
+            <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
+            <label>Korduvus<select class="select" name="recurrence"><option>Ühekordne</option><option>Iganädalane</option><option>Igakuine</option><option>Kvartaalne</option><option>Aastane</option></select></label>
+            <label>Staatus<select class="select" name="status">
+              <option value="uus">Uus</option>
+              <option value="planeeritud">Planeeritud</option>
+              <option value="töös">Töös</option>
+              <option value="pausil">Pausil</option>
+              <option value="ootel">Ootel</option>
+              <option value="täidetud">Täidetud</option>
+              <option value="akt">Akt genereeritud</option>
+              <option value="saadetud">Saadetud</option>
+            </select></label>
+            <label>Tööaeg<input class="field" name="hours" placeholder="nt 2.5 h"></label>
+            <label>Transpordi aeg<input class="field" name="travelTime" placeholder="nt 0.5 h"></label>
+            <label class="full">Töö kirjeldus<textarea name="description" required></textarea></label>
+            <label class="full">Tehtud töö kirjeldus<textarea name="workDone"></textarea></label>
+            <label class="full">Materjalid<textarea name="materials"></textarea></label>
+            <label class="full">Fotod / tõendusmaterjal<textarea name="photos" placeholder="nt enne: IMG_1012, pärast: IMG_1018"></textarea></label>
+            <label>Kliendi kinnitaja<input class="field" name="approvedBy"></label>
+            <label>EZEFSi viide<input class="field" name="ezefsRef" placeholder="tulevane väline ID"></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="jobModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="importJobModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="importJobModalTitle">
+      <div class="dialog-head">
+        <h2 id="importJobModalTitle">Impordi töö e-kirjast või ekraanitõmmisest</h2>
+        <button class="btn ghost" data-close="importJobModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="importJobForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Allikas<select class="select" name="source">
+              <option>E-kiri</option>
+              <option>RKAS Works</option>
+              <option>AllDevice</option>
+              <option>Granlund</option>
+              <option>Muu keskkond</option>
+            </select></label>
+            <label>Fail / pilt<input class="field" name="fileName" placeholder="nt works_kutse_4458.png"></label>
+            <div class="full">
+              <label>Kleebi pilt siia</label>
+              <div class="paste-zone" id="imagePasteZone" tabindex="0">
+                <div>
+                  Vajuta siia ja kleebi pilt Ctrl+V-ga.<br>
+                  Sobib Works, AllDevice, Granlund või e-kirja ekraanitõmmis.
+                </div>
+                <img class="image-preview" id="importImagePreview" alt="Kleebitud pildi eelvaade">
+              </div>
+            </div>
+            <label class="full">AI/OCR tuvastatud tekst<textarea name="sourceText" placeholder="Pärast pildi kleepimist täidab süsteem siia tuvastatud info. Võid seda käsitsi parandada."></textarea></label>
+            <label class="full">Analüüsi tulemus<textarea name="aiNote" readonly>Ootan pilti või teksti.</textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn" type="button" id="analyzeImportImageBtn"><span class="icon">✦</span> Analüüsi pilt</button>
+          <button class="btn ghost" type="button" data-close="importJobModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✦</span> Loo mustand</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="emailAgentModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="emailAgentTitle">
+      <div class="dialog-head">
+        <h2 id="emailAgentTitle">AI agent tuvastas uue tellimuse</h2>
+        <button class="btn ghost" data-close="emailAgentModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <div class="dialog-body">
+        <div class="mobile-card">
+          <strong>Saabunud e-kiri: Kinema OÜ pakkumine S26003064</strong>
+          <span class="job-meta">Agent luges kirjast objekti Narva maantee 30/1, töö sisu ja kontaktandmed ning lõi töökäsu mustandi.</span>
+        </div>
+        <div class="event-row" id="emailAgentDraftSummary"></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn ghost" data-close="emailAgentModal">Hiljem</button>
+        <button class="btn primary" id="reviewEmailDraftBtn"><span class="icon">✎</span> Vaata mustand üle</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="actModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="actModalTitle">
+      <div class="dialog-head">
+        <h2 id="actModalTitle">Akti eelvaade</h2>
+        <button class="btn ghost" data-close="actModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <div class="dialog-body">
+        <div class="act-preview" id="actPreview"></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="btn ghost" id="markSentBtn"><span class="icon">↗</span> Märgi saadetuks</button>
+        <button class="btn primary" id="printActBtn"><span class="icon">⎙</span> Prindi / salvesta PDF</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="personModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="personModalTitle">
+      <div class="dialog-head">
+        <h2 id="personModalTitle">Lisa tehnik</h2>
+        <button class="btn ghost" data-close="personModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="personForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Nimi<input class="field" name="name" required></label>
+            <label>Roll<select class="select" name="role"><option>Tehnik</option><option>Admin</option><option>Juht</option></select></label>
+            <label>Telefon<input class="field" name="phone"></label>
+            <label>E-post<input class="field" name="email" type="email"></label>
+            <label>Piirkond<input class="field" name="region" placeholder="nt Tallinn"></label>
+            <label>Oskused<input class="field" name="skills" placeholder="nt HVAC, automaatika"></label>
+            <label>Staatus<select class="select" name="active"><option value="true">Aktiivne</option><option value="false">Deaktiveeritud</option></select></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="personModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="eventModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="eventModalTitle">
+      <div class="dialog-head">
+        <h2 id="eventModalTitle">Lisa puudumine või tähtpäev</h2>
+        <button class="btn ghost" data-close="eventModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="eventForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Tehnik<select class="select" name="personId" required></select></label>
+            <label>Tüüp<select class="select" name="type"><option>Puhkus</option><option>Haigus</option><option>Koolitus</option><option>Tähtpäev</option><option>Muu</option></select></label>
+            <label>Algus<input class="field" name="start" type="date" required></label>
+            <label>Lõpp<input class="field" name="end" type="date" required></label>
+            <label class="full">Märkus<textarea name="note"></textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="eventModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="clientModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+      <div class="dialog-head">
+        <h2 id="clientModalTitle">Lisa klient</h2>
+        <button class="btn ghost" data-close="clientModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="clientForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Kliendi nimi<input class="field" name="name" required></label>
+            <label>Registrikood<input class="field" name="regNo"></label>
+            <label>Peamine kontakt<input class="field" name="contact"></label>
+            <label>Telefon<input class="field" name="phone"></label>
+            <label>E-post<input class="field" name="email" type="email"></label>
+            <label>Arve e-post<input class="field" name="invoiceEmail" type="email"></label>
+            <label>EZEFSi kliendi ID<input class="field" name="ezefsClientId" placeholder="tulevane väline ID"></label>
+            <label>Staatus<select class="select" name="active"><option value="true">Aktiivne</option><option value="false">Deaktiveeritud</option></select></label>
+            <label class="full">Märkused<textarea name="notes"></textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="clientModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="clientItemModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="clientItemModalTitle">
+      <div class="dialog-head">
+        <h2 id="clientItemModalTitle">Lisa kontakt või objekt</h2>
+        <button class="btn ghost" data-close="clientItemModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="clientItemForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Klient<select class="select" name="clientId" required></select></label>
+            <label>Tüüp<select class="select" name="type"><option value="object">Objekt</option><option value="contact">Kontakt</option></select></label>
+            <label>Nimi<input class="field" name="name" required></label>
+            <label>Aadress / roll<input class="field" name="detail" placeholder="Objekti aadress või kontaktisiku roll"></label>
+            <label>Telefon<input class="field" name="phone"></label>
+            <label>E-post<input class="field" name="email" type="email"></label>
+            <label class="full">Märkus<textarea name="note"></textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="clientItemModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="clientPlanModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="clientPlanModalTitle">
+      <div class="dialog-head">
+        <h2 id="clientPlanModalTitle">Planeeri kliendi tööd</h2>
+        <button class="btn ghost" data-close="clientPlanModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="clientPlanForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Klient<input class="field" name="clientName" readonly></label>
+            <label>Objekt / aadress<input class="field" name="address" required></label>
+            <label>Hooneosa<input class="field" name="buildingPart"></label>
+            <label>Seade<input class="field" name="asset"></label>
+            <label>Sagedus<select class="select" name="frequency">
+              <option value="day">Päev</option>
+              <option value="week">Nädal</option>
+              <option value="month">Kuu</option>
+              <option value="year">Aasta</option>
+            </select></label>
+            <label>Intervall<input class="field" name="interval" type="number" min="1" value="1"></label>
+            <label>Algus<input class="field" name="startDate" type="date" required></label>
+            <label>Lõpp<input class="field" name="endDate" type="date"></label>
+            <label>Kordade arv<input class="field" name="count" type="number" min="1" value="1"></label>
+            <label>Kellaaeg<input class="field" name="time" type="time" value="09:00"></label>
+            <label>Tehnik<select class="select" name="technician" required></select></label>
+            <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
+            <label class="full">Töö kirjeldus<textarea name="description" required>Planeeritud hooldustöö.</textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="clientPlanModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo töökäsud</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    let people = [
+      { id: "U-01", name: "Aleksei", role: "Tehnik", phone: "+372 5551 1001", email: "aleksei@veco.ee", region: "Tallinn", skills: "HVAC, automaatika", active: true },
+      { id: "U-02", name: "Marek", role: "Tehnik", phone: "+372 5551 1002", email: "marek@veco.ee", region: "Harjumaa", skills: "Konditsioneerid, hooldus", active: true },
+      { id: "U-03", name: "Sergei", role: "Tehnik", phone: "+372 5551 1003", email: "sergei@veco.ee", region: "Tallinn", skills: "Soojussõlmed, pumbad", active: true },
+      { id: "U-04", name: "Admin", role: "Admin", phone: "+372 5551 1004", email: "admin@veco.ee", region: "Kontor", skills: "Planeerimine", active: true }
+    ];
+    let peopleEvents = [
+      { id: "EV-01", personId: "U-02", type: "Puhkus", start: "2026-05-18", end: "2026-05-22", note: "Kevadine puhkus" },
+      { id: "EV-02", personId: "U-03", type: "Koolitus", start: "2026-05-15", end: "2026-05-15", note: "Automaatika täiendkoolitus" }
+    ];
+    let clients = [
+      {
+        id: "C-01", name: "KÜ Pargi 12", regNo: "80445566", contact: "Maarika Tamm", phone: "+372 5551 2211",
+        email: "pargi12@example.ee", invoiceEmail: "arved.pargi12@example.ee", ezefsClientId: "", active: true,
+        notes: "Korteriühistu, regulaarne hooldus.",
+        items: [
+          { id: "CI-01", type: "object", name: "Pargi 12", detail: "Pargi 12, Tallinn", phone: "", email: "", note: "Peamine objekt" },
+          { id: "CI-05", type: "device", name: "SV-01 ventilatsiooniseade", detail: "Ventilatsiooniruum", phone: "", email: "", note: "Filtrid F7/M5, hooldus kord kvartalis" },
+          { id: "CI-02", type: "contact", name: "Maarika Tamm", detail: "Haldur", phone: "+372 5551 2211", email: "maarika@example.ee", note: "" }
+        ]
+      },
+      {
+        id: "C-02", name: "Baltic Office OÜ", regNo: "11223344", contact: "Kaur Lepp", phone: "+372 5666 9080",
+        email: "kaur@balticoffice.ee", invoiceEmail: "invoice@balticoffice.ee", ezefsClientId: "EZ-C-2041", active: true,
+        notes: "Kontorihoone hooldusleping.",
+        items: [
+          { id: "CI-03", type: "object", name: "Laki 6 kontor", detail: "Laki 6, Tallinn", phone: "", email: "", note: "Kliimaseadmed ja ventilatsiooniseadmed mitmel korrusel" },
+          { id: "CI-06", type: "device", name: "AC-3F-02 konditsioneer", detail: "3. korrus", phone: "", email: "", note: "Lekke kontroll igal hooldusel" },
+          { id: "CI-08", type: "device", name: "SV-2 ventilatsiooniseade", detail: "Katus", phone: "", email: "", note: "Rihmad ja filtrid kord kvartalis" },
+          { id: "CI-09", type: "device", name: "Kilp A-1 automaatika", detail: "Tehnoruum", phone: "", email: "", note: "Häirelogi kontroll enne hooldust" },
+          { id: "CI-10", type: "device", name: "P-4 kondensaadipump", detail: "3. korrus", phone: "", email: "", note: "Varupump laos olemas" }
+        ]
+      },
+      {
+        id: "C-03", name: "Nord Clinic", regNo: "10998877", contact: "Liina Saar", phone: "+372 5888 1020",
+        email: "liina@nordclinic.ee", invoiceEmail: "raamatupidamine@nordclinic.ee", ezefsClientId: "", active: true,
+        notes: "Töödel eelistada hommikust aega.",
+        items: [
+          { id: "CI-04", type: "object", name: "Tartu mnt 18", detail: "Tartu mnt 18, Tallinn", phone: "", email: "", note: "Tehnoruum B-korpus" }
+          ,{ id: "CI-07", type: "device", name: "P-02 ringluspump", detail: "Soojussõlm", phone: "", email: "", note: "Varuosa mudel Grundfos 25-80" }
+        ]
+      }
+    ];
+    const monthNames = ["Jaanuar", "Veebruar", "Märts", "Aprill", "Mai", "Juuni", "Juuli", "August", "September", "Oktoober", "November", "Detsember"];
+
+    let jobs = [
+      {
+        id: "VK-1024", client: "KÜ Pargi 12", referenceNo: "KUTSE-4458", address: "Pargi 12, Tallinn", buildingPart: "Ventilatsiooniruum", asset: "SV-01 ventilatsiooniseade",
+        contact: "Maarika Tamm", phone: "+372 5551 2211", date: "2026-05-14", time: "09:00",
+        technician: "Aleksei", priority: "Kõrge", status: "planeeritud", dueDate: "2026-05-14T11:00", slaHours: "2", recurrence: "Ühekordne",
+        description: "Ventilatsiooniseadme häire, kontrollida automaatikat ja filtrite seisukorda.",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      },
+      {
+        id: "VK-1025", client: "Baltic Office OÜ", referenceNo: "PR-2041", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "AC-3F-02 konditsioneer",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "12:30",
+        technician: "Marek", priority: "Tavaline", status: "töös", dueDate: "2026-05-14T16:00", slaHours: "4", recurrence: "Kvartaalne",
+        description: "Konditsioneeri hooldus ja lekke kontroll.",
+        workDone: "Seade puhastatud, lekke tunnuseid ei leitud.", materials: "Filtrikomplekt F7", hours: "1.5 h", travelTime: "0.5 h",
+        timeLogs: [{ start: "2026-05-14T12:30:00", end: "2026-05-14T14:00:00" }], photos: "enne: IMG_2201, pärast: IMG_2207", approvedBy: "", ezefsRef: "EZ-PR-2041"
+      },
+      {
+        id: "VK-1026", client: "Nord Clinic", referenceNo: "NC-HOOL-19", address: "Tartu mnt 18, Tallinn", buildingPart: "Soojussõlm", asset: "P-02 ringluspump",
+        contact: "Liina Saar", phone: "+372 5888 1020", date: "2026-05-13", time: "15:00",
+        technician: "Sergei", priority: "Tavaline", status: "täidetud", dueDate: "2026-05-13T18:00", slaHours: "8", recurrence: "Aastane",
+        description: "Soojussõlme ringluspumba kontroll.",
+        workDone: "Pumba töö kontrollitud, ühendusklemmid pingutatud, süsteem töötab normaalselt.",
+        materials: "Klemmikomplekt, isolatsiooniteip", hours: "2 h", travelTime: "0.75 h",
+        timeLogs: [{ start: "2026-05-13T15:00:00", end: "2026-05-13T17:00:00" }], photos: "seadme silt: IMG_1040, töö järel: IMG_1044", approvedBy: "Liina Saar", ezefsRef: ""
+      },
+      {
+        id: "VK-1027", client: "KÜ Merevaade", referenceNo: "", address: "Ranna tee 4, Viimsi", buildingPart: "Katus", asset: "Katuseventilaator KV-2",
+        contact: "Jaanus Põld", phone: "+372 5123 1000", date: "2026-05-15", time: "10:00",
+        technician: "Aleksei", priority: "Tavaline", status: "ootel", dueDate: "2026-05-17T12:00", slaHours: "48", recurrence: "Ühekordne",
+        description: "Katuseventilaatori rihm vajab vahetust, varuosa tellimisel.",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      },
+      {
+        id: "VK-1028", client: "Baltic Office OÜ", referenceNo: "BO-HOOL-05", address: "Laki 6, Tallinn", buildingPart: "Katus", asset: "SV-2 ventilatsiooniseade",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-16", time: "09:00",
+        technician: "Sergei", priority: "Tavaline", status: "planeeritud", dueDate: "2026-05-16T14:00", slaHours: "5", recurrence: "Kvartaalne",
+        description: "Ventilatsiooniseadme kvartaalne hooldus, filtrite ja rihmade kontroll.",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      },
+      {
+        id: "VK-1029", client: "Baltic Office OÜ", referenceNo: "BO-AUTO-17", address: "Laki 6, Tallinn", buildingPart: "Tehnoruum", asset: "Kilp A-1 automaatika",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-14", time: "15:00",
+        technician: "Aleksei", priority: "Kõrge", status: "ootel", dueDate: "2026-05-14T18:00", slaHours: "3", recurrence: "Ühekordne",
+        description: "Automaatikakilbi häirelogi kontroll, ootel kliendi ligipääsu kinnitust.",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      },
+      {
+        id: "VK-1030", client: "Baltic Office OÜ", referenceNo: "BO-PUMP-04", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "P-4 kondensaadipump",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-13", time: "11:00",
+        technician: "Marek", priority: "Tavaline", status: "täidetud", dueDate: "2026-05-13T16:00", slaHours: "5", recurrence: "Ühekordne",
+        description: "Kondensaadipumba töö kontroll ja puhastus.",
+        workDone: "Pump puhastatud, äravool kontrollitud, testkäivitus korras.", materials: "Puhastusvahend, voolikuklamber", hours: "1 h 20 min", travelTime: "0.5 h",
+        timeLogs: [{ start: "2026-05-13T11:00:00", end: "2026-05-13T12:20:00" }], photos: "enne: BO_PUMP_01, pärast: BO_PUMP_02", approvedBy: "Kaur Lepp", ezefsRef: ""
+      },
+      {
+        id: "VK-1031", client: "Baltic Office OÜ", referenceNo: "BO-AC-22", address: "Laki 6, Tallinn", buildingPart: "3. korrus", asset: "AC-3F-02 konditsioneer",
+        contact: "Kaur Lepp", phone: "+372 5666 9080", date: "2026-05-17", time: "10:30",
+        technician: "Marek", priority: "Madal", status: "uus", dueDate: "2026-05-20T12:00", slaHours: "72", recurrence: "Igakuine",
+        description: "Konditsioneeri filtri vahetus ja kasutaja kaebuse kontroll.",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      }
+    ];
+
+    let selectedId = jobs[0].id;
+    let editingId = null;
+    let editingPersonId = null;
+    let selectedClientId = clients[0].id;
+    let editingClientId = null;
+    let selectedObjectKey = "C-01::Pargi 12, Tallinn";
+    let demoClock = new Date("2026-05-14T09:00:00");
+    let calendarCursor = new Date("2026-05-14T12:00:00");
+    let detailJobId = null;
+    let importedImageName = "";
+    let emailAgentDraftId = null;
+
+    const statusLabels = {
+      uus: "Uus",
+      planeeritud: "Planeeritud",
+      töös: "Töös",
+      pausil: "Pausil",
+      ootel: "Ootel",
+      täidetud: "Täidetud",
+      akt: "Akt genereeritud",
+      saadetud: "Saadetud"
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const $$ = (selector) => Array.from(document.querySelectorAll(selector));
+    const selectedJob = () => jobs.find(job => job.id === selectedId) || jobs[0];
+    const technicians = () => people.filter(person => person.active && ["Tehnik", "Admin", "Juht"].includes(person.role)).map(person => person.name);
+    const personName = (id) => (people.find(person => person.id === id) || {}).name || "Tundmatu";
+    const selectedClient = () => clients.find(client => client.id === selectedClientId) || clients[0];
+    const objectKey = (clientId, address) => `${clientId}::${address}`;
+    const allObjects = () => clients.flatMap(client =>
+      client.items.filter(item => item.type === "object").map(item => ({
+        key: objectKey(client.id, item.detail),
+        clientId: client.id,
+        clientName: client.name,
+        name: item.name,
+        address: item.detail,
+        note: item.note
+      }))
+    );
+    const selectedObject = () => allObjects().find(object => object.key === selectedObjectKey) || allObjects()[0];
+
+    function statusClass(status) {
+      return status === "akt" ? "akt" : status;
+    }
+
+    function escapeHtml(value) {
+      return String(value || "").replace(/[&<>"']/g, char => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[char]));
+    }
+
+    function nextTimestamp() {
+      demoClock = new Date(demoClock.getTime() + 23 * 60 * 1000);
+      return demoClock.toISOString().slice(0, 19);
+    }
+
+    function formatDateTime(value) {
+      if (!value) return "-";
+      return new Date(value).toLocaleString("et-EE", {
+        day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit"
+      });
+    }
+
+    function dateKey(date) {
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, "0");
+      const d = String(date.getDate()).padStart(2, "0");
+      return `${y}-${m}-${d}`;
+    }
+
+    function startOfWeek(date) {
+      const result = new Date(date);
+      const day = result.getDay() || 7;
+      result.setDate(result.getDate() - day + 1);
+      result.setHours(12, 0, 0, 0);
+      return result;
+    }
+
+    function addDays(date, days) {
+      const result = new Date(date);
+      result.setDate(result.getDate() + days);
+      return result;
+    }
+
+    function daysInMonth(year, monthIndex) {
+      return new Date(year, monthIndex + 1, 0).getDate();
+    }
+
+    function weekNumber(date) {
+      const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNumber = target.getUTCDay() || 7;
+      target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
+      const yearStart = new Date(Date.UTC(target.getUTCFullYear(), 0, 1));
+      return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
+    }
+
+    function formatShortDate(date) {
+      return date.toLocaleDateString("et-EE", { day: "2-digit", month: "2-digit" });
+    }
+
+    function minutesBetween(start, end) {
+      if (!start || !end) return 0;
+      return Math.max(0, Math.round((new Date(end) - new Date(start)) / 60000));
+    }
+
+    function totalWorkMinutes(job) {
+      return (job.timeLogs || []).reduce((sum, log) => sum + minutesBetween(log.start, log.end), 0);
+    }
+
+    function formatMinutes(minutes) {
+      if (!minutes) return "0 h";
+      const h = Math.floor(minutes / 60);
+      const m = minutes % 60;
+      if (!h) return `${m} min`;
+      if (!m) return `${h} h`;
+      return `${h} h ${m} min`;
+    }
+
+    function effectiveWorkTime(job) {
+      return totalWorkMinutes(job) ? formatMinutes(totalWorkMinutes(job)) : (job.hours || "");
+    }
+
+    function isPersonUnavailable(name, date) {
+      const person = people.find(item => item.name === name);
+      if (!person) return false;
+      return peopleEvents.some(event => event.personId === person.id && event.start <= date && event.end >= date);
+    }
+
+    function unavailableNames(date) {
+      return people
+        .filter(person => peopleEvents.some(event => event.personId === person.id && event.start <= date && event.end >= date))
+        .map(person => person.name);
+    }
+
+    function slaText(job) {
+      if (!job.dueDate) return "SLA puudub";
+      const due = new Date(job.dueDate);
+      const planned = new Date(`${job.date}T${job.time || "00:00"}`);
+      return planned > due ? "SLA risk" : `SLA ${formatDateTime(job.dueDate)}`;
+    }
+
+    function priorityScore(job) {
+      let score = 20;
+      if (job.priority === "Kõrge") score += 45;
+      if (job.status === "uus") score += 15;
+      if (slaText(job) === "SLA risk") score += 30;
+      if (isPersonUnavailable(job.technician, job.date)) score += 20;
+      return Math.min(score, 100);
+    }
+
+    function photoTiles(job) {
+      const photos = String(job.photos || "").split(",").map(item => item.trim()).filter(Boolean);
+      if (!photos.length) return `<div class="photo-tile">Fotosid pole lisatud</div>`;
+      return photos.map(photo => `<div class="photo-tile">${escapeHtml(photo)}</div>`).join("");
+    }
+
+    function renderTimeLog(job) {
+      const logs = job.timeLogs || [];
+      if (!logs.length) return `<div class="mobile-card">Ajakulu lõike ei ole veel fikseeritud.</div>`;
+      return `
+        <div class="timeline">
+          ${logs.map((log, index) => `
+            <div class="event-row">
+              <strong>Lõik ${index + 1}: ${escapeHtml(formatMinutes(minutesBetween(log.start, log.end)))}</strong>
+              <span>Algus: ${escapeHtml(formatDateTime(log.start))}</span>
+              <span>Lõpp: ${escapeHtml(log.end ? formatDateTime(log.end) : "käib")}</span>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+
+    function fillSelects() {
+      const techOptions = technicians().map(name => `<option value="${name}">${name}</option>`).join("");
+      const selectedTech = $("#technicianFilter").value || "all";
+      const selectedMobileTech = $("#mobileTech").value || technicians()[0] || "";
+      const selectedActsTech = $("#actsTechFilter").value || "all";
+      $("#technicianFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
+      $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
+      $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
+      $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
+      $("#mobileTech").innerHTML = techOptions;
+      $("#mobileTech").value = technicians().includes(selectedMobileTech) ? selectedMobileTech : technicians()[0] || "";
+      document.querySelector("[name='technician']").innerHTML = techOptions;
+      document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions;
+      document.querySelector("[name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+      document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("");
+    }
+
+    function filteredJobs() {
+      const tech = $("#technicianFilter").value;
+      const status = $("#statusFilter").value;
+      const query = $("#searchField").value.trim().toLowerCase();
+      return jobs.filter(job => {
+        const matchesTech = tech === "all" || job.technician === tech;
+        const matchesStatus = status === "all" || job.status === status;
+        const haystack = `${job.client} ${job.referenceNo} ${job.address} ${job.buildingPart} ${job.description} ${job.technician}`.toLowerCase();
+        return matchesTech && matchesStatus && haystack.includes(query);
+      });
+    }
+
+    function renderCalendar() {
+      const visible = filteredJobs();
+      const mode = $("#calendarMode").value;
+      if (mode === "month") {
+        renderMonthCalendar(visible);
+        return;
+      }
+      if (mode === "year") {
+        renderYearCalendar(visible);
+        return;
+      }
+      const weekStart = startOfWeek(calendarCursor);
+      const weekDays = Array.from({ length: 5 }, (_, index) => {
+        const date = addDays(weekStart, index);
+        return [dateKey(date), ["E", "T", "K", "N", "R"][index], formatShortDate(date)];
+      });
+      const weekEnd = addDays(weekStart, 4);
+      $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatShortDate(weekStart)}-${formatShortDate(weekEnd)} · ${calendarCursor.getFullYear()}`;
+      $("#weekGrid").className = "week-grid";
+      $("#weekGrid").innerHTML = weekDays.map(([date, day, label]) => {
+        const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
+        const cards = dayJobs.map(job => `
+          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}">
+            <span class="job-time"><span>${escapeHtml(job.time)}</span><span>${escapeHtml(job.technician)}</span></span>
+            <span class="job-title">${escapeHtml(job.client)}</span>
+            ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
+            <span class="job-meta">${escapeHtml(job.address)}</span>
+            ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
+            ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
+            <span class="job-meta">${escapeHtml(slaText(job))}</span>
+            <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+          </button>
+        `).join("");
+        return `
+          <div class="day">
+            <div class="day-head"><strong>${day}</strong><span>${label}</span></div>
+            ${unavailableNames(date).length ? `<div class="job-meta" style="padding:8px 10px;">Puudub: ${escapeHtml(unavailableNames(date).join(", "))}</div>` : ""}
+            ${cards || `<div class="job-meta" style="padding:12px;">Töid ei ole</div>`}
+          </div>
+        `;
+      }).join("");
+
+      $$(".job-card").forEach(card => {
+        card.addEventListener("click", () => {
+          selectedId = card.dataset.job;
+          detailJobId = selectedId;
+          setDetailCollapsed(false);
+          renderAll();
+        });
+      });
+    }
+
+    function bindCalendarSelection() {
+      $$("#weekGrid [data-job]").forEach(card => {
+        card.addEventListener("click", () => {
+          const sameJob = detailJobId === card.dataset.job;
+          const detailHidden = $("#calendarView").classList.contains("detail-collapsed");
+          selectedId = card.dataset.job;
+          detailJobId = sameJob && !detailHidden ? null : selectedId;
+          setDetailCollapsed(!detailJobId);
+          renderAll();
+        });
+      });
+    }
+
+    function renderMonthCalendar(visible) {
+      const year = calendarCursor.getFullYear();
+      const month = calendarCursor.getMonth();
+      const monthDays = Array.from({ length: daysInMonth(year, month) }, (_, index) => dateKey(new Date(year, month, index + 1, 12)));
+      $("#calendarTitle").textContent = `${monthNames[month]} ${year}`;
+      $("#weekGrid").className = "calendar-grid month";
+      $("#weekGrid").innerHTML = monthDays.map(date => {
+        const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
+        return `
+          <div class="month-cell">
+            <div class="day-head"><strong>${Number(date.slice(-2))}</strong><span>${unavailableNames(date).length ? "Puudumisi" : ""}</span></div>
+            ${dayJobs.map(job => `
+              <button class="mini-job" data-job="${job.id}">
+                <strong>${escapeHtml(job.time)} · ${escapeHtml(job.client)}</strong>
+                <span>${escapeHtml(job.technician)} · ${escapeHtml(statusLabels[job.status])}</span>
+              </button>
+            `).join("") || `<span class="job-meta">-</span>`}
+          </div>
+        `;
+      }).join("");
+      bindCalendarSelection();
+    }
+
+    function renderYearCalendar(visible) {
+      const year = calendarCursor.getFullYear();
+      $("#calendarTitle").textContent = `Aasta ${year}`;
+      $("#weekGrid").className = "calendar-grid year";
+      $("#weekGrid").innerHTML = monthNames.map((name, index) => {
+        const month = String(index + 1).padStart(2, "0");
+        const monthJobs = visible.filter(job => job.date.startsWith(`${year}-${month}`));
+        const done = monthJobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
+        return `
+          <div class="year-cell">
+            <h2>${escapeHtml(name)}</h2>
+            <div class="kv"><span>Töid</span><strong>${monthJobs.length}</strong></div>
+            <div class="kv"><span>Valmis</span><strong>${done}</strong></div>
+            <div class="kv"><span>Puudumisi</span><strong>${peopleEvents.filter(event => event.start.startsWith(`${year}-${month}`) || event.end.startsWith(`${year}-${month}`)).length}</strong></div>
+            ${monthJobs.slice(0, 3).map(job => `
+              <button class="mini-job" data-job="${job.id}">
+                <strong>${escapeHtml(job.date.slice(8, 10))}. ${escapeHtml(job.client)}</strong>
+                <span>${escapeHtml(job.technician)}</span>
+              </button>
+            `).join("")}
+          </div>
+        `;
+      }).join("");
+      bindCalendarSelection();
+    }
+
+    function renderDetail() {
+      const job = selectedJob();
+      $("#detailBody").innerHTML = `
+        <div class="detail-title">
+          <div>
+            <h2>${escapeHtml(job.client)}</h2>
+            <div class="job-meta">${escapeHtml(job.id)} · ${escapeHtml(job.address)}</div>
+          </div>
+          <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+        </div>
+        <div class="kv"><span>Viitenumber</span><strong>${escapeHtml(job.referenceNo || "puudub")}</strong></div>
+        <div class="kv"><span>Hooneosa</span><strong>${escapeHtml(job.buildingPart || "määramata")}</strong></div>
+        <div class="kv"><span>Seade</span><strong>${escapeHtml(job.asset || "sidumata")}</strong></div>
+        <div class="kv"><span>SLA</span><strong>${escapeHtml(slaText(job))}</strong></div>
+        <div class="kv"><span>Korduvus</span><strong>${escapeHtml(job.recurrence || "Ühekordne")}</strong></div>
+        <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}</strong></div>
+        <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(job.time)}</strong></div>
+        <div class="kv"><span>Kontakt</span><strong>${escapeHtml(job.contact)} · ${escapeHtml(job.phone)}</strong></div>
+        <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
+        <p class="section-title">Tellimus</p>
+        <div class="mobile-card">${escapeHtml(job.description)}</div>
+        <p class="section-title">Täitmine</p>
+        <div class="kv"><span>Tööaeg</span><strong>${escapeHtml(effectiveWorkTime(job) || "täitmata")}</strong></div>
+        <div class="kv"><span>Transpordi aeg</span><strong>${escapeHtml(job.travelTime || "täitmata")}</strong></div>
+        <div class="kv"><span>Materjalid</span><strong>${escapeHtml(job.materials || "täitmata")}</strong></div>
+        <div class="mobile-card">${escapeHtml(job.workDone || "Tehtud töö kirjeldus on veel lisamata.")}</div>
+        <p class="section-title">Fotod</p>
+        <div class="photo-strip">${photoTiles(job)}</div>
+        <p class="section-title">Ajakulu lõigud</p>
+        ${renderTimeLog(job)}
+        <p class="section-title">Tegevused</p>
+        <div class="mobile-actions">
+          <button class="btn" data-status="töös"><span class="icon">▶</span> Alusta</button>
+          <button class="btn" data-status="pausil"><span class="icon">Ⅱ</span> Pausile</button>
+          <button class="btn" data-status="täidetud"><span class="icon">✓</span> Lõpeta töökäsk</button>
+          <button class="btn primary" id="generateActBtn"><span class="icon">▣</span> Genereeri akt</button>
+          <button class="btn ghost" id="remoteFillBtn"><span class="icon">✎</span> Lisa täitmise info</button>
+        </div>
+      `;
+      $$("[data-status]").forEach(btn => btn.addEventListener("click", () => {
+        if (btn.dataset.status === "täidetud") {
+          completeSelectedJob();
+        } else {
+          updateStatus(btn.dataset.status);
+        }
+      }));
+      $("#generateActBtn").addEventListener("click", openAct);
+      $("#remoteFillBtn").addEventListener("click", () => openJobModal(job.id));
+    }
+
+    function renderMobile() {
+      const tech = $("#mobileTech").value || technicians()[0];
+      const techJobs = jobs.filter(job => job.technician === tech && ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status));
+      $("#mobileJobs").innerHTML = techJobs.map(job => `
+        <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
+          <span class="job-time"><span>${escapeHtml(job.date)} ${escapeHtml(job.time)}</span><span>${escapeHtml(job.id)}</span></span>
+          <span class="job-title">${escapeHtml(job.client)}</span>
+          ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
+          <span class="job-meta">${escapeHtml(job.address)}</span>
+          ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
+          <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+        </button>
+      `).join("") || `<div class="detail-body"><div class="mobile-card">Sellel tehnikul ei ole aktiivseid töid.</div></div>`;
+
+      $$("#mobileJobs [data-mobile-job]").forEach(card => {
+        card.addEventListener("click", () => {
+          selectedId = card.dataset.mobileJob;
+          detailJobId = selectedId;
+          setDetailCollapsed(false);
+          renderAll();
+        });
+      });
+
+      const job = selectedJob();
+      $("#quickFill").innerHTML = `
+        <div class="mobile-card">
+          <strong>${escapeHtml(job.client)}</strong>
+          ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
+          <span class="job-meta">${escapeHtml(job.address)}</span>
+          ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
+          <span class="job-meta">${escapeHtml(job.description)}</span>
+        </div>
+        <div class="mobile-actions">
+          <button class="btn" data-mobile-status="töös"><span class="icon">▶</span> Alusta töö</button>
+          <button class="btn" data-mobile-status="pausil"><span class="icon">Ⅱ</span> Pane pausile</button>
+          <button class="btn primary" id="mobileFillBtn"><span class="icon">✓</span> Täida töökäsk</button>
+          <button class="btn" id="mobileCompleteBtn"><span class="icon">✓</span> Lõpeta töökäsk</button>
+          <button class="btn ghost" id="mobileActBtn"><span class="icon">▣</span> Akt</button>
+        </div>
+      `;
+      $$("[data-mobile-status]").forEach(btn => btn.addEventListener("click", () => {
+        if (btn.dataset.mobileStatus === "täidetud") {
+          completeSelectedJob();
+        } else {
+          updateStatus(btn.dataset.mobileStatus);
+        }
+      }));
+      $("#mobileFillBtn").addEventListener("click", () => openJobModal(job.id));
+      $("#mobileCompleteBtn").addEventListener("click", completeSelectedJob);
+      $("#mobileActBtn").addEventListener("click", openAct);
+    }
+
+    function renderActs() {
+      const tech = $("#actsTechFilter").value;
+      const date = $("#actsDateFilter").value;
+      const buildingPart = $("#actsBuildingPartFilter").value.trim().toLowerCase();
+      const address = $("#actsAddressFilter").value.trim().toLowerCase();
+      const visibleActs = jobs.filter(job => {
+        if (!["täidetud", "akt", "saadetud"].includes(job.status)) return false;
+        if (tech !== "all" && job.technician !== tech) return false;
+        if (date && job.date !== date) return false;
+        if (buildingPart && !String(job.buildingPart || "").toLowerCase().includes(buildingPart)) return false;
+        if (address && !String(job.address || "").toLowerCase().includes(address)) return false;
+        return true;
+      });
+      const groups = visibleActs.reduce((acc, job) => {
+        if (!acc[job.client]) acc[job.client] = [];
+        acc[job.client].push(job);
+        return acc;
+      }, {});
+
+      $("#actsList").innerHTML = Object.keys(groups).sort().map(client => `
+        <div class="mobile-card">
+          <div class="detail-title">
+            <div>
+              <h2>${escapeHtml(client)}</h2>
+              <div class="job-meta">${groups[client].length} akti</div>
+            </div>
+          </div>
+          <div class="timeline">
+            ${groups[client].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)).map(job => `
+              <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-act-job="${job.id}">
+                <span class="job-time"><span>${escapeHtml(job.id)} · ${escapeHtml(job.date)}</span><span>${escapeHtml(job.technician)}</span></span>
+                <span class="job-title">${escapeHtml(job.address)}</span>
+                ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
+                ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
+                <span class="job-meta">${escapeHtml(job.workDone || "Akti andmed vajavad täiendamist")}</span>
+                <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+                <div class="mobile-actions">
+                  <button class="btn primary" data-open-act="${job.id}"><span class="icon">▣</span> Ava akt</button>
+                  <button class="btn ghost" data-edit-act-job="${job.id}"><span class="icon">✎</span> Muuda</button>
+                </div>
+              </div>
+            `).join("")}
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Filtritele vastavaid akte ei leitud.</div>`;
+      $$("#actsList [data-open-act]").forEach(btn => btn.addEventListener("click", () => {
+        selectedId = btn.dataset.openAct;
+        renderAll();
+        openAct();
+      }));
+      $$("#actsList [data-edit-act-job]").forEach(btn => btn.addEventListener("click", () => {
+        selectedId = btn.dataset.editActJob;
+        openJobModal(selectedId);
+      }));
+    }
+
+    function renderPeople() {
+      const filter = $("#peopleStatusFilter").value;
+      const visiblePeople = people.filter(person => {
+        if (filter === "active") return person.active;
+        if (filter === "inactive") return !person.active;
+        return true;
+      });
+      $("#peopleGrid").innerHTML = visiblePeople.map(person => `
+        <div class="person-card">
+          <div class="person-top">
+            <div>
+              <h3>${escapeHtml(person.name)}</h3>
+              <div class="job-meta">${escapeHtml(person.role)} · ${escapeHtml(person.region || "piirkond määramata")}</div>
+            </div>
+            <span class="status ${person.active ? "täidetud" : "ootel"}">${person.active ? "Aktiivne" : "Deaktiveeritud"}</span>
+          </div>
+          <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
+          <div class="kv"><span>E-post</span><strong>${escapeHtml(person.email || "-")}</strong></div>
+          <div class="kv"><span>Oskused</span><strong>${escapeHtml(person.skills || "-")}</strong></div>
+          <div class="person-actions">
+            <button class="btn" data-edit-person="${person.id}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn" data-toggle-person="${person.id}"><span class="icon">${person.active ? "Ⅱ" : "▶"}</span> ${person.active ? "Deaktiveeri" : "Aktiveeri"}</button>
+            <button class="btn" data-event-person="${person.id}"><span class="icon">＋</span> Puudumine</button>
+            <button class="btn ghost" data-delete-person="${person.id}"><span class="icon">×</span> Kustuta</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Kasutajaid ei leitud.</div>`;
+
+      $("#peopleEvents").innerHTML = peopleEvents
+        .slice()
+        .sort((a, b) => a.start.localeCompare(b.start))
+        .map(event => `
+          <div class="event-row">
+            <strong>${escapeHtml(personName(event.personId))} · ${escapeHtml(event.type)}</strong>
+            <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
+            <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+          </div>
+        `).join("") || `<div class="mobile-card">Puudumisi ega tähtpäevi ei ole sisestatud.</div>`;
+
+      $$("[data-edit-person]").forEach(btn => btn.addEventListener("click", () => openPersonModal(btn.dataset.editPerson)));
+      $$("[data-toggle-person]").forEach(btn => btn.addEventListener("click", () => togglePerson(btn.dataset.togglePerson)));
+      $$("[data-event-person]").forEach(btn => btn.addEventListener("click", () => openEventModal(btn.dataset.eventPerson)));
+      $$("[data-delete-person]").forEach(btn => btn.addEventListener("click", () => deletePerson(btn.dataset.deletePerson)));
+    }
+
+    function renderVacations() {
+      const type = $("#vacationTypeFilter").value;
+      const visibleEvents = peopleEvents
+        .filter(event => type === "all" || event.type === type)
+        .sort((a, b) => a.start.localeCompare(b.start));
+
+      $("#vacationGrid").innerHTML = people.map(person => {
+        const events = visibleEvents.filter(event => event.personId === person.id);
+        return `
+          <div class="person-card">
+            <div class="person-top">
+              <div>
+                <h3>${escapeHtml(person.name)}</h3>
+                <div class="job-meta">${escapeHtml(person.role)} · ${escapeHtml(person.region || "-")}</div>
+              </div>
+              <span class="status ${events.length ? "ootel" : "täidetud"}">${events.length ? `${events.length} kirjet` : "Saadaval"}</span>
+            </div>
+            <div class="timeline">
+              ${events.map(event => `
+                <div class="event-row">
+                  <strong>${escapeHtml(event.type)}</strong>
+                  <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
+                  <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+                </div>
+              `).join("") || `<div class="mobile-card">Puudumisi ei ole.</div>`}
+            </div>
+          </div>
+        `;
+      }).join("");
+
+      $("#vacationTimeline").innerHTML = visibleEvents.map(event => `
+        <div class="event-row">
+          <strong>${escapeHtml(personName(event.personId))} · ${escapeHtml(event.type)}</strong>
+          <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
+          <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+        </div>
+      `).join("") || `<div class="mobile-card">Valitud filtriga puudumisi ei ole.</div>`;
+    }
+
+    function renderClients() {
+      const filter = $("#clientStatusFilter").value;
+      const query = $("#clientSearchField").value.trim().toLowerCase();
+      const visibleClients = clients.filter(client => {
+        if (filter === "active" && !client.active) return false;
+        if (filter === "inactive" && client.active) return false;
+        const haystack = `${client.name} ${client.regNo} ${client.contact} ${client.phone} ${client.email}`.toLowerCase();
+        return haystack.includes(query);
+      });
+
+      $("#clientsGrid").innerHTML = visibleClients.map(client => `
+        <div class="person-card ${client.id === selectedClientId ? "selected" : ""}">
+          <div class="person-top">
+            <div>
+              <h3>${escapeHtml(client.name)}</h3>
+              <div class="job-meta">${escapeHtml(client.regNo || "registrikood puudub")} · ${escapeHtml(client.contact || "kontakt puudub")}</div>
+            </div>
+            <span class="status ${client.active ? "täidetud" : "ootel"}">${client.active ? "Aktiivne" : "Deaktiveeritud"}</span>
+          </div>
+          <div class="kv"><span>Telefon</span><strong>${escapeHtml(client.phone || "-")}</strong></div>
+          <div class="kv"><span>E-post</span><strong>${escapeHtml(client.email || "-")}</strong></div>
+          <div class="kv"><span>Objekte</span><strong>${client.items.filter(item => item.type === "object").length}</strong></div>
+          <div class="person-actions">
+            <button class="btn" data-select-client="${client.id}"><span class="icon">▣</span> Ava</button>
+            <button class="btn" data-edit-client="${client.id}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn" data-toggle-client="${client.id}"><span class="icon">${client.active ? "Ⅱ" : "▶"}</span> ${client.active ? "Deaktiveeri" : "Aktiveeri"}</button>
+            <button class="btn ghost" data-delete-client="${client.id}"><span class="icon">×</span> Kustuta</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Kliente ei leitud.</div>`;
+
+      const client = selectedClient();
+      $("#clientDetail").innerHTML = client ? `
+        <div class="detail-title">
+          <div>
+            <h2>${escapeHtml(client.name)}</h2>
+            <div class="job-meta">${escapeHtml(client.regNo || "registrikood puudub")} · ${escapeHtml(client.ezefsClientId || "EZEFSi viide puudub")}</div>
+          </div>
+          <span class="status ${client.active ? "täidetud" : "ootel"}">${client.active ? "Aktiivne" : "Deaktiveeritud"}</span>
+        </div>
+        <div class="kv"><span>Kontakt</span><strong>${escapeHtml(client.contact || "-")}</strong></div>
+        <div class="kv"><span>Telefon</span><strong>${escapeHtml(client.phone || "-")}</strong></div>
+        <div class="kv"><span>E-post</span><strong>${escapeHtml(client.email || "-")}</strong></div>
+        <div class="kv"><span>Arve e-post</span><strong>${escapeHtml(client.invoiceEmail || "-")}</strong></div>
+        <p class="section-title">Objektid</p>
+        <div class="timeline">
+          ${client.items.filter(item => item.type === "object").map(item => `
+            <div class="event-row">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.detail || "-")}</span>
+              <span class="job-meta">${escapeHtml(item.note || "Märkus puudub")}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Objekte ei ole lisatud.</div>`}
+        </div>
+        <p class="section-title">Seadmed</p>
+        <div class="timeline">
+          ${client.items.filter(item => item.type === "device").map(item => `
+            <div class="event-row">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.detail || "-")}</span>
+              <span class="job-meta">${escapeHtml(item.note || "Märkus puudub")}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Seadmeid ei ole lisatud.</div>`}
+        </div>
+        <p class="section-title">Kontaktisikud</p>
+        <div class="timeline">
+          ${client.items.filter(item => item.type === "contact").map(item => `
+            <div class="event-row">
+              <strong>${escapeHtml(item.name)}</strong>
+              <span>${escapeHtml(item.detail || "-")} · ${escapeHtml(item.phone || "-")}</span>
+              <span class="job-meta">${escapeHtml(item.email || "")}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Kontaktisikuid ei ole lisatud.</div>`}
+        </div>
+        <p class="section-title">Tööde ajalugu</p>
+        <div class="timeline">
+          ${jobs.filter(job => job.client === client.name).sort((a, b) => b.date.localeCompare(a.date)).map(job => `
+            <div class="event-row">
+              <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)} · ${escapeHtml(statusLabels[job.status])}</strong>
+              <span>${escapeHtml(job.address)}${job.asset ? ` · ${escapeHtml(job.asset)}` : ""}</span>
+              <span class="job-meta">${escapeHtml(job.description)}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Tööde ajalugu puudub.</div>`}
+        </div>
+      ` : `<div class="mobile-card">Vali klient.</div>`;
+
+      $$("[data-select-client]").forEach(btn => btn.addEventListener("click", () => { selectedClientId = btn.dataset.selectClient; renderAll(); }));
+      $$("[data-edit-client]").forEach(btn => btn.addEventListener("click", () => openClientModal(btn.dataset.editClient)));
+      $$("[data-toggle-client]").forEach(btn => btn.addEventListener("click", () => toggleClient(btn.dataset.toggleClient)));
+      $$("[data-delete-client]").forEach(btn => btn.addEventListener("click", () => deleteClient(btn.dataset.deleteClient)));
+    }
+
+    function objectJobs(object) {
+      if (!object) return [];
+      return jobs.filter(job => job.client === object.clientName && job.address === object.address);
+    }
+
+    function renderObjects() {
+      const query = $("#objectSearchField").value.trim().toLowerCase();
+      const visibleObjects = allObjects().filter(object => {
+        const haystack = `${object.clientName} ${object.name} ${object.address} ${object.note}`.toLowerCase();
+        return haystack.includes(query);
+      });
+
+      $("#objectsGrid").innerHTML = visibleObjects.map(object => {
+        const active = objectJobs(object).filter(job => ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status));
+        const waiting = objectJobs(object).filter(job => job.status === "ootel");
+        return `
+          <button class="person-card ${object.key === selectedObjectKey ? "selected" : ""}" data-select-object="${object.key}">
+            <div class="person-top">
+              <div>
+                <h3>${escapeHtml(object.name)}</h3>
+                <div class="job-meta">${escapeHtml(object.clientName)} · ${escapeHtml(object.address)}</div>
+              </div>
+              <span class="status ${waiting.length ? "ootel" : "planeeritud"}">${waiting.length ? `${waiting.length} ootel` : `${active.length} aktiivset`}</span>
+            </div>
+            <div class="kv"><span>Planeeritud</span><strong>${active.filter(job => job.status === "planeeritud").length}</strong></div>
+            <div class="kv"><span>Töös</span><strong>${active.filter(job => job.status === "töös" || job.status === "pausil").length}</strong></div>
+            <div class="kv"><span>Kõik tööd</span><strong>${objectJobs(object).length}</strong></div>
+            <span class="btn primary"><span class="icon">▣</span> Ava objekt</span>
+          </button>
+        `;
+      }).join("") || `<div class="mobile-card">Objekte ei leitud.</div>`;
+
+      const object = selectedObject();
+      const client = clients.find(item => item.id === object?.clientId);
+      const statusFilter = $("#objectStatusFilter").value;
+      const jobsForObject = object ? objectJobs(object).filter(job => {
+        if (statusFilter === "waiting") return job.status === "ootel";
+        if (statusFilter === "active") return ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status);
+        return true;
+      }) : [];
+      const devices = client?.items.filter(item => item.type === "device" && (!item.detail || object?.address.includes(item.detail) || object?.name.includes(item.detail))) || [];
+
+      $("#objectDetail").innerHTML = object ? `
+        <div class="detail-title">
+          <div>
+            <h2>${escapeHtml(object.name)}</h2>
+            <div class="job-meta">${escapeHtml(object.clientName)} · ${escapeHtml(object.address)}</div>
+          </div>
+        </div>
+        <div class="kv"><span>Märkus</span><strong>${escapeHtml(object.note || "-")}</strong></div>
+        <div class="kv"><span>Kontakt</span><strong>${escapeHtml(client?.contact || "-")} · ${escapeHtml(client?.phone || "-")}</strong></div>
+        <p class="section-title">Planeeritud ja ootel tööd</p>
+        <div class="timeline">
+          ${jobsForObject.map(job => `
+            <div class="event-row">
+              <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(statusLabels[job.status])}</strong>
+              <span>${escapeHtml(job.technician)} · ${escapeHtml(job.asset || job.buildingPart || "-")}</span>
+              <span class="job-meta">${escapeHtml(job.description)}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Selle filtriga töid ei ole.</div>`}
+        </div>
+        <p class="section-title">Seadmed</p>
+        <div class="timeline">
+          ${devices.map(device => `
+            <div class="event-row">
+              <strong>${escapeHtml(device.name)}</strong>
+              <span>${escapeHtml(device.detail || "-")}</span>
+              <span class="job-meta">${escapeHtml(device.note || "Märkus puudub")}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Seadmeid ei ole seotud.</div>`}
+        </div>
+        <p class="section-title">Viimased tehtud tööd</p>
+        <div class="timeline">
+          ${objectJobs(object).filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).slice(0, 5).map(job => `
+            <div class="event-row">
+              <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)}</strong>
+              <span>${escapeHtml(job.workDone || job.description)}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Tehtud tööde ajalugu puudub.</div>`}
+        </div>
+      ` : `<div class="mobile-card">Vali objekt.</div>`;
+
+      $$("[data-select-object]").forEach(btn => btn.addEventListener("click", () => {
+        selectedObjectKey = btn.dataset.selectObject;
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+    }
+
+    function renderAi() {
+      const candidates = jobs
+        .filter(job => !["täidetud", "akt", "saadetud"].includes(job.status))
+        .map(job => ({ job, score: priorityScore(job) }))
+        .sort((a, b) => b.score - a.score);
+
+      $("#aiSuggestions").innerHTML = candidates.map(({ job, score }) => `
+        <div class="person-card">
+          <div class="person-top">
+            <div>
+              <h3>${escapeHtml(job.client)}</h3>
+              <div class="job-meta">${escapeHtml(job.id)} · ${escapeHtml(job.address)}</div>
+            </div>
+            <span class="ai-score">${score}</span>
+          </div>
+          <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
+          <div class="kv"><span>SLA</span><strong>${escapeHtml(slaText(job))}</strong></div>
+          <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}${isPersonUnavailable(job.technician, job.date) ? " · puudub" : ""}</strong></div>
+          <div class="mobile-card">${escapeHtml(aiReason(job))}</div>
+          <div class="person-actions">
+            <button class="btn primary" data-ai-open="${job.id}"><span class="icon">▣</span> Ava</button>
+            <button class="btn" data-ai-prioritize="${job.id}"><span class="icon">✦</span> Tõsta ette</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">AI soovitusi ei ole.</div>`;
+
+      $("#notificationsList").innerHTML = notifications().map(item => `
+        <div class="event-row">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${escapeHtml(item.body)}</span>
+          <span class="job-meta">${escapeHtml(item.kind)}</span>
+        </div>
+      `).join("") || `<div class="mobile-card">Teavitusi ei ole.</div>`;
+
+      $$("[data-ai-open]").forEach(btn => btn.addEventListener("click", () => {
+        selectedId = btn.dataset.aiOpen;
+        detailJobId = selectedId;
+        switchView("calendar");
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+      $$("[data-ai-prioritize]").forEach(btn => btn.addEventListener("click", () => {
+        prioritizeJob(btn.dataset.aiPrioritize);
+      }));
+    }
+
+    function aiReason(job) {
+      const reasons = [];
+      if (job.priority === "Kõrge") reasons.push("kõrge prioriteet");
+      if (slaText(job) === "SLA risk") reasons.push("SLA risk");
+      if (isPersonUnavailable(job.technician, job.date)) reasons.push("tehnik pole saadaval");
+      if (!reasons.length) reasons.push("töö sobib planeeritud järjekorda");
+      return `Soovitus: ${reasons.join(", ")}.`;
+    }
+
+    function notifications() {
+      const items = [];
+      jobs.forEach(job => {
+        if (job.priority === "Kõrge" && !["täidetud", "akt", "saadetud"].includes(job.status)) {
+          items.push({ kind: "Prioriteet", title: `${job.id} vajab tähelepanu`, body: `${job.client}, ${job.address}` });
+        }
+        if (slaText(job) === "SLA risk") {
+          items.push({ kind: "SLA", title: `${job.id} võib hilineda`, body: `Tähtaeg ${formatDateTime(job.dueDate)}` });
+        }
+        if (isPersonUnavailable(job.technician, job.date)) {
+          items.push({ kind: "Saadavus", title: `${job.technician} puudub`, body: `${job.id} tuleks ümber planeerida.` });
+        }
+      });
+      return items;
+    }
+
+    function renderStats() {
+      $("#todayCount").textContent = jobs.filter(job => job.date === "2026-05-14").length;
+      $("#doneCount").textContent = jobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
+    }
+
+    function renderAll() {
+      fillSelects();
+      renderCalendar();
+      renderDetail();
+      renderMobile();
+      renderActs();
+      renderPeople();
+      renderVacations();
+      renderClients();
+      renderObjects();
+      renderAi();
+      renderStats();
+    }
+
+    function updateStatus(status) {
+      const job = selectedJob();
+      job.timeLogs = job.timeLogs || [];
+      const openLog = job.timeLogs.find(log => !log.end);
+      if (status === "töös" && !openLog) {
+        job.timeLogs.push({ start: nextTimestamp(), end: "" });
+      }
+      if ((status === "pausil" || status === "täidetud") && openLog) {
+        openLog.end = nextTimestamp();
+      }
+      job.status = status;
+      const minutes = totalWorkMinutes(job);
+      if (minutes) job.hours = formatMinutes(minutes);
+      if (status === "täidetud" && !job.workDone) {
+        job.workDone = "Töö teostatud, detailid täpsustada akti jaoks.";
+      }
+      renderAll();
+    }
+
+    function completeSelectedJob() {
+      const job = selectedJob();
+      const ok = window.confirm(`Kas lõpetada töökäsk ${job.id}?\n\nKinnitamisel fikseeritakse lõppaeg ja töökäsk liigub aktide vaatesse.`);
+      if (!ok) return;
+      updateStatus("täidetud");
+      detailJobId = null;
+      setDetailCollapsed(true);
+    }
+
+    function nextJobId() {
+      const max = jobs.reduce((num, job) => Math.max(num, Number(job.id.split("-")[1]) || 0), 0);
+      return `VK-${max + 1}`;
+    }
+
+    function openJobModal(id = null) {
+      editingId = id;
+      const form = $("#jobForm");
+      form.reset();
+      $("#jobModalTitle").textContent = id ? "Muuda / täida töökäsk" : "Lisa töökäsk";
+      const job = id ? jobs.find(item => item.id === id) : {
+        client: "", referenceNo: "", address: "", buildingPart: "", contact: "", phone: "", date: "2026-05-14", time: "09:00",
+        technician: technicians()[0] || "", priority: "Tavaline", status: "uus", description: "",
+        workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
+      };
+      Object.entries(job).forEach(([key, value]) => {
+        if (form.elements[key]) form.elements[key].value = value;
+      });
+      $("#jobModal").classList.add("open");
+      $("#jobModal").setAttribute("aria-hidden", "false");
+    }
+
+    function openObjectJobModal() {
+      const object = selectedObject();
+      const client = clients.find(item => item.id === object?.clientId);
+      openJobModal();
+      const form = $("#jobForm");
+      const device = client?.items.find(item => item.type === "device");
+      form.elements.client.value = object.clientName;
+      form.elements.address.value = object.address;
+      form.elements.buildingPart.value = device?.detail || "";
+      form.elements.asset.value = device?.name || "";
+      form.elements.contact.value = client?.contact || "";
+      form.elements.phone.value = client?.phone || "";
+      form.elements.description.value = `Töö objektil ${object.name}.`;
+    }
+
+    function openImportJobModal() {
+      $("#importJobForm").reset();
+      importedImageName = "";
+      $("#importImagePreview").style.display = "none";
+      $("#importImagePreview").removeAttribute("src");
+      $("#imagePasteZone").querySelector("div").style.display = "block";
+      $("#importJobModal").classList.add("open");
+      $("#importJobModal").setAttribute("aria-hidden", "false");
+      setTimeout(() => $("#imagePasteZone").focus(), 0);
+    }
+
+    function analyzeImportedImage() {
+      const form = $("#importJobForm");
+      const source = form.elements.source.value;
+      const sample = `Allikas: ${source}
+Saatja: Kinema OÜ / Andre Loikmann
+Kontakt: andre.loikmann@kinema.eu, +372 53 852 495
+Objekt: Narva maantee 30/1
+Aadress: Narva maantee 30/1
+Viide: S26003064
+Summa: 2 075,34 €
+Töö sisu: Liugväravaautomaatika parandamise ja vahetamise pakkumine.
+Prioriteet: tavaline`;
+      if (!form.elements.sourceText.value.trim()) form.elements.sourceText.value = sample;
+      form.elements.aiNote.value = importedImageName
+        ? `Pildilt ${importedImageName} tuvastati saatja, aadress, pakkumise number, summa ja töö kirjeldus. Admin peab mustandi üle kontrollima.`
+        : "Päris süsteemis käivituks siin OCR/AI pildianalüüs. Prototüübis täideti näidisandmed.";
+    }
+
+    function handleImportPaste(event) {
+      const items = Array.from(event.clipboardData?.items || []);
+      const imageItem = items.find(item => item.type.startsWith("image/"));
+      if (!imageItem) return;
+      event.preventDefault();
+      const file = imageItem.getAsFile();
+      if (!file) return;
+      importedImageName = file.name || "kleebitud-ekraanitommis.png";
+      const reader = new FileReader();
+      reader.onload = () => {
+        $("#importImagePreview").src = reader.result;
+        $("#importImagePreview").style.display = "block";
+        $("#imagePasteZone").querySelector("div").style.display = "none";
+        $("#importJobForm").elements.fileName.value = importedImageName;
+        analyzeImportedImage();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function detectClientFromText(text) {
+      const lower = text.toLowerCase();
+      return clients.find(client => lower.includes(client.name.toLowerCase())) || clients[0];
+    }
+
+    function detectAddressFromText(text, client) {
+      const object = client.items.find(item => item.type === "object" && text.toLowerCase().includes(item.detail.toLowerCase()));
+      if (object) return object.detail;
+      const match = text.match(/aadress[:\s]+([^,\n]+(?:,\s*[^,\n]+)?)/i);
+      return match ? match[1].trim() : client.items.find(item => item.type === "object")?.detail || "";
+    }
+
+    function detectReferenceFromText(text) {
+      const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|nr)[:\s-]*([A-Z0-9-]{3,})/i) || text.match(/\b(S\d{6,})\b/i);
+      return match ? match[1].trim() : "";
+    }
+
+    function detectContactFromText(text) {
+      const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
+      const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0] || "";
+      return { email, phone };
+    }
+
+    function detectDescriptionFromText(text) {
+      const match = text.match(/(?:töö sisu|kirjeldus)[:\s]+(.+)/i);
+      if (match) return match[1].trim();
+      const offer = text.match(/(liugväravaautomaatika[^.\n]+)/i);
+      return offer ? offer[1].trim() : text.slice(0, 220);
+    }
+
+    function createImportedJobDraft(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      const text = `${data.sourceText || ""} ${data.fileName || ""} ${importedImageName || ""}`;
+      const client = detectClientFromText(text);
+      const lower = text.toLowerCase();
+      const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
+      const device = client.items.find(item => item.type === "device");
+      const detectedContact = detectContactFromText(text);
+      const detectedDescription = detectDescriptionFromText(text);
+      const draft = {
+        id: nextJobId(),
+        client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
+        referenceNo: detectReferenceFromText(text),
+        address: detectAddressFromText(text, client),
+        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
+        asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
+        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
+        phone: detectedContact.phone || client.phone,
+        date: dateKey(calendarCursor),
+        time: "09:00",
+        dueDate: "",
+        slaHours: "",
+        technician: technicians()[0] || "",
+        priority,
+        recurrence: "Ühekordne",
+        status: "uus",
+        description: detectedDescription || `${data.source} ekraanitõmmisest loodud töökäsu mustand.`,
+        workDone: "",
+        materials: "",
+        hours: "",
+        travelTime: "",
+        timeLogs: [],
+        photos: data.fileName ? `allikas: ${data.fileName}` : "",
+        approvedBy: "",
+        ezefsRef: data.source
+      };
+      jobs.push(draft);
+      selectedId = draft.id;
+      detailJobId = selectedId;
+      closeModal("importJobModal");
+      openJobModal(draft.id);
+    }
+
+    function buildDraftFromText(source, sourceText, fileName = "") {
+      const text = `${sourceText || ""} ${fileName || ""}`;
+      const client = detectClientFromText(text);
+      const lower = text.toLowerCase();
+      const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
+      const device = client.items.find(item => item.type === "device");
+      const detectedContact = detectContactFromText(text);
+      const detectedDescription = detectDescriptionFromText(text);
+      return {
+        id: nextJobId(),
+        client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
+        referenceNo: detectReferenceFromText(text),
+        address: detectAddressFromText(text, client),
+        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
+        asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
+        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
+        phone: detectedContact.phone || client.phone,
+        date: dateKey(calendarCursor),
+        time: "09:00",
+        dueDate: "",
+        slaHours: "",
+        technician: technicians()[0] || "",
+        priority,
+        recurrence: "Ühekordne",
+        status: "uus",
+        description: detectedDescription || `${source} kirjast loodud töökäsu mustand.`,
+        workDone: "",
+        materials: "",
+        hours: "",
+        travelTime: "",
+        timeLogs: [],
+        photos: fileName ? `allikas: ${fileName}` : "",
+        approvedBy: "",
+        ezefsRef: source
+      };
+    }
+
+    function simulateIncomingEmail() {
+      const text = `Saatja: Kinema OÜ / Andre Loikmann
+Kontakt: andre.loikmann@kinema.eu, +372 53 852 495
+Aadress: Narva maantee 30/1
+Viide: S26003064
+Töö sisu: Liugväravaautomaatika parandamise ja vahetamise pakkumine.
+Summa: 2 075,34 €`;
+      const draft = buildDraftFromText("E-kiri", text, "Pakkumine-S26003064.pdf");
+      jobs.push(draft);
+      emailAgentDraftId = draft.id;
+      $("#emailAgentDraftSummary").innerHTML = `
+        <strong>${escapeHtml(draft.id)} · ${escapeHtml(draft.client)}</strong>
+        <span>${escapeHtml(draft.address)} · ${escapeHtml(draft.referenceNo)}</span>
+        <span class="job-meta">${escapeHtml(draft.description)}</span>
+      `;
+      $("#emailAgentModal").classList.add("open");
+      $("#emailAgentModal").setAttribute("aria-hidden", "false");
+      renderAll();
+    }
+
+    function reviewEmailDraft() {
+      if (!emailAgentDraftId) return;
+      selectedId = emailAgentDraftId;
+      detailJobId = selectedId;
+      closeModal("emailAgentModal");
+      openJobModal(selectedId);
+    }
+
+    function closeModal(id) {
+      $(`#${id}`).classList.remove("open");
+      $(`#${id}`).setAttribute("aria-hidden", "true");
+    }
+
+    function saveJob(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      if (editingId) {
+        const job = jobs.find(item => item.id === editingId);
+        Object.assign(job, data);
+        selectedId = job.id;
+        detailJobId = selectedId;
+      } else {
+        const job = { id: nextJobId(), ...data, timeLogs: [] };
+        jobs.push(job);
+        selectedId = job.id;
+        detailJobId = selectedId;
+      }
+      closeModal("jobModal");
+      renderAll();
+    }
+
+    function prioritizeJob(id) {
+      const job = jobs.find(item => item.id === id);
+      if (!job) return;
+      job.priority = "Kõrge";
+      job.date = "2026-05-14";
+      job.time = "08:00";
+      const available = technicians().find(name => !isPersonUnavailable(name, job.date));
+      if (available) job.technician = available;
+      selectedId = job.id;
+      detailJobId = selectedId;
+      switchView("calendar");
+      setDetailCollapsed(false);
+      renderAll();
+    }
+
+    function autoScheduleJobs() {
+      const slots = ["08:00", "10:00", "12:00", "14:00", "16:00"];
+      let slotIndex = 0;
+      jobs
+        .filter(job => !["täidetud", "akt", "saadetud"].includes(job.status))
+        .sort((a, b) => priorityScore(b) - priorityScore(a))
+        .forEach(job => {
+          const tech = technicians().find(name => !isPersonUnavailable(name, job.date)) || job.technician;
+          job.technician = tech;
+          job.time = slots[slotIndex % slots.length];
+          job.status = job.status === "uus" ? "planeeritud" : job.status;
+          slotIndex += 1;
+        });
+      renderAll();
+    }
+
+    function moveCalendarPeriod(direction) {
+      const mode = $("#calendarMode").value;
+      const next = new Date(calendarCursor);
+      if (mode === "week") next.setDate(next.getDate() + direction * 7);
+      if (mode === "month") next.setMonth(next.getMonth() + direction);
+      if (mode === "year") next.setFullYear(next.getFullYear() + direction);
+      calendarCursor = next;
+      renderAll();
+    }
+
+    function resetCalendarToToday() {
+      calendarCursor = new Date();
+      calendarCursor.setHours(12, 0, 0, 0);
+      $("#statusFilter").value = "all";
+      $("#searchField").value = "";
+      renderAll();
+    }
+
+    function nextPersonId() {
+      const max = people.reduce((num, person) => Math.max(num, Number(person.id.split("-")[1]) || 0), 0);
+      return `U-${String(max + 1).padStart(2, "0")}`;
+    }
+
+    function nextEventId() {
+      const max = peopleEvents.reduce((num, event) => Math.max(num, Number(event.id.split("-")[1]) || 0), 0);
+      return `EV-${String(max + 1).padStart(2, "0")}`;
+    }
+
+    function nextClientId() {
+      const max = clients.reduce((num, client) => Math.max(num, Number(client.id.split("-")[1]) || 0), 0);
+      return `C-${String(max + 1).padStart(2, "0")}`;
+    }
+
+    function nextClientItemId() {
+      const allItems = clients.flatMap(client => client.items);
+      const max = allItems.reduce((num, item) => Math.max(num, Number(item.id.split("-")[1]) || 0), 0);
+      return `CI-${String(max + 1).padStart(2, "0")}`;
+    }
+
+    function openPersonModal(id = null) {
+      editingPersonId = id;
+      const form = $("#personForm");
+      form.reset();
+      $("#personModalTitle").textContent = id ? "Muuda tehnikut" : "Lisa tehnik";
+      const person = id ? people.find(item => item.id === id) : {
+        name: "", role: "Tehnik", phone: "", email: "", region: "", skills: "", active: true
+      };
+      Object.entries(person).forEach(([key, value]) => {
+        if (form.elements[key]) form.elements[key].value = String(value);
+      });
+      $("#personModal").classList.add("open");
+      $("#personModal").setAttribute("aria-hidden", "false");
+    }
+
+    function savePerson(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      data.active = data.active === "true";
+      if (editingPersonId) {
+        const person = people.find(item => item.id === editingPersonId);
+        Object.assign(person, data);
+      } else {
+        people.push({ id: nextPersonId(), ...data });
+      }
+      closeModal("personModal");
+      renderAll();
+    }
+
+    function togglePerson(id) {
+      const person = people.find(item => item.id === id);
+      if (!person) return;
+      person.active = !person.active;
+      renderAll();
+    }
+
+    function deletePerson(id) {
+      const person = people.find(item => item.id === id);
+      if (!person) return;
+      if (jobs.some(job => job.technician === person.name)) {
+        person.active = false;
+      } else {
+        people = people.filter(item => item.id !== id);
+        peopleEvents = peopleEvents.filter(event => event.personId !== id);
+      }
+      renderAll();
+    }
+
+    function openEventModal(personId = null) {
+      const form = $("#eventForm");
+      form.reset();
+      fillSelects();
+      form.elements.personId.value = personId || people[0]?.id || "";
+      form.elements.start.value = "2026-05-14";
+      form.elements.end.value = "2026-05-14";
+      $("#eventModal").classList.add("open");
+      $("#eventModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveEvent(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      peopleEvents.push({ id: nextEventId(), ...data });
+      closeModal("eventModal");
+      renderAll();
+    }
+
+    function openClientModal(id = null) {
+      editingClientId = id;
+      const form = $("#clientForm");
+      form.reset();
+      $("#clientModalTitle").textContent = id ? "Muuda klienti" : "Lisa klient";
+      const client = id ? clients.find(item => item.id === id) : {
+        name: "", regNo: "", contact: "", phone: "", email: "", invoiceEmail: "", ezefsClientId: "", active: true, notes: ""
+      };
+      Object.entries(client).forEach(([key, value]) => {
+        if (form.elements[key]) form.elements[key].value = String(value);
+      });
+      $("#clientModal").classList.add("open");
+      $("#clientModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveClient(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      data.active = data.active === "true";
+      if (editingClientId) {
+        const client = clients.find(item => item.id === editingClientId);
+        Object.assign(client, data);
+        selectedClientId = client.id;
+      } else {
+        const client = { id: nextClientId(), ...data, items: [] };
+        clients.push(client);
+        selectedClientId = client.id;
+      }
+      closeModal("clientModal");
+      renderAll();
+    }
+
+    function toggleClient(id) {
+      const client = clients.find(item => item.id === id);
+      if (!client) return;
+      client.active = !client.active;
+      renderAll();
+    }
+
+    function deleteClient(id) {
+      const client = clients.find(item => item.id === id);
+      if (!client) return;
+      if (jobs.some(job => job.client === client.name)) {
+        client.active = false;
+      } else {
+        clients = clients.filter(item => item.id !== id);
+        selectedClientId = clients[0]?.id || "";
+      }
+      renderAll();
+    }
+
+    function openClientItemModal() {
+      const form = $("#clientItemForm");
+      form.reset();
+      fillSelects();
+      form.elements.clientId.value = selectedClientId || clients[0]?.id || "";
+      $("#clientItemModal").classList.add("open");
+      $("#clientItemModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveClientItem(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      const client = clients.find(item => item.id === data.clientId);
+      if (!client) return;
+      client.items.push({
+        id: nextClientItemId(),
+        type: data.type,
+        name: data.name,
+        detail: data.detail,
+        phone: data.phone,
+        email: data.email,
+        note: data.note
+      });
+      selectedClientId = client.id;
+      closeModal("clientItemModal");
+      renderAll();
+    }
+
+    function openClientPlanModal() {
+      const client = selectedClient();
+      if (!client) return;
+      const form = $("#clientPlanForm");
+      form.reset();
+      fillSelects();
+      const object = client.items.find(item => item.type === "object");
+      const device = client.items.find(item => item.type === "device");
+      form.elements.clientName.value = client.name;
+      form.elements.address.value = object?.detail || "";
+      form.elements.buildingPart.value = device?.detail || "";
+      form.elements.asset.value = device?.name || "";
+      form.elements.startDate.value = dateKey(calendarCursor);
+      form.elements.count.value = "1";
+      form.elements.interval.value = "1";
+      form.elements.time.value = "09:00";
+      $("#clientPlanModal").classList.add("open");
+      $("#clientPlanModal").setAttribute("aria-hidden", "false");
+    }
+
+    function addInterval(date, frequency, interval) {
+      const next = new Date(date);
+      if (frequency === "day") next.setDate(next.getDate() + interval);
+      if (frequency === "week") next.setDate(next.getDate() + interval * 7);
+      if (frequency === "month") next.setMonth(next.getMonth() + interval);
+      if (frequency === "year") next.setFullYear(next.getFullYear() + interval);
+      return next;
+    }
+
+    function recurrenceLabel(frequency, interval) {
+      const labels = { day: "päeva", week: "nädala", month: "kuu", year: "aasta" };
+      return interval === 1 ? `Iga ${labels[frequency]}` : `Iga ${interval} ${labels[frequency]} tagant`;
+    }
+
+    function saveClientPlan(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      const client = selectedClient();
+      const interval = Math.max(1, Number(data.interval) || 1);
+      const countLimit = Math.max(1, Number(data.count) || 1);
+      const endDate = data.endDate ? new Date(`${data.endDate}T12:00:00`) : null;
+      let cursor = new Date(`${data.startDate}T12:00:00`);
+      let created = 0;
+
+      while (created < countLimit && (!endDate || cursor <= endDate)) {
+        const due = new Date(cursor);
+        due.setHours(Number(data.time.slice(0, 2)) + 2, Number(data.time.slice(3, 5)), 0, 0);
+        const job = {
+          id: nextJobId(),
+          client: client.name,
+          referenceNo: `PLAAN-${created + 1}`,
+          address: data.address,
+          buildingPart: data.buildingPart,
+          asset: data.asset,
+          contact: client.contact,
+          phone: client.phone,
+          date: dateKey(cursor),
+          time: data.time,
+          dueDate: due.toISOString().slice(0, 16),
+          slaHours: "2",
+          technician: data.technician,
+          priority: data.priority,
+          recurrence: recurrenceLabel(data.frequency, interval),
+          status: "planeeritud",
+          description: data.description,
+          workDone: "",
+          materials: "",
+          hours: "",
+          travelTime: "",
+          timeLogs: [],
+          photos: "",
+          approvedBy: "",
+          ezefsRef: ""
+        };
+        jobs.push(job);
+        selectedId = job.id;
+        detailJobId = selectedId;
+        created += 1;
+        cursor = addInterval(cursor, data.frequency, interval);
+      }
+
+      calendarCursor = new Date(`${data.startDate}T12:00:00`);
+      closeModal("clientPlanModal");
+      switchView("calendar");
+      setDetailCollapsed(false);
+      renderAll();
+    }
+
+    function openAct() {
+      const job = selectedJob();
+      if (job.status === "täidetud") job.status = "akt";
+      $("#actPreview").innerHTML = `
+        <div class="act-top">
+          <div>
+            <div class="act-logo">VECO</div>
+            <div>Teostatud tööde akt</div>
+          </div>
+          <div>
+            <strong>Akt ${escapeHtml(job.id)}</strong><br>
+            Kuupäev: ${new Date().toLocaleDateString("et-EE")}<br>
+            EZEFSi viide: ${escapeHtml(job.ezefsRef || "-")}
+          </div>
+        </div>
+        <div class="act-grid">
+          <div class="act-box"><span>Klient</span><strong>${escapeHtml(job.client)}</strong></div>
+          <div class="act-box"><span>Kliendi/projekti viide</span><strong>${escapeHtml(job.referenceNo || "-")}</strong></div>
+          <div class="act-box"><span>Objekt</span><strong>${escapeHtml(job.address)}</strong></div>
+          <div class="act-box"><span>Hooneosa</span><strong>${escapeHtml(job.buildingPart || "-")}</strong></div>
+          <div class="act-box"><span>Seade</span><strong>${escapeHtml(job.asset || "-")}</strong></div>
+          <div class="act-box"><span>Kontakt</span><strong>${escapeHtml(job.contact)} ${escapeHtml(job.phone)}</strong></div>
+          <div class="act-box"><span>Tehnik</span><strong>${escapeHtml(job.technician)}</strong></div>
+          <div class="act-box"><span>Töö aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(effectiveWorkTime(job) || "-")}</strong></div>
+          <div class="act-box"><span>Transpordi aeg</span><strong>${escapeHtml(job.travelTime || "-")}</strong></div>
+          <div class="act-box"><span>Staatus</span><strong>${statusLabels[job.status]}</strong></div>
+        </div>
+        <div class="act-box"><span>Tellitud töö</span>${escapeHtml(job.description)}</div>
+        <br>
+        <div class="act-box"><span>Tehtud töö</span>${escapeHtml(job.workDone || "-")}</div>
+        <br>
+        <div class="act-box"><span>Ajakulu lõigud</span>${renderTimeLog(job)}</div>
+        <br>
+        <div class="act-box"><span>Fotod / tõendusmaterjal</span><div class="photo-strip">${photoTiles(job)}</div></div>
+        <br>
+        <div class="act-box"><span>Kasutatud materjalid</span>${escapeHtml(job.materials || "-")}</div>
+        <div class="signature-row">
+          <div class="signature">VECO esindaja: ${escapeHtml(job.technician)}</div>
+          <div class="signature">Kliendi esindaja: ${escapeHtml(job.approvedBy || "-")}</div>
+        </div>
+      `;
+      $("#actModal").classList.add("open");
+      $("#actModal").setAttribute("aria-hidden", "false");
+      renderAll();
+    }
+
+    function switchView(name) {
+      ["calendar", "mobile", "people", "vacations", "clients", "objects", "acts", "ai", "ezefs"].forEach(view => {
+        $(`#${view}View`).classList.toggle("hidden", view !== name);
+      });
+      $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === name));
+    }
+
+    function toggleSidebar() {
+      const collapsed = $("#appShell").classList.toggle("sidebar-collapsed");
+      $("#toggleSidebarBtn").innerHTML = collapsed
+        ? `<span class="icon">☰</span> Näita menüüd`
+        : `<span class="icon">☰</span> Peida menüü`;
+    }
+
+    function toggleDetail() {
+      const collapsed = !$("#calendarView").classList.contains("detail-collapsed");
+      setDetailCollapsed(collapsed);
+    }
+
+    function setDetailCollapsed(collapsed) {
+      const views = ["#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
+      views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
+      $("#toggleDetailBtn").innerHTML = collapsed
+        ? `<span class="icon">▣</span> Näita detaili`
+        : `<span class="icon">▣</span> Peida detail`;
+    }
+
+    fillSelects();
+    setDetailCollapsed(true);
+    renderAll();
+
+    $("#newJobBtn").addEventListener("click", () => openJobModal());
+    $("#newPersonBtn").addEventListener("click", () => openPersonModal());
+    $("#newEventBtn").addEventListener("click", () => openEventModal());
+    $("#newVacationEventBtn").addEventListener("click", () => openEventModal());
+    $("#newClientBtn").addEventListener("click", () => openClientModal());
+    $("#newClientItemBtn").addEventListener("click", openClientItemModal);
+    $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
+    $("#newObjectJobBtn").addEventListener("click", openObjectJobModal);
+    $("#importJobBtn").addEventListener("click", openImportJobModal);
+    $("#simulateEmailBtn").addEventListener("click", simulateIncomingEmail);
+    $("#reviewEmailDraftBtn").addEventListener("click", reviewEmailDraft);
+    $("#imagePasteZone").addEventListener("paste", handleImportPaste);
+    $("#analyzeImportImageBtn").addEventListener("click", analyzeImportedImage);
+    $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
+    $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
+    $("#toggleDetailBtn").addEventListener("click", toggleDetail);
+    $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
+    $("#jobForm").addEventListener("submit", saveJob);
+    $("#importJobForm").addEventListener("submit", createImportedJobDraft);
+    $("#personForm").addEventListener("submit", savePerson);
+    $("#eventForm").addEventListener("submit", saveEvent);
+    $("#clientForm").addEventListener("submit", saveClient);
+    $("#clientItemForm").addEventListener("submit", saveClientItem);
+    $("#clientPlanForm").addEventListener("submit", saveClientPlan);
+    if ($("#openActBtn")) $("#openActBtn").addEventListener("click", openAct);
+    $("#printActBtn").addEventListener("click", () => window.print());
+    $("#printActSideBtn").addEventListener("click", openAct);
+    $("#markSentBtn").addEventListener("click", () => { updateStatus("saadetud"); closeModal("actModal"); });
+    $("#todayBtn").addEventListener("click", resetCalendarToToday);
+    $("#prevPeriodBtn").addEventListener("click", () => moveCalendarPeriod(-1));
+    $("#nextPeriodBtn").addEventListener("click", () => moveCalendarPeriod(1));
+    $("#technicianFilter").addEventListener("change", renderAll);
+    $("#calendarMode").addEventListener("change", renderAll);
+    $("#statusFilter").addEventListener("change", renderAll);
+    $("#actsTechFilter").addEventListener("change", renderAll);
+    $("#actsDateFilter").addEventListener("change", renderAll);
+    $("#actsBuildingPartFilter").addEventListener("input", renderAll);
+    $("#actsAddressFilter").addEventListener("input", renderAll);
+    $("#clearActsFiltersBtn").addEventListener("click", () => {
+      $("#actsTechFilter").value = "all";
+      $("#actsDateFilter").value = "";
+      $("#actsBuildingPartFilter").value = "";
+      $("#actsAddressFilter").value = "";
+      renderAll();
+    });
+    $("#peopleStatusFilter").addEventListener("change", renderAll);
+    $("#vacationTypeFilter").addEventListener("change", renderAll);
+    $("#clientStatusFilter").addEventListener("change", renderAll);
+    $("#clientSearchField").addEventListener("input", renderAll);
+    $("#objectSearchField").addEventListener("input", renderAll);
+    $("#objectStatusFilter").addEventListener("change", renderAll);
+    $("#searchField").addEventListener("input", renderAll);
+    $("#mobileTech").addEventListener("change", renderAll);
+    $$(".nav button").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+    $$("[data-close]").forEach(btn => btn.addEventListener("click", () => closeModal(btn.dataset.close)));
+    $$(".modal").forEach(modal => modal.addEventListener("click", event => {
+      if (event.target === modal) closeModal(modal.id);
+    }));
+  </script>
+</body>
+</html>
