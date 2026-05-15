@@ -820,6 +820,7 @@
         </div>
       </div>
       <nav class="nav" aria-label="Põhivaated">
+        <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
@@ -833,6 +834,7 @@
       <div class="side-stats">
         <div class="side-stat"><span>Tänased tööd</span><strong id="todayCount">0</strong></div>
         <div class="side-stat"><span>Täidetud</span><strong id="doneCount">0</strong></div>
+        <div class="side-stat"><span>Piloot</span><strong style="font-size:13px;">salvestub brauserisse</strong></div>
       </div>
     </aside>
 
@@ -849,9 +851,94 @@
           </select>
           <button class="btn ghost" id="todayBtn"><span class="icon">⌖</span> Täna</button>
           <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+          <button class="btn" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
+          <label class="btn" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
+          <input id="importDataFile" type="file" accept="application/json" class="hidden">
           <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
         </div>
       </header>
+
+      <section class="content hidden" id="pilotView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Piloodi MVP ulatus</h2>
+            <div class="filters">
+              <button class="btn ghost" id="resetDemoBtn"><span class="icon">↺</span> Taasta demoandmed</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid">
+              <div class="mobile-card">
+                <strong>1. Piloodi ulatus</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Üks hooldusjuht/admin ja üks tehnik saavad testida tööde lisamist, planeerimist, täitmist ja akti loomist.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>2. Töökäsud</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Lisa, muuda, alusta, pane pausile, jätka, lõpeta ning salvesta tehtud töö info, viide ja transpordi aeg.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>3. Kalender ja planeerimine</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Nädala, kuu ja aasta vaade, ajas edasi-tagasi liikumine ning tehniku ja staatuse filtrid.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>4. Objektid ja seadmed</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Objektivaade näitab planeeritud, ootel ja tehtud töid ning seotud seadmeid.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>5. Tehnikud ja puudumised</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Tehnikuid saab lisada, muuta, aktiveerida/deaktiveerida ning märkida puhkused ja haigestumised.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>6. Aktid ja PDF</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Lõpetatud töökäsust saab akti eelvaate ning selle saab brauserist PDF-iks printida.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>7. Import ja AI mustand</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">E-kirja või ekraanitõmmise põhjal saab luua adminile ülevaatamiseks töökäsu mustandi.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>8. Liidestused</strong>
+                <span class="status ootel">N</span>
+                <span class="job-meta">EZEFSi, Works, Alldevice ja Granlund jäävad MVP-st välja. Hoiame andmeväljad valmis, aga automaatset ühendust ei ehita veel.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>9. Kasutajad ja õigused</strong>
+                <span class="status ootel">N</span>
+                <span class="job-meta">Piloodis ei ole sisselogimist ega rollipõhiseid õigusi. See sobib katsetamiseks, mitte veel päris mitme kasutaja tööks.</span>
+              </div>
+              <div class="mobile-card">
+                <strong>10. Tehniline otsus</strong>
+                <span class="status täidetud">Y</span>
+                <span class="job-meta">Praegune GitHub Pages versioon salvestab andmed brauserisse. Jagamiseks kasuta Varukoopia ja Taasta nuppe.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head"><h2>Piloodi töökorraldus</h2></div>
+          <div class="detail-body">
+            <div class="mobile-card">
+              <strong>Soovitus esimeseks nädalaks</strong>
+              <span class="job-meta">Sisestage 5-10 päris töökäsku, las tehnik märgib objektil alguse, pausi/lõpu ja tehtud töö kirjelduse. Päeva lõpus kontrollige aktide vaadet.</span>
+            </div>
+            <div class="mobile-card">
+              <strong>Andmete jagamine</strong>
+              <span class="job-meta">Kui admin ja tehnik kasutavad eri arvuteid, siis praeguses MVP-s ei sünkroniseeru andmed automaatselt. Selleks on järgmine samm ühine andmebaas.</span>
+            </div>
+            <div class="mobile-card">
+              <strong>Otsus pärast pilooti</strong>
+              <span class="job-meta">Kui töövoog sobib, ehitame järgmises etapis sisselogimise, ühise andmebaasi ja päris AI/OCR impordi.</span>
+            </div>
+          </div>
+        </aside>
+      </section>
 
       <section class="content" id="calendarView">
         <div class="panel">
@@ -1495,6 +1582,14 @@
     let detailJobId = null;
     let importedImageName = "";
     let emailAgentDraftId = null;
+    const STORAGE_KEY = "vecoPilotDataV1";
+
+    const demoData = {
+      people: JSON.parse(JSON.stringify(people)),
+      peopleEvents: JSON.parse(JSON.stringify(peopleEvents)),
+      clients: JSON.parse(JSON.stringify(clients)),
+      jobs: JSON.parse(JSON.stringify(jobs))
+    };
 
     const statusLabels = {
       uus: "Uus",
@@ -2174,7 +2269,7 @@
         if (statusFilter === "active") return ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status);
         return true;
       }) : [];
-      const devices = client?.items.filter(item => item.type === "device" && (!item.detail || object?.address.includes(item.detail) || object?.name.includes(item.detail))) || [];
+      const devices = client?.items.filter(item => item.type === "device") || [];
 
       $("#objectDetail").innerHTML = object ? `
         <div class="detail-title">
@@ -2341,6 +2436,69 @@
       $("#doneCount").textContent = jobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
     }
 
+    function savePilotData() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ people, peopleEvents, clients, jobs }));
+    }
+
+    function loadPilotData() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return;
+      try {
+        const data = JSON.parse(saved);
+        people = data.people || people;
+        peopleEvents = data.peopleEvents || peopleEvents;
+        clients = data.clients || clients;
+        jobs = data.jobs || jobs;
+      } catch (error) {
+        console.warn("VECO piloodi andmeid ei saanud laadida", error);
+      }
+    }
+
+    function exportPilotData() {
+      savePilotData();
+      const payload = JSON.stringify({ exportedAt: new Date().toISOString(), people, peopleEvents, clients, jobs }, null, 2);
+      const blob = new Blob([payload], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `veco-piloot-varukoopia-${dateKey(new Date())}.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importPilotData(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(reader.result);
+          people = data.people || people;
+          peopleEvents = data.peopleEvents || peopleEvents;
+          clients = data.clients || clients;
+          jobs = data.jobs || jobs;
+          savePilotData();
+          renderAll();
+        } catch (error) {
+          alert("Varukoopia faili ei saanud lugeda.");
+        }
+      };
+      reader.readAsText(file);
+      event.target.value = "";
+    }
+
+    function resetPilotDemo() {
+      if (!window.confirm("Kas taastada demo algandmed? Brauserisse salvestatud muudatused asendatakse.")) return;
+      people = JSON.parse(JSON.stringify(demoData.people));
+      peopleEvents = JSON.parse(JSON.stringify(demoData.peopleEvents));
+      clients = JSON.parse(JSON.stringify(demoData.clients));
+      jobs = JSON.parse(JSON.stringify(demoData.jobs));
+      selectedId = jobs[0]?.id || "";
+      detailJobId = null;
+      localStorage.removeItem(STORAGE_KEY);
+      renderAll();
+    }
+
     function renderAll() {
       fillSelects();
       renderCalendar();
@@ -2353,6 +2511,7 @@
       renderObjects();
       renderAi();
       renderStats();
+      savePilotData();
     }
 
     function updateStatus(status) {
@@ -2996,7 +3155,7 @@ Summa: 2 075,34 €`;
     }
 
     function switchView(name) {
-      ["calendar", "mobile", "people", "vacations", "clients", "objects", "acts", "ai", "ezefs"].forEach(view => {
+      ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "acts", "ai", "ezefs"].forEach(view => {
         $(`#${view}View`).classList.toggle("hidden", view !== name);
       });
       $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === name));
@@ -3015,7 +3174,7 @@ Summa: 2 075,34 €`;
     }
 
     function setDetailCollapsed(collapsed) {
-      const views = ["#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
+      const views = ["#pilotView", "#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
       $("#toggleDetailBtn").innerHTML = collapsed
         ? `<span class="icon">▣</span> Näita detaili`
@@ -3023,6 +3182,7 @@ Summa: 2 075,34 €`;
     }
 
     fillSelects();
+    loadPilotData();
     setDetailCollapsed(true);
     renderAll();
 
@@ -3035,6 +3195,9 @@ Summa: 2 075,34 €`;
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
     $("#newObjectJobBtn").addEventListener("click", openObjectJobModal);
     $("#importJobBtn").addEventListener("click", openImportJobModal);
+    $("#exportDataBtn").addEventListener("click", exportPilotData);
+    $("#resetDemoBtn").addEventListener("click", resetPilotDemo);
+    $("#importDataFile").addEventListener("change", importPilotData);
     $("#simulateEmailBtn").addEventListener("click", simulateIncomingEmail);
     $("#reviewEmailDraftBtn").addEventListener("click", reviewEmailDraft);
     $("#imagePasteZone").addEventListener("paste", handleImportPaste);
