@@ -66,22 +66,26 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 4px 2px 8px;
+      padding: 8px 12px 10px;
       background: transparent;
       width: 100%;
       text-align: left;
       border-radius: 7px;
+      color: var(--blue);
     }
 
     .brand:hover {
       background: rgba(255,255,255,.07);
     }
 
-    .brand img {
-      width: 174px;
-      max-width: 100%;
-      height: auto;
-      display: block;
+    .brand-wordmark {
+      font-size: 30px;
+      line-height: .85;
+      font-weight: 900;
+      letter-spacing: -0.04em;
+      font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+      transform: scaleX(1.18);
+      transform-origin: left center;
     }
 
     .nav {
@@ -933,7 +937,7 @@
   <div class="app" id="appShell">
     <aside class="sidebar">
       <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
-        <img src="assets/veco-logo-transparent.png" alt="VECO kinnisvara hooldus">
+        <span class="brand-wordmark" aria-label="VECO">VECO</span>
       </button>
       <nav class="nav" aria-label="Põhivaated">
         <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
