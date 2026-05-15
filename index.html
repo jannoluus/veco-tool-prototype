@@ -1335,6 +1335,32 @@
     </div>
   </div>
 
+  <div class="modal" id="techFillModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="techFillTitle">
+      <div class="dialog-head">
+        <h2 id="techFillTitle">Täida töökäsk</h2>
+        <button class="btn ghost" data-close="techFillModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="techFillForm">
+        <div class="dialog-body">
+          <div class="mobile-card" id="techFillSummary"></div>
+          <div class="form-grid">
+            <label class="full">Tehtud töö kirjeldus<textarea name="workDone" required placeholder="Kirjelda lühidalt, mis objektil tehtud sai."></textarea></label>
+            <label class="full">Materjalid<textarea name="materials" placeholder="nt filter, kaitse, kinnitused"></textarea></label>
+            <label>Transpordi aeg<input class="field" name="travelTime" placeholder="nt 0.5 h"></label>
+            <label>Fotod / tõendusmaterjal<input class="field" name="photos" placeholder="nt IMG_1012, IMG_1018"></label>
+            <label>Kliendi kinnitaja<input class="field" name="approvedBy" placeholder="nimi, kui olemas"></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="techFillModal">Tühista</button>
+          <button class="btn" type="submit" name="saveOnly" value="1"><span class="icon">✓</span> Salvesta</button>
+          <button class="btn primary" type="submit" name="complete" value="1"><span class="icon">✓</span> Salvesta ja lõpeta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="emailAgentModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="emailAgentTitle">
       <div class="dialog-head">
@@ -2008,7 +2034,11 @@
 
     function renderMobile() {
       const tech = $("#mobileTech").value || technicians()[0];
-      const techJobs = jobs.filter(job => job.technician === tech && ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status));
+      const today = dateKey(new Date());
+      const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel"];
+      const todayJobs = jobs.filter(job => job.technician === tech && job.date === today && activeStatuses.includes(job.status));
+      const otherJobs = jobs.filter(job => job.technician === tech && job.date !== today && activeStatuses.includes(job.status));
+      const techJobs = todayJobs.length ? todayJobs : otherJobs;
       $("#mobileJobs").innerHTML = techJobs.map(job => `
         <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
           <span class="job-time"><span>${escapeHtml(job.date)} ${escapeHtml(job.time)}</span><span>${escapeHtml(job.id)}</span></span>
@@ -2018,7 +2048,7 @@
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
           <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
         </button>
-      `).join("") || `<div class="detail-body"><div class="mobile-card">Sellel tehnikul ei ole aktiivseid töid.</div></div>`;
+      `).join("") || `<div class="detail-body"><div class="mobile-card">Sellel tehnikul ei ole tänaseid ega aktiivseid töid.</div></div>`;
 
       $$("#mobileJobs [data-mobile-job]").forEach(card => {
         card.addEventListener("click", () => {
@@ -2034,9 +2064,12 @@
         <div class="mobile-card">
           <strong>${escapeHtml(job.client)}</strong>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
+          <span class="job-meta">${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(statusLabels[job.status])}</span>
           <span class="job-meta">${escapeHtml(job.address)}</span>
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
+          ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
           <span class="job-meta">${escapeHtml(job.description)}</span>
+          <span class="job-meta">Ajakulu: ${escapeHtml(effectiveWorkTime(job) || "veel puudub")}</span>
         </div>
         <div class="mobile-actions">
           <button class="btn" data-mobile-status="töös"><span class="icon">▶</span> Alusta töö</button>
@@ -2054,7 +2087,7 @@
           updateStatus(btn.dataset.mobileStatus);
         }
       }));
-      $("#mobileFillBtn").addEventListener("click", () => openJobModal(job.id));
+      $("#mobileFillBtn").addEventListener("click", () => openTechFillModal(job.id));
       $("#mobileCompleteBtn").addEventListener("click", completeSelectedJob);
       $("#mobileActBtn").addEventListener("click", openAct);
       $("#mobileDeleteBtn").addEventListener("click", deleteSelectedJob);
@@ -2766,11 +2799,55 @@
 
     function completeSelectedJob() {
       const job = selectedJob();
+      if (!String(job.workDone || "").trim()) {
+        alert("Enne lõpetamist lisa tehtud töö kirjeldus.");
+        openTechFillModal(job.id);
+        return;
+      }
       const ok = window.confirm(`Kas lõpetada töökäsk ${job.id}?\n\nKinnitamisel fikseeritakse lõppaeg ja töökäsk liigub aktide vaatesse.`);
       if (!ok) return;
       updateStatus("täidetud");
       detailJobId = null;
       setDetailCollapsed(true);
+    }
+
+    function openTechFillModal(id = selectedId) {
+      selectedId = id;
+      const job = selectedJob();
+      const form = $("#techFillForm");
+      form.reset();
+      $("#techFillTitle").textContent = `Täida töökäsk ${job.id}`;
+      $("#techFillSummary").innerHTML = `
+        <strong>${escapeHtml(job.client)}</strong>
+        <span class="job-meta">${escapeHtml(job.address)} · ${escapeHtml(job.date)} ${escapeHtml(job.time)}</span>
+        ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
+        <span class="job-meta">${escapeHtml(job.description)}</span>
+      `;
+      form.elements.workDone.value = job.workDone || "";
+      form.elements.materials.value = job.materials || "";
+      form.elements.travelTime.value = job.travelTime || "";
+      form.elements.photos.value = job.photos || "";
+      form.elements.approvedBy.value = job.approvedBy || "";
+      $("#techFillModal").classList.add("open");
+      $("#techFillModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveTechFill(event) {
+      event.preventDefault();
+      const submitter = event.submitter;
+      const job = selectedJob();
+      const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      job.workDone = data.workDone;
+      job.materials = data.materials;
+      job.travelTime = data.travelTime;
+      job.photos = data.photos;
+      job.approvedBy = data.approvedBy;
+      closeModal("techFillModal");
+      if (submitter?.name === "complete") {
+        completeSelectedJob();
+      } else {
+        renderAll();
+      }
     }
 
     function deleteSelectedJob() {
@@ -3455,6 +3532,7 @@ Summa: 2 075,34 €`;
     $("#toggleDetailBtn").addEventListener("click", toggleDetail);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#jobForm").addEventListener("submit", saveJob);
+    $("#techFillForm").addEventListener("submit", saveTechFill);
     $("#importJobForm").addEventListener("submit", createImportedJobDraft);
     $("#personForm").addEventListener("submit", savePerson);
     $("#eventForm").addEventListener("submit", saveEvent);
