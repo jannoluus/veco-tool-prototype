@@ -1627,6 +1627,9 @@
     const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
     let supabaseClient = null;
     let remoteSaveTimer = null;
+    let remoteLoadTimer = null;
+    let remoteBusy = false;
+    let lastRemoteLoadAt = "";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
 
@@ -2540,6 +2543,7 @@
       supabaseClient = window.supabase.createClient(config.url, config.anonKey);
       databaseStatus = "Ühendatud: " + config.workspaceId;
       renderDatabaseStatus();
+      startRemoteAutoLoad();
       return true;
     }
 
@@ -2553,6 +2557,19 @@
       if (field) field.value = databaseStatus;
     }
 
+    function hasOpenModal() {
+      return $$(".modal.open").length > 0;
+    }
+
+    function startRemoteAutoLoad() {
+      if (remoteLoadTimer) clearInterval(remoteLoadTimer);
+      if (!supabaseClient) return;
+      remoteLoadTimer = setInterval(() => {
+        if (!supabaseClient || remoteBusy || hasOpenModal()) return;
+        loadPilotDataFromDatabase(false, true);
+      }, 30000);
+    }
+
     function scheduleRemoteSave() {
       if (!supabaseClient || suppressRemoteSave) return;
       clearTimeout(remoteSaveTimer);
@@ -2564,6 +2581,8 @@
         if (showAlert) alert("Sisesta esmalt Supabase ühenduse andmed.");
         return;
       }
+      if (remoteBusy) return;
+      remoteBusy = true;
       const config = readSupabaseConfig();
       databaseStatus = "Salvestan andmebaasi...";
       renderDatabaseStatus();
@@ -2577,22 +2596,28 @@
       if (error) {
         databaseStatus = "DB viga: " + error.message;
         renderDatabaseStatus();
+        remoteBusy = false;
         if (showAlert) alert(databaseStatus);
         return;
       }
       databaseStatus = "Sünkroniseeritud: " + new Date().toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" });
       renderDatabaseStatus();
+      remoteBusy = false;
       if (showAlert) alert("Andmed salvestati Supabase andmebaasi.");
     }
 
-    async function loadPilotDataFromDatabase(showAlert = true) {
+    async function loadPilotDataFromDatabase(showAlert = true, silent = false) {
       if (!supabaseClient && !initSupabaseClient()) {
         if (showAlert) alert("Sisesta esmalt Supabase ühenduse andmed.");
         return;
       }
+      if (remoteBusy || hasOpenModal()) return;
+      remoteBusy = true;
       const config = readSupabaseConfig();
-      databaseStatus = "Laen andmebaasist...";
-      renderDatabaseStatus();
+      if (!silent) {
+        databaseStatus = "Laen andmebaasist...";
+        renderDatabaseStatus();
+      }
       const { data, error } = await supabaseClient
         .from("pilot_state")
         .select("data")
@@ -2601,10 +2626,12 @@
       if (error) {
         databaseStatus = "DB viga: " + error.message;
         renderDatabaseStatus();
+        remoteBusy = false;
         if (showAlert) alert(databaseStatus);
         return;
       }
       if (!data?.data) {
+        remoteBusy = false;
         await pushPilotDataToDatabase(false);
         if (showAlert) alert("Andmebaasis polnud veel piloodi andmeid. Lõin algse kirje.");
         return;
@@ -2614,8 +2641,10 @@
       localStorage.setItem(STORAGE_KEY, JSON.stringify(pilotPayload()));
       renderAll();
       suppressRemoteSave = false;
-      databaseStatus = "Laetud andmebaasist";
+      lastRemoteLoadAt = new Date().toLocaleTimeString("et-EE", { hour: "2-digit", minute: "2-digit" });
+      databaseStatus = silent ? `Automaatne laadimine: ${lastRemoteLoadAt}` : "Laetud andmebaasist";
       renderDatabaseStatus();
+      remoteBusy = false;
       if (showAlert) alert("Andmed laaditi Supabase andmebaasist.");
     }
 
