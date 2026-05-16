@@ -409,6 +409,33 @@
       box-shadow: inset 0 0 0 2px rgba(23,105,170,.18);
     }
 
+    .day.drag-time-preview::before {
+      content: attr(data-preview-time);
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: var(--preview-top, 42px);
+      height: 2px;
+      background: var(--blue);
+      z-index: 4;
+      box-shadow: 0 0 0 1px rgba(23,105,170,.12);
+    }
+
+    .day.drag-time-preview::after {
+      content: attr(data-preview-time);
+      position: absolute;
+      left: 10px;
+      top: calc(var(--preview-top, 42px) - 13px);
+      z-index: 5;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      pointer-events: none;
+    }
+
     .day.public-holiday {
       background-color: #fff5f5;
       border-color: #f2c7c3;
@@ -1636,7 +1663,7 @@
             <label>Töö kuupäev<input class="field" name="date" type="date" required></label>
             <label>Töö algus<select class="select" name="time" required></select></label>
             <label>Töö lõpp<select class="select" name="endTime"></select></label>
-            <label>Kestvus tundides<input class="field" name="durationHours" type="number" min="0.25" step="0.25" placeholder="nt 2"></label>
+            <label>Kestvus tundides<input class="field" name="durationHours" type="number" min="0.5" step="0.5" placeholder="nt 2"></label>
             <label>Tehnik<select class="select" name="technician" required></select></label>
             <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
             <label>Korduvus<select class="select" name="recurrence"><option>Ühekordne</option><option>Iganädalane</option><option>Igakuine</option><option>Kvartaalne</option><option>Aastane</option></select></label>
@@ -2258,10 +2285,36 @@
       return minutesToTime(timeToMinutes(time) + duration * 60);
     }
 
+    function resolveWorkdayOverflow(job) {
+      const start = timeToMinutes(job.time || "09:00");
+      const durationMinutes = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+      const end = start + durationMinutes;
+      const workdayEnd = 17 * 60;
+      if (end <= workdayEnd) {
+        job.endTime = addDurationToTime(job.time, job.durationHours);
+        return true;
+      }
+      const allowOvertime = window.confirm(
+        `Töö ${job.id} lõppeks kell ${minutesToTime(end)} ehk pärast 17:00.\n\nOK = jätame samale päevale üle tööpäeva\nCancel = jätkame järgmisel tööpäeval kell 09:00`
+      );
+      if (allowOvertime) {
+        job.endTime = addDurationToTime(job.time, job.durationHours);
+        return true;
+      }
+      const overflowMinutes = Math.max(30, end - workdayEnd);
+      job.durationHours = String(Math.max(0.5, Math.round((overflowMinutes / 60) * 2) / 2));
+      job.date = dateKey(nextBusinessDate(new Date(`${job.date}T12:00:00`)));
+      job.time = "09:00";
+      job.endTime = addDurationToTime(job.time, job.durationHours);
+      calendarCursor = new Date(`${job.date}T12:00:00`);
+      return true;
+    }
+
     function inferDurationHours(start, end) {
       if (!start || !end) return "";
       const minutes = timeToMinutes(end) - timeToMinutes(start);
-      return minutes > 0 ? String(minutes / 60) : "";
+      if (minutes <= 0) return "";
+      return String(Math.max(0.5, Math.round((minutes / 60) * 2) / 2));
     }
 
     function displayWorkWindow(job) {
@@ -2554,17 +2607,39 @@
         });
       });
 
+      function previewDropTime(day, event) {
+        const body = day.querySelector(".day-body");
+        if (!body) return "09:00";
+        const rect = body.getBoundingClientRect();
+        const relativeY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+        const minutesFromStart = Math.round((relativeY / 40) * 2) * 30;
+        const minutes = Math.max(7 * 60, Math.min(19 * 60, 7 * 60 + minutesFromStart));
+        const time = minutesToTime(minutes);
+        day.dataset.previewTime = time;
+        day.style.setProperty("--preview-top", `${42 + Math.round(((minutes - 7 * 60) / 60) * 40)}px`);
+        day.classList.add("drag-time-preview");
+        return time;
+      }
+
+      function clearDropPreview(day) {
+        day.classList.remove("drop-ready", "drag-time-preview");
+        day.removeAttribute("data-preview-time");
+        day.style.removeProperty("--preview-top");
+      }
+
       $$("[data-calendar-day]").forEach(day => {
         day.addEventListener("dragover", event => {
           if (!draggedCalendarJobId) return;
           event.preventDefault();
           day.classList.add("drop-ready");
+          previewDropTime(day, event);
         });
-        day.addEventListener("dragleave", () => day.classList.remove("drop-ready"));
+        day.addEventListener("dragleave", () => clearDropPreview(day));
         day.addEventListener("drop", event => {
           event.preventDefault();
-          day.classList.remove("drop-ready");
-          moveCalendarJob(draggedCalendarJobId || event.dataTransfer.getData("text/plain"), day.dataset.calendarDay);
+          const targetTime = previewDropTime(day, event);
+          clearDropPreview(day);
+          moveCalendarJob(draggedCalendarJobId || event.dataTransfer.getData("text/plain"), day.dataset.calendarDay, targetTime);
         });
       });
 
@@ -2588,20 +2663,15 @@
       });
     }
 
-    function moveCalendarJob(jobId, targetDate) {
+    function moveCalendarJob(jobId, targetDate, targetTime = "") {
       const job = jobs.find(item => item.id === jobId);
       if (!job || !targetDate) return;
-      if (job.date === targetDate) {
-        const nextTime = window.prompt(`Uus algusaeg töökäsule ${job.id}`, job.time || "09:00");
-        if (nextTime === null) return;
-        const cleanTime = nextTime.trim();
-        if (/^\d{1,2}:\d{2}$/.test(cleanTime)) {
-          job.time = cleanTime.padStart(5, "0");
-          if (job.durationHours) job.endTime = addDurationToTime(job.time, job.durationHours);
-        }
-      } else {
-        job.date = targetDate;
+      job.date = targetDate;
+      if (targetTime) {
+        job.time = targetTime;
+        if (job.durationHours) job.endTime = addDurationToTime(job.time, job.durationHours);
       }
+      resolveWorkdayOverflow(job);
       selectedId = job.id;
       detailJobId = job.id;
       setDetailCollapsed(false);
@@ -2615,6 +2685,7 @@
       const nextMinutes = Math.max(30, Math.min(12 * 60, currentMinutes + deltaMinutes));
       job.durationHours = String(nextMinutes / 60);
       job.endTime = addDurationToTime(job.time || "09:00", job.durationHours);
+      resolveWorkdayOverflow(job);
       selectedId = job.id;
       detailJobId = job.id;
       setDetailCollapsed(false);
@@ -4011,7 +4082,11 @@ Summa: 2 075,34 €`;
       const form = $("#jobForm");
       const start = form.elements.time.value;
       const end = form.elements.endTime.value;
-      const duration = form.elements.durationHours.value;
+      let duration = form.elements.durationHours.value;
+      if (source === "duration" && duration) {
+        duration = String(Math.max(0.5, Math.round(Number(duration) * 2) / 2));
+        form.elements.durationHours.value = duration;
+      }
       if (source === "duration" && start && duration) {
         form.elements.endTime.value = addDurationToTime(start, duration);
       }
@@ -4026,6 +4101,9 @@ Summa: 2 075,34 €`;
     function saveJob(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
+      if (data.durationHours) {
+        data.durationHours = String(Math.max(0.5, Math.round(Number(data.durationHours) * 2) / 2));
+      }
       if (data.time && data.durationHours && !data.endTime) {
         data.endTime = addDurationToTime(data.time, data.durationHours);
       }
