@@ -290,6 +290,27 @@
       position: relative;
     }
 
+    .ticker-controls {
+      position: absolute;
+      left: 10px;
+      z-index: 4;
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      padding-right: 10px;
+      background: #f8fafb;
+    }
+
+    .ticker-select {
+      height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      color: var(--ink);
+      padding: 0 8px;
+      font-size: 12px;
+    }
+
     .news-ticker::before,
     .news-ticker::after {
       content: "";
@@ -316,7 +337,7 @@
       align-items: center;
       gap: 22px;
       min-width: max-content;
-      animation: tickerMove 46s linear infinite;
+      animation: tickerMove var(--ticker-speed, 46s) linear infinite;
       will-change: transform;
       padding-left: 100%;
       white-space: nowrap;
@@ -1020,6 +1041,16 @@
       background: linear-gradient(to left, #101820, transparent);
     }
 
+    body.theme-dark .ticker-controls {
+      background: #101820;
+    }
+
+    body.theme-dark .ticker-select {
+      background: #172129;
+      color: var(--ink);
+      border-color: #34414a;
+    }
+
     body.theme-dark .btn {
       background: #22303a;
       color: var(--ink);
@@ -1179,7 +1210,6 @@
           <select class="select" id="technicianFilter" aria-label="Tehniku filter">
             <option value="all">Kõik tehnikud</option>
           </select>
-          <button class="btn ghost" id="todayBtn"><span class="icon">⌖</span> Täna</button>
           <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
           <button class="btn" id="databaseBtn"><span class="icon">↔</span> Andmebaas: lokaalne</button>
           <button class="btn" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
@@ -1278,6 +1308,7 @@
             <h2 id="calendarTitle">Nädal 20 · 2026</h2>
             <div class="filters">
               <button class="btn ghost" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn ghost" id="todayBtn"><span class="icon">⌖</span> Täna</button>
               <button class="btn ghost" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
               <select class="select" id="calendarMode" aria-label="Kalendri vaade">
                 <option value="week">Nädal</option>
@@ -1306,6 +1337,18 @@
             <div class="week-grid" id="weekGrid"></div>
           </div>
           <div class="news-ticker" aria-label="Tööde uudisteriba">
+            <div class="ticker-controls">
+              <select class="ticker-select" id="tickerSpeedSelect" aria-label="Uudisteriba kiirus">
+                <option value="70">Aeglane</option>
+                <option value="46">Tavaline</option>
+                <option value="28">Kiire</option>
+              </select>
+              <select class="ticker-select" id="newsSourceSelect" aria-label="Uudiste allikas">
+                <option value="err">ERR</option>
+                <option value="err-news">ERR uudised</option>
+                <option value="off">Ainult tööd</option>
+              </select>
+            </div>
             <div class="ticker-track" id="newsTickerTrack"></div>
           </div>
         </div>
@@ -1995,6 +2038,8 @@
     const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
     const THEME_KEY = "vecoThemeV1";
     const WEEKEND_KEY = "vecoShowWeekendsV1";
+    const TICKER_SPEED_KEY = "vecoTickerSpeedV1";
+    const NEWS_SOURCE_KEY = "vecoNewsSourceV1";
     let supabaseClient = null;
     let remoteSaveTimer = null;
     let remoteLoadTimer = null;
@@ -2006,6 +2051,11 @@
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
     let latestNewsHeadline = "Uudis: internetiuudist laetakse...";
+    const newsSources = {
+      err: { label: "ERR", url: "https://www.err.ee/rss" },
+      "err-news": { label: "ERR uudised", url: "https://www.err.ee/rss" },
+      off: { label: "Ainult tööd", url: "" }
+    };
 
     const demoData = {
       people: JSON.parse(JSON.stringify(people)),
@@ -3268,9 +3318,11 @@
       ];
       const items = [
         ...workItems,
-        { label: "Paus", text: jokes[(new Date().getDate() + jobs.length) % jokes.length] },
-        { label: "Uudis", text: latestNewsHeadline.replace(/^Uudis:\s*/i, "") }
+        { label: "Paus", text: jokes[(new Date().getDate() + jobs.length) % jokes.length] }
       ];
+      if (($("#newsSourceSelect")?.value || localStorage.getItem(NEWS_SOURCE_KEY) || "err") !== "off") {
+        items.push({ label: "Uudis", text: latestNewsHeadline.replace(/^Uudis:\s*/i, "") });
+      }
       track.innerHTML = items.map(item => `
         <span class="ticker-item"><span class="ticker-label">${escapeHtml(item.label)}</span>${escapeHtml(item.text)}</span>
         ${tickerLogo()}
@@ -3278,8 +3330,17 @@
     }
 
     async function loadLatestNewsHeadline() {
+      const sourceKey = $("#newsSourceSelect")?.value || localStorage.getItem(NEWS_SOURCE_KEY) || "err";
+      const source = newsSources[sourceKey] || newsSources.err;
+      if (!source.url) {
+        latestNewsHeadline = "";
+        renderNewsTicker();
+        return;
+      }
+      latestNewsHeadline = `${source.label}: uudist laetakse...`;
+      renderNewsTicker();
       try {
-        const feedUrl = encodeURIComponent("https://www.err.ee/rss");
+        const feedUrl = encodeURIComponent(source.url);
         const response = await fetch(`https://api.allorigins.win/raw?url=${feedUrl}`, { cache: "no-store" });
         if (!response.ok) throw new Error("RSS ei vastanud");
         const xml = await response.text();
@@ -3290,6 +3351,14 @@
         latestNewsHeadline = "Internetiuudist ei saanud hetkel laadida.";
       }
       renderNewsTicker();
+    }
+
+    function applyTickerSettings() {
+      const speed = localStorage.getItem(TICKER_SPEED_KEY) || "46";
+      const source = localStorage.getItem(NEWS_SOURCE_KEY) || "err";
+      if ($("#tickerSpeedSelect")) $("#tickerSpeedSelect").value = speed;
+      if ($("#newsSourceSelect")) $("#newsSourceSelect").value = newsSources[source] ? source : "err";
+      if ($("#newsTickerTrack")) $("#newsTickerTrack").style.setProperty("--ticker-speed", `${speed}s`);
     }
 
     function pilotPayload() {
@@ -4452,6 +4521,7 @@ Summa: 2 075,34 €`;
     fillSelects();
     loadPilotData();
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
+    applyTickerSettings();
     setDetailCollapsed(true);
     renderAll();
     initSupabaseClient();
@@ -4511,6 +4581,15 @@ Summa: 2 075,34 €`;
     $("#technicianFilter").addEventListener("change", renderAll);
     $("#calendarMode").addEventListener("change", renderAll);
     $("#statusFilter").addEventListener("change", renderAll);
+    $("#tickerSpeedSelect").addEventListener("change", () => {
+      localStorage.setItem(TICKER_SPEED_KEY, $("#tickerSpeedSelect").value);
+      applyTickerSettings();
+    });
+    $("#newsSourceSelect").addEventListener("change", () => {
+      localStorage.setItem(NEWS_SOURCE_KEY, $("#newsSourceSelect").value);
+      applyTickerSettings();
+      loadLatestNewsHeadline();
+    });
     $("#actsTechFilter").addEventListener("change", renderAll);
     $("#actsDateFilter").addEventListener("change", renderAll);
     $("#actsBuildingPartFilter").addEventListener("input", renderAll);
