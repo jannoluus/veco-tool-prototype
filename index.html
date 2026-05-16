@@ -309,18 +309,36 @@
       background-color: #fbfcfd;
       background-image:
         linear-gradient(to bottom, transparent 0 50%, rgba(255,245,245,.92) 50% 100%),
-        repeating-linear-gradient(to bottom, transparent 0, transparent 43px, rgba(97,112,124,.13) 44px);
+        repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--calendar-hour-height) - 1px), rgba(97,112,124,.13) var(--calendar-hour-height));
       border-color: #f2d6d3;
     }
 
     .week-grid {
       display: grid;
-      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      --calendar-head-height: 42px;
+      --calendar-hour-height: 40px;
+      grid-template-columns: 38px repeat(5, minmax(120px, 1fr));
       gap: 10px;
     }
 
     .week-grid.with-weekend {
-      grid-template-columns: repeat(7, minmax(120px, 1fr));
+      grid-template-columns: 38px repeat(7, minmax(120px, 1fr));
+    }
+
+    .time-axis {
+      position: relative;
+      min-height: calc(var(--calendar-head-height) + 480px);
+      color: rgba(97,112,124,.48);
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    .time-axis span {
+      position: absolute;
+      right: 4px;
+      top: calc(var(--calendar-head-height) + (var(--hour-index) * var(--calendar-hour-height)) - 7px);
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
     }
 
     .calendar-grid.month {
@@ -392,33 +410,38 @@
     }
 
     .day {
-      min-height: 530px;
+      min-height: calc(var(--calendar-head-height) + 480px);
       border: 1px solid var(--line);
       border-radius: var(--radius);
       background-color: #fbfcfd;
       background-image: repeating-linear-gradient(
         to bottom,
         transparent 0,
-        transparent 43px,
-        rgba(97,112,124,.13) 44px
+        transparent calc(var(--calendar-hour-height) - 1px),
+        rgba(97,112,124,.13) var(--calendar-hour-height)
       );
-      background-size: 100% 44px;
+      background-size: 100% var(--calendar-hour-height);
+      background-position: 0 var(--calendar-head-height);
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
 
-    .day::after {
-      content: "07  08  09  10  11  12  13  14  15  16  17  18  19";
-      margin-top: auto;
-      padding: 0 10px 8px;
-      color: rgba(97,112,124,.35);
-      font-size: 10px;
-      word-spacing: 6px;
-      pointer-events: none;
+    .day-body {
+      position: relative;
+      flex: 1 1 auto;
+      min-height: 480px;
+    }
+
+    .day-empty {
+      padding: 12px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .day-head {
+      min-height: var(--calendar-head-height);
+      box-sizing: border-box;
       padding: 10px;
       border-bottom: 1px solid var(--line);
       background: #eef3f5;
@@ -440,6 +463,16 @@
       gap: 7px;
       text-align: left;
       box-shadow: 0 8px 18px rgba(18, 30, 40, .06);
+    }
+
+    .day-body .job-card {
+      position: absolute;
+      left: 9px;
+      right: 9px;
+      top: var(--job-top, 8px);
+      min-height: var(--job-height, 76px);
+      margin: 0;
+      z-index: 1;
     }
 
     .job-card:hover,
@@ -874,7 +907,7 @@
       background-color: #101820;
       background-image:
         linear-gradient(to bottom, transparent 0 50%, rgba(43,23,25,.92) 50% 100%),
-        repeating-linear-gradient(to bottom, transparent 0, transparent 43px, rgba(167,178,188,.12) 44px);
+        repeating-linear-gradient(to bottom, transparent 0, transparent calc(var(--calendar-hour-height) - 1px), rgba(167,178,188,.12) var(--calendar-hour-height));
       border-color: #5a3736;
     }
 
@@ -882,8 +915,8 @@
       background-image: repeating-linear-gradient(
         to bottom,
         transparent 0,
-        transparent 43px,
-        rgba(167,178,188,.12) 44px
+        transparent calc(var(--calendar-hour-height) - 1px),
+        rgba(167,178,188,.12) var(--calendar-hour-height)
       );
     }
 
@@ -968,6 +1001,9 @@
         display: flex;
         overflow-x: auto;
         scroll-snap-type: x mandatory;
+      }
+      .time-axis {
+        display: none;
       }
       .day {
         min-width: 82vw;
@@ -1671,8 +1707,9 @@
           <div class="form-grid">
             <label>Klient<select class="select" name="clientId" required></select></label>
             <label>Tüüp<select class="select" name="type"><option value="object">Objekt</option><option value="device">Seade</option><option value="contact">Kontakt</option></select></label>
-            <label>Nimi<input class="field" name="name" required></label>
-            <label>Aadress / roll<input class="field" name="detail" placeholder="Objekti aadress või kontaktisiku roll"></label>
+            <label id="clientItemObjectField">Objekt<select class="select" name="objectId"></select></label>
+            <label id="clientItemNameLabel">Nimi<input class="field" name="name" required></label>
+            <label id="clientItemDetailLabel">Aadress / roll<input class="field" name="detail" placeholder="Objekti aadress või kontaktisiku roll"></label>
             <label>Telefon<input class="field" name="phone"></label>
             <label>E-post<input class="field" name="email" type="email"></label>
             <label class="full">Märkus<textarea name="note"></textarea></label>
@@ -1890,6 +1927,7 @@
     const allObjects = () => clients.flatMap(client =>
       client.items.filter(item => item.type === "object").map(item => ({
         key: objectKey(client.id, item.detail),
+        itemId: item.id,
         clientId: client.id,
         clientName: client.name,
         name: item.name,
@@ -1898,6 +1936,20 @@
       }))
     );
     const selectedObject = () => allObjects().find(object => object.key === selectedObjectKey) || allObjects()[0];
+    const clientObjects = (clientId) => clients.find(client => client.id === clientId)?.items.filter(item => item.type === "object") || [];
+    const linkedDevicesForObject = (client, object) => {
+      if (!client || !object) return [];
+      const objects = client.items.filter(item => item.type === "object");
+      return client.items.filter(item => {
+        if (item.type !== "device") return false;
+        if (item.objectId) return item.objectId === object.itemId;
+        return objects.length === 1 || item.detail === object.address || item.note?.includes(object.name);
+      });
+    };
+    const deviceObjectLabel = (client, device) => {
+      const object = client?.items.find(item => item.type === "object" && item.id === device.objectId);
+      return object ? `${object.name} · ${object.detail || "aadress puudub"}` : "Objekt sidumata";
+    };
 
     function statusClass(status) {
       return status === "akt" ? "akt" : status;
@@ -2039,6 +2091,17 @@
       return job.time || "";
     }
 
+    function calendarCardStyle(job) {
+      const dayStart = 7 * 60;
+      const dayEnd = 19 * 60;
+      const start = Math.min(Math.max(timeToMinutes(job.time || "09:00"), dayStart), dayEnd);
+      const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+      const visibleDuration = Math.min(duration, dayEnd - start);
+      const top = Math.round(((start - dayStart) / 60) * 40);
+      const height = Math.max(72, Math.round((visibleDuration / 60) * 40) - 6);
+      return `--job-top:${top}px;--job-height:${height}px`;
+    }
+
     function nextBusinessDate(date) {
       const result = new Date(date);
       do {
@@ -2161,6 +2224,27 @@
       document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("");
     }
 
+    function updateClientItemFormMode() {
+      const form = $("#clientItemForm");
+      if (!form) return;
+      const type = form.elements.type.value;
+      const clientId = form.elements.clientId.value;
+      const objectField = $("#clientItemObjectField");
+      const objects = clientObjects(clientId);
+      form.elements.objectId.innerHTML = objects.map(item =>
+        `<option value="${item.id}">${escapeHtml(item.name)} · ${escapeHtml(item.detail || "aadress puudub")}</option>`
+      ).join("");
+      objectField.classList.toggle("hidden", type !== "device");
+      form.elements.objectId.required = type === "device" && objects.length > 0;
+      $("#clientItemNameLabel").firstChild.textContent = type === "device" ? "Seadme nimetus" : type === "object" ? "Objekti nimi" : "Kontaktisiku nimi";
+      $("#clientItemDetailLabel").firstChild.textContent = type === "device" ? "Asukoht" : type === "object" ? "Aadress" : "Roll";
+      form.elements.detail.placeholder = type === "object"
+        ? "Objekti aadress"
+        : type === "device"
+          ? "Seadme asukoht objektil, nt katus või tehnoruum"
+          : "Kontaktisiku roll";
+    }
+
     function filteredJobs() {
       const tech = $("#technicianFilter").value;
       const status = $("#statusFilter").value;
@@ -2194,12 +2278,15 @@
       const weekEnd = addDays(weekStart, weekLength - 1);
       $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatShortDate(weekStart)}-${formatShortDate(weekEnd)} · ${calendarCursor.getFullYear()}`;
       $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
-      $("#weekGrid").innerHTML = weekDays.map(([date, day, label]) => {
+      const timeAxis = `<div class="time-axis" aria-hidden="true">${
+        Array.from({ length: 13 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
+      }</div>`;
+      $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const holiday = holidayName(date);
         const preHoliday = !holiday ? nextDayHolidayName(date) : "";
         const cards = dayJobs.map(job => `
-          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true">
+          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
             <span class="job-time"><span>${escapeHtml(job.time)}</span><span>${escapeHtml(job.technician)}</span></span>
             <span class="job-title">${escapeHtml(job.client)}</span>
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
@@ -2221,7 +2308,7 @@
             ${holiday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">${escapeHtml(holiday)}</div>` : ""}
             ${preHoliday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">Pühale eelnev poolik päev</div>` : ""}
             ${unavailableNames(date).length ? `<div class="job-meta" style="padding:8px 10px;">Puudub: ${escapeHtml(unavailableNames(date).join(", "))}</div>` : ""}
-            ${cards || `<div class="job-meta" style="padding:12px;">Töid ei ole</div>`}
+            <div class="day-body">${cards || `<div class="day-empty">Töid ei ole</div>`}</div>
           </div>
         `;
       }).join("");
@@ -2722,7 +2809,8 @@
           ${client.items.filter(item => item.type === "device").map(item => `
             <div class="event-row">
               <strong>${escapeHtml(item.name)}</strong>
-              <span>${escapeHtml(item.detail || "-")}</span>
+              <span>${escapeHtml(deviceObjectLabel(client, item))}</span>
+              <span>${escapeHtml(item.detail || "asukoht määramata")}</span>
               <span class="job-meta">${escapeHtml(item.note || "Märkus puudub")}</span>
               <div class="person-actions">
                 <button class="btn" data-edit-client-item="${item.id}"><span class="icon">✎</span> Muuda</button>
@@ -2805,7 +2893,7 @@
         if (statusFilter === "active") return ["uus", "planeeritud", "töös", "pausil", "ootel"].includes(job.status);
         return true;
       }) : [];
-      const devices = client?.items.filter(item => item.type === "device") || [];
+      const devices = linkedDevicesForObject(client, object);
 
       $("#objectDetail").innerHTML = object ? `
         <div class="detail-title">
@@ -2818,6 +2906,7 @@
         <div class="kv"><span>Kontakt</span><strong>${escapeHtml(client?.contact || "-")} · ${escapeHtml(client?.phone || "-")}</strong></div>
         <div class="mobile-actions">
           <button class="btn" data-edit-object-item="${object.key}"><span class="icon">✎</span> Muuda objekt</button>
+          <button class="btn primary" data-add-device-object="${object.key}"><span class="icon">＋</span> Lisa seade</button>
           <button class="btn danger" data-delete-object-item="${object.key}"><span class="icon">×</span> Kustuta objekt</button>
         </div>
         <p class="section-title">Objekti kalender</p>
@@ -2855,6 +2944,10 @@
               <strong>${escapeHtml(device.name)}</strong>
               <span>${escapeHtml(device.detail || "-")}</span>
               <span class="job-meta">${escapeHtml(device.note || "Märkus puudub")}</span>
+              <div class="person-actions">
+                <button class="btn" data-edit-client-item="${device.id}"><span class="icon">✎</span> Muuda</button>
+                <button class="btn danger" data-delete-client-item="${device.id}"><span class="icon">×</span> Kustuta</button>
+              </div>
             </div>
           `).join("") || `<div class="mobile-card">Seadmeid ei ole seotud.</div>`}
         </div>
@@ -2883,14 +2976,24 @@
       }));
       $$("[data-edit-object-item]").forEach(btn => btn.addEventListener("click", () => {
         const object = allObjects().find(item => item.key === btn.dataset.editObjectItem);
-        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.type === "object" && entry.detail === object.address);
+        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.id === object?.itemId);
         if (item) openClientItemModal(item.id);
       }));
       $$("[data-delete-object-item]").forEach(btn => btn.addEventListener("click", () => {
         const object = allObjects().find(item => item.key === btn.dataset.deleteObjectItem);
-        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.type === "object" && entry.detail === object.address);
+        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.id === object?.itemId);
         if (item) deleteClientItem(item.id);
       }));
+      $$("[data-add-device-object]").forEach(btn => btn.addEventListener("click", () => {
+        const object = allObjects().find(item => item.key === btn.dataset.addDeviceObject);
+        if (object) {
+          selectedClientId = object.clientId;
+          selectedObjectKey = object.key;
+          openClientItemModal(null, "device");
+        }
+      }));
+      $$("[data-edit-client-item]").forEach(btn => btn.addEventListener("click", () => openClientItemModal(btn.dataset.editClientItem)));
+      $$("[data-delete-client-item]").forEach(btn => btn.addEventListener("click", () => deleteClientItem(btn.dataset.deleteClientItem)));
       $$("[data-drag-job]").forEach(row => {
         row.addEventListener("dragstart", event => {
           event.dataTransfer.setData("text/plain", row.dataset.dragJob);
@@ -3884,11 +3987,16 @@ Summa: 2 075,34 €`;
       const found = id ? findClientItem(id) : null;
       form.elements.clientId.value = found?.client.id || selectedClientId || clients[0]?.id || "";
       form.elements.type.value = found?.item.type || forcedType || "object";
+      updateClientItemFormMode();
       form.elements.name.value = found?.item.name || "";
       form.elements.detail.value = found?.item.detail || "";
       form.elements.phone.value = found?.item.phone || "";
       form.elements.email.value = found?.item.email || "";
       form.elements.note.value = found?.item.note || "";
+      if (form.elements.type.value === "device") {
+        const fallbackObjectId = selectedObject()?.clientId === form.elements.clientId.value ? selectedObject()?.itemId : "";
+        form.elements.objectId.value = found?.item.objectId || fallbackObjectId || clientObjects(form.elements.clientId.value)[0]?.id || "";
+      }
       $("#clientItemModal").classList.add("open");
       $("#clientItemModal").setAttribute("aria-hidden", "false");
     }
@@ -3911,6 +4019,7 @@ Summa: 2 075,34 €`;
           detail: data.detail,
           phone: data.phone,
           email: data.email,
+          objectId: data.type === "device" ? data.objectId : "",
           note: data.note
         });
       } else {
@@ -3921,11 +4030,16 @@ Summa: 2 075,34 €`;
           detail: data.detail,
           phone: data.phone,
           email: data.email,
+          objectId: data.type === "device" ? data.objectId : "",
           note: data.note
         });
       }
       selectedClientId = client.id;
       if (data.type === "object") selectedObjectKey = objectKey(client.id, data.detail);
+      if (data.type === "device" && data.objectId) {
+        const object = client.items.find(item => item.id === data.objectId);
+        if (object) selectedObjectKey = objectKey(client.id, object.detail);
+      }
       closeModal("clientItemModal");
       editingClientItemId = null;
       renderAll();
@@ -3937,6 +4051,11 @@ Summa: 2 075,34 €`;
       const hasJobs = found.item.type === "object" && jobs.some(job => job.client === found.client.name && job.address === found.item.detail);
       if (hasJobs) {
         alert("Selle objektiga on seotud töökäsud. Objekti ei kustutata, et tööde ajalugu säiliks.");
+        return;
+      }
+      const hasDevices = found.item.type === "object" && found.client.items.some(item => item.type === "device" && item.objectId === found.item.id);
+      if (hasDevices) {
+        alert("Selle objektiga on seotud seadmed. Enne kustutamist eemalda või tõsta seadmed teise objekti alla.");
         return;
       }
       const ok = window.confirm(`Kas kustutada kirje?\n\n${found.item.name}`);
@@ -4151,6 +4270,8 @@ Summa: 2 075,34 €`;
     $("#eventForm").addEventListener("submit", saveEvent);
     $("#clientForm").addEventListener("submit", saveClient);
     $("#clientItemForm").addEventListener("submit", saveClientItem);
+    $("#clientItemForm").elements.type.addEventListener("change", updateClientItemFormMode);
+    $("#clientItemForm").elements.clientId.addEventListener("change", updateClientItemFormMode);
     $("#clientPlanForm").addEventListener("submit", saveClientPlan);
     if ($("#openActBtn")) $("#openActBtn").addEventListener("click", openAct);
     $("#printActBtn").addEventListener("click", () => window.print());
