@@ -267,6 +267,11 @@
       min-width: 0;
     }
 
+    .select.multi {
+      height: 112px;
+      padding: 8px 10px;
+    }
+
     .calendar {
       padding: 12px;
       position: relative;
@@ -1733,9 +1738,15 @@
         <div class="dialog-body">
           <div class="form-grid">
             <label>Klient<input class="field" name="clientName" readonly></label>
-            <label>Objekt / aadress<input class="field" name="address" required></label>
-            <label>Hooneosa<input class="field" name="buildingPart"></label>
-            <label>Seade<input class="field" name="asset"></label>
+            <label>Objekt<select class="select" name="objectId" required></select></label>
+            <label>Objekti aadress<input class="field" name="address" readonly required></label>
+            <label>Seadmete valik<select class="select" name="deviceMode">
+              <option value="single">Üks seade</option>
+              <option value="selected">Valitud seadmed</option>
+              <option value="all">Kõik objekti seadmed</option>
+              <option value="object">Ainult objekt, ilma seadmeta</option>
+            </select></label>
+            <label id="clientPlanDevicesField">Seadmed<select class="select multi" name="deviceIds" multiple></select></label>
             <label>Sagedus<select class="select" name="frequency">
               <option value="day">Päev</option>
               <option value="week">Nädal</option>
@@ -1944,6 +1955,18 @@
         if (item.type !== "device") return false;
         if (item.objectId) return item.objectId === object.itemId;
         return objects.length === 1 || item.detail === object.address || item.note?.includes(object.name);
+      });
+    };
+    const linkedDevicesForObjectId = (client, objectId) => {
+      const object = client?.items.find(item => item.type === "object" && item.id === objectId);
+      if (!client || !object) return [];
+      return linkedDevicesForObject(client, {
+        itemId: object.id,
+        clientId: client.id,
+        clientName: client.name,
+        name: object.name,
+        address: object.detail,
+        note: object.note
       });
     };
     const deviceObjectLabel = (client, device) => {
@@ -2243,6 +2266,25 @@
         : type === "device"
           ? "Seadme asukoht objektil, nt katus või tehnoruum"
           : "Kontaktisiku roll";
+    }
+
+    function updateClientPlanFormDevices() {
+      const form = $("#clientPlanForm");
+      if (!form) return;
+      const client = selectedClient();
+      const object = client?.items.find(item => item.type === "object" && item.id === form.elements.objectId.value);
+      form.elements.address.value = object?.detail || "";
+      const devices = linkedDevicesForObjectId(client, object?.id);
+      form.elements.deviceIds.innerHTML = devices.map(device =>
+        `<option value="${device.id}">${escapeHtml(device.name)} · ${escapeHtml(device.detail || "asukoht määramata")}</option>`
+      ).join("");
+      const showPicker = ["single", "selected"].includes(form.elements.deviceMode.value);
+      $("#clientPlanDevicesField").classList.toggle("hidden", !showPicker);
+      form.elements.deviceIds.required = showPicker && devices.length > 0;
+      form.elements.deviceIds.multiple = form.elements.deviceMode.value === "selected";
+      if (form.elements.deviceMode.value === "single" && devices[0]) {
+        form.elements.deviceIds.value = form.elements.deviceIds.value || devices[0].id;
+      }
     }
 
     function filteredJobs() {
@@ -2907,6 +2949,7 @@
         <div class="mobile-actions">
           <button class="btn" data-edit-object-item="${object.key}"><span class="icon">✎</span> Muuda objekt</button>
           <button class="btn primary" data-add-device-object="${object.key}"><span class="icon">＋</span> Lisa seade</button>
+          <button class="btn primary" data-plan-object-devices="${object.key}"><span class="icon">▣</span> Planeeri seadmed</button>
           <button class="btn danger" data-delete-object-item="${object.key}"><span class="icon">×</span> Kustuta objekt</button>
         </div>
         <p class="section-title">Objekti kalender</p>
@@ -2990,6 +3033,14 @@
           selectedClientId = object.clientId;
           selectedObjectKey = object.key;
           openClientItemModal(null, "device");
+        }
+      }));
+      $$("[data-plan-object-devices]").forEach(btn => btn.addEventListener("click", () => {
+        const object = allObjects().find(item => item.key === btn.dataset.planObjectDevices);
+        if (object) {
+          selectedClientId = object.clientId;
+          selectedObjectKey = object.key;
+          openClientPlanModal(object.key);
         }
       }));
       $$("[data-edit-client-item]").forEach(btn => btn.addEventListener("click", () => openClientItemModal(btn.dataset.editClientItem)));
@@ -4065,22 +4116,26 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    function openClientPlanModal() {
+    function openClientPlanModal(preferredObjectKey = "") {
       const client = selectedClient();
       if (!client) return;
       const form = $("#clientPlanForm");
       form.reset();
       fillSelects();
-      const object = client.items.find(item => item.type === "object");
-      const device = client.items.find(item => item.type === "device");
+      const objectOptions = client.items.filter(item => item.type === "object");
+      const preferredObject = allObjects().find(object => object.key === preferredObjectKey);
+      const object = objectOptions.find(item => item.id === preferredObject?.itemId) || objectOptions[0];
       form.elements.clientName.value = client.name;
-      form.elements.address.value = object?.detail || "";
-      form.elements.buildingPart.value = device?.detail || "";
-      form.elements.asset.value = device?.name || "";
+      form.elements.objectId.innerHTML = objectOptions.map(item =>
+        `<option value="${item.id}">${escapeHtml(item.name)} · ${escapeHtml(item.detail || "aadress puudub")}</option>`
+      ).join("");
+      form.elements.objectId.value = object?.id || "";
+      form.elements.deviceMode.value = "single";
       form.elements.startDate.value = dateKey(calendarCursor);
       form.elements.count.value = "1";
       form.elements.interval.value = "1";
       form.elements.time.value = "09:00";
+      updateClientPlanFormDevices();
       $("#clientPlanModal").classList.add("open");
       $("#clientPlanModal").setAttribute("aria-hidden", "false");
     }
@@ -4103,43 +4158,59 @@ Summa: 2 075,34 €`;
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
       const client = selectedClient();
+      const object = client?.items.find(item => item.type === "object" && item.id === data.objectId);
+      if (!client || !object) return;
+      const objectDevices = linkedDevicesForObjectId(client, object.id);
+      const selectedDeviceIds = new FormData(event.target).getAll("deviceIds");
+      let plannedDevices = [];
+      if (data.deviceMode === "all") plannedDevices = objectDevices;
+      if (data.deviceMode === "single" || data.deviceMode === "selected") {
+        plannedDevices = objectDevices.filter(device => selectedDeviceIds.includes(device.id));
+      }
+      if (data.deviceMode === "object" || plannedDevices.length === 0) {
+        plannedDevices = [{ id: "", name: "", detail: "" }];
+      }
       const interval = Math.max(1, Number(data.interval) || 1);
       const countLimit = Math.max(1, Number(data.count) || 1);
       const endDate = data.endDate ? new Date(`${data.endDate}T12:00:00`) : null;
       let cursor = new Date(`${data.startDate}T12:00:00`);
       let created = 0;
+      let sequence = 1;
 
       while (created < countLimit && (!endDate || cursor <= endDate)) {
-        const job = {
-          id: nextJobId(),
-          client: client.name,
-          referenceNo: `PLAAN-${created + 1}`,
-          address: data.address,
-          buildingPart: data.buildingPart,
-          asset: data.asset,
-          contact: client.contact,
-          phone: client.phone,
-          date: dateKey(cursor),
-          time: data.time,
-          endTime: addDurationToTime(data.time, 2),
-          durationHours: "2",
-          technician: data.technician,
-          priority: data.priority,
-          recurrence: recurrenceLabel(data.frequency, interval),
-          status: "planeeritud",
-          description: data.description,
-          workDone: "",
-          materials: "",
-          hours: "",
-          travelTime: "",
-          timeLogs: [],
-          photos: "",
-          approvedBy: "",
-          ezefsRef: ""
-        };
-        jobs.push(job);
-        selectedId = job.id;
-        detailJobId = selectedId;
+        plannedDevices.forEach(device => {
+          const job = {
+            id: nextJobId(),
+            client: client.name,
+            referenceNo: `PLAAN-${sequence}`,
+            address: object.detail,
+            buildingPart: device.detail || object.name,
+            asset: device.name || "",
+            contact: client.contact,
+            phone: client.phone,
+            date: dateKey(cursor),
+            time: data.time,
+            endTime: addDurationToTime(data.time, 2),
+            durationHours: "2",
+            technician: data.technician,
+            priority: data.priority,
+            recurrence: recurrenceLabel(data.frequency, interval),
+            status: "planeeritud",
+            description: device.name ? `${data.description}\nSeade: ${device.name}` : data.description,
+            workDone: "",
+            materials: "",
+            hours: "",
+            travelTime: "",
+            timeLogs: [],
+            photos: "",
+            approvedBy: "",
+            ezefsRef: ""
+          };
+          jobs.push(job);
+          selectedId = job.id;
+          detailJobId = selectedId;
+          sequence += 1;
+        });
         created += 1;
         cursor = addInterval(cursor, data.frequency, interval);
       }
@@ -4273,6 +4344,8 @@ Summa: 2 075,34 €`;
     $("#clientItemForm").elements.type.addEventListener("change", updateClientItemFormMode);
     $("#clientItemForm").elements.clientId.addEventListener("change", updateClientItemFormMode);
     $("#clientPlanForm").addEventListener("submit", saveClientPlan);
+    $("#clientPlanForm").elements.objectId.addEventListener("change", updateClientPlanFormDevices);
+    $("#clientPlanForm").elements.deviceMode.addEventListener("change", updateClientPlanFormDevices);
     if ($("#openActBtn")) $("#openActBtn").addEventListener("click", openAct);
     $("#printActBtn").addEventListener("click", () => window.print());
     $("#printActSideBtn").addEventListener("click", openAct);
