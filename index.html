@@ -579,9 +579,11 @@
       left: 9px;
       right: 9px;
       top: var(--job-top, 8px);
-      min-height: var(--job-height, 76px);
+      height: var(--job-height, 92px);
       margin: 0;
       z-index: 1;
+      align-content: start;
+      overflow: hidden;
     }
 
     .job-card:hover,
@@ -613,11 +615,17 @@
     }
 
     .job-time {
-      color: var(--muted);
+      color: var(--ink);
       font-size: 12px;
+      font-weight: 800;
       display: flex;
       justify-content: space-between;
       gap: 8px;
+    }
+
+    .job-window {
+      color: var(--muted);
+      font-weight: 650;
     }
 
     .job-title {
@@ -2269,7 +2277,7 @@
       const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
       const visibleDuration = Math.min(duration, dayEnd - start);
       const top = Math.round(((start - dayStart) / 60) * 40);
-      const height = Math.max(72, Math.round((visibleDuration / 60) * 40) - 6);
+      const height = Math.max(96, Math.round((visibleDuration / 60) * 40) - 4);
       return `--job-top:${top}px;--job-height:${height}px`;
     }
 
@@ -2477,13 +2485,12 @@
         const preHoliday = !holiday ? nextDayHolidayName(date) : "";
         const cards = dayJobs.map(job => `
           <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
-            <span class="job-time"><span>${escapeHtml(job.time)}</span><span>${escapeHtml(job.technician)}</span></span>
-            <span class="job-title">${escapeHtml(job.client)}</span>
+            <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.technician)}</span></span>
+            <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
             <span class="job-meta">${escapeHtml(job.address)}</span>
             ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
             ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
-            <span class="job-meta">${escapeHtml(displayWorkWindow(job))}</span>
             <span class="resize-row">
               <button type="button" data-resize-job="${job.id}" data-resize-minutes="-30">−</button>
               <span>Kestvus ${escapeHtml(formatMinutes(Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60))}</span>
