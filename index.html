@@ -409,6 +409,15 @@
       box-shadow: inset 0 0 0 2px rgba(23,105,170,.18);
     }
 
+    .day.active-workday:not(.weekend-day) {
+      background-color: #f2fbf2;
+      border-color: #a9d6ad;
+    }
+
+    .day.active-workday:not(.weekend-day) .day-head {
+      background: #dff3df;
+    }
+
     .day.drag-time-preview::before {
       content: attr(data-preview-time);
       position: absolute;
@@ -475,6 +484,22 @@
       top: calc(var(--calendar-head-height) + (var(--hour-index) * var(--calendar-hour-height)) - 7px);
       line-height: 1;
       font-variant-numeric: tabular-nums;
+    }
+
+    .time-axis .range-marker {
+      right: auto;
+      left: 0;
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      z-index: 2;
+    }
+
+    .time-axis .range-marker.end {
+      background: #4e6f87;
     }
 
     .calendar-grid.month {
@@ -2331,6 +2356,27 @@
       return Math.max(19 * 60, Math.min(23 * 60, Math.ceil(latest / 30) * 30));
     }
 
+    function axisTopForMinutes(minutes) {
+      return Math.round(((minutes - 7 * 60) / 60) * 40);
+    }
+
+    function selectedJobRangeMarkers(endMinutes) {
+      const job = jobs.find(item => item.id === selectedId);
+      if (!job) return "";
+      const mode = $("#calendarMode")?.value || "week";
+      if (mode !== "week") return "";
+      const start = startOfWeek(calendarCursor);
+      const weekEnd = addDays(start, showWeekends ? 6 : 4);
+      if (job.date < dateKey(start) || job.date > dateKey(weekEnd)) return "";
+      const startMinutes = timeToMinutes(job.time || "09:00");
+      const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+      const finishMinutes = Math.min(endMinutes, startMinutes + duration);
+      return `
+        <span class="range-marker start" style="top: calc(var(--calendar-head-height) + ${axisTopForMinutes(startMinutes)}px - 10px)">${escapeHtml(minutesToTime(startMinutes))}</span>
+        <span class="range-marker end" style="top: calc(var(--calendar-head-height) + ${axisTopForMinutes(finishMinutes)}px - 10px)">${escapeHtml(minutesToTime(finishMinutes))}</span>
+      `;
+    }
+
     function calendarCardStyle(job) {
       const dayStart = 7 * 60;
       const dayEnd = calendarEndMinutes(jobs.filter(item => item.date === job.date));
@@ -2543,11 +2589,14 @@
       $("#weekGrid").style.setProperty("--calendar-body-height", `${bodyHeight}px`);
       const timeAxis = `<div class="time-axis" aria-hidden="true">${
         Array.from({ length: Math.floor((endMinutes - 7 * 60) / 60) + 1 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
-      }</div>`;
+      }${selectedJobRangeMarkers(endMinutes)}</div>`;
       $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const holiday = holidayName(date);
         const preHoliday = !holiday ? nextDayHolidayName(date) : "";
+        const weekday = new Date(`${date}T12:00:00`).getDay();
+        const isWeekend = [0, 6].includes(weekday);
+        const isActiveWorkday = date === jobs.find(job => job.id === selectedId)?.date && !isWeekend;
         const cards = dayJobs.map(job => `
           <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.technician)}</span></span>
@@ -2565,7 +2614,7 @@
           </button>
         `).join("");
         return `
-          <div class="day ${holiday ? "public-holiday" : ""} ${preHoliday ? "pre-holiday" : ""}" data-calendar-day="${date}">
+          <div class="day ${holiday ? "public-holiday" : ""} ${preHoliday ? "pre-holiday" : ""} ${isWeekend ? "weekend-day" : ""} ${isActiveWorkday ? "active-workday" : ""}" data-calendar-day="${date}">
             <div class="day-head"><strong>${day}</strong><span>${label}</span></div>
             ${holiday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">${escapeHtml(holiday)}</div>` : ""}
             ${preHoliday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">Pühale eelnev poolik päev</div>` : ""}
