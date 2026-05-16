@@ -277,6 +277,89 @@
       position: relative;
     }
 
+    .news-ticker {
+      height: 48px;
+      margin: 12px;
+      margin-top: 0;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #f8fafb;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+
+    .news-ticker::before,
+    .news-ticker::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 42px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .news-ticker::before {
+      left: 0;
+      background: linear-gradient(to right, #f8fafb, transparent);
+    }
+
+    .news-ticker::after {
+      right: 0;
+      background: linear-gradient(to left, #f8fafb, transparent);
+    }
+
+    .ticker-track {
+      display: inline-flex;
+      align-items: center;
+      gap: 22px;
+      min-width: max-content;
+      animation: tickerMove 46s linear infinite;
+      will-change: transform;
+      padding-left: 100%;
+      white-space: nowrap;
+      font-size: 14px;
+    }
+
+    .news-ticker:hover .ticker-track {
+      animation-play-state: paused;
+    }
+
+    .ticker-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--ink);
+    }
+
+    .ticker-label {
+      color: var(--blue);
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: .05em;
+    }
+
+    .ticker-logo {
+      width: 26px;
+      height: 26px;
+      border-radius: 999px;
+      object-fit: cover;
+      flex: 0 0 auto;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.7);
+    }
+
+    @keyframes tickerMove {
+      from { transform: translateX(0); }
+      to { transform: translateX(-100%); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .ticker-track { animation: none; padding-left: 12px; }
+    }
+
     .week-edge-drop {
       position: absolute;
       top: 12px;
@@ -925,6 +1008,18 @@
       );
     }
 
+    body.theme-dark .news-ticker {
+      background: #101820;
+    }
+
+    body.theme-dark .news-ticker::before {
+      background: linear-gradient(to right, #101820, transparent);
+    }
+
+    body.theme-dark .news-ticker::after {
+      background: linear-gradient(to left, #101820, transparent);
+    }
+
     body.theme-dark .btn {
       background: #22303a;
       color: var(--ink);
@@ -1081,7 +1176,6 @@
       <header class="topbar">
         <div class="toolbar">
           <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
-          <button class="btn ghost" id="toggleDetailBtn"><span class="icon">▣</span> Peida detail</button>
           <select class="select" id="technicianFilter" aria-label="Tehniku filter">
             <option value="all">Kõik tehnikud</option>
           </select>
@@ -1210,6 +1304,9 @@
             <div class="week-edge-drop left" data-week-edge="-1">‹</div>
             <div class="week-edge-drop right" data-week-edge="1">›</div>
             <div class="week-grid" id="weekGrid"></div>
+          </div>
+          <div class="news-ticker" aria-label="Tööde uudisteriba">
+            <div class="ticker-track" id="newsTickerTrack"></div>
           </div>
         </div>
 
@@ -1908,6 +2005,7 @@
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
+    let latestNewsHeadline = "Uudis: internetiuudist laetakse...";
 
     const demoData = {
       people: JSON.parse(JSON.stringify(people)),
@@ -2371,6 +2469,12 @@
           renderAll();
         });
       });
+      $$("#weekGrid [data-calendar-day]").forEach(day => {
+        day.addEventListener("click", event => {
+          if (event.target.closest("[data-job]") || event.target.closest("button")) return;
+          openJobModal(null, day.dataset.calendarDay);
+        });
+      });
     }
 
     function clearWeekEdgeTimer() {
@@ -2518,7 +2622,11 @@
     }
 
     function renderDetail() {
-      const job = selectedJob();
+      const job = jobs.find(item => item.id === detailJobId);
+      if (!job) {
+        $("#detailBody").innerHTML = `<div class="mobile-card">Vali kalendrist töökäsk.</div>`;
+        return;
+      }
       $("#detailBody").innerHTML = `
         <div class="detail-title">
           <div>
@@ -3137,6 +3245,53 @@
       renderDatabaseStatus();
     }
 
+    function tickerLogo() {
+      return `<img class="ticker-logo" src="assets/veco-round-logo.jpg" alt="VECO">`;
+    }
+
+    function renderNewsTicker() {
+      const track = $("#newsTickerTrack");
+      if (!track) return;
+      const today = dateKey(new Date());
+      const upcoming = jobs
+        .filter(job => job.date >= today && job.status !== "arhiveeritud")
+        .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+        .slice(0, 8);
+      const workItems = upcoming.length ? upcoming.map(job => ({
+        label: job.date === today ? "Täna" : "Tulekul",
+        text: `${job.date} ${job.time} · ${job.client} · ${job.address}${job.asset ? ` · ${job.asset}` : ""} · ${job.technician}`
+      })) : [{ label: "Kalender", text: "Tänaseid ega tulevasi töid pole veel planeeritud." }];
+      const jokes = [
+        "Hooldusnali: kui filter on puhas, hingab ka graafik vabamalt.",
+        "Päeva tarkus: enne kui seade vaikib, kuula laagrit.",
+        "Tehniku zen: kõige kiiremini leitakse tööriist siis, kui teine tehnik seda juba kasutab."
+      ];
+      const items = [
+        ...workItems,
+        { label: "Paus", text: jokes[(new Date().getDate() + jobs.length) % jokes.length] },
+        { label: "Uudis", text: latestNewsHeadline.replace(/^Uudis:\s*/i, "") }
+      ];
+      track.innerHTML = items.map(item => `
+        <span class="ticker-item"><span class="ticker-label">${escapeHtml(item.label)}</span>${escapeHtml(item.text)}</span>
+        ${tickerLogo()}
+      `).join("");
+    }
+
+    async function loadLatestNewsHeadline() {
+      try {
+        const feedUrl = encodeURIComponent("https://www.err.ee/rss");
+        const response = await fetch(`https://api.allorigins.win/raw?url=${feedUrl}`, { cache: "no-store" });
+        if (!response.ok) throw new Error("RSS ei vastanud");
+        const xml = await response.text();
+        const doc = new DOMParser().parseFromString(xml, "text/xml");
+        const title = doc.querySelector("item title")?.textContent?.trim();
+        if (title) latestNewsHeadline = title;
+      } catch (error) {
+        latestNewsHeadline = "Internetiuudist ei saanud hetkel laadida.";
+      }
+      renderNewsTicker();
+    }
+
     function pilotPayload() {
       return { people, peopleEvents, clients, jobs };
     }
@@ -3427,6 +3582,7 @@
       renderAi();
       renderStats();
       renderWeekendToggle();
+      renderNewsTicker();
       savePilotData();
     }
 
@@ -3529,12 +3685,13 @@
       return `VK-${max + 1}`;
     }
 
-    function openJobModal(id = null) {
+    function openJobModal(id = null, preferredDate = "") {
       editingId = id;
       const form = $("#jobForm");
       form.reset();
       $("#jobModalTitle").textContent = id ? "Muuda / täida töökäsk" : "Lisa töökäsk";
       const defaultSlot = nextFreeSlot(technicians()[0] || "");
+      if (preferredDate) defaultSlot.date = preferredDate;
       const job = id ? jobs.find(item => item.id === id) : {
         client: "", referenceNo: "", address: "", buildingPart: "", contact: "", phone: "", date: defaultSlot.date, time: defaultSlot.time,
         endTime: "", durationHours: "2",
@@ -4290,9 +4447,6 @@ Summa: 2 075,34 €`;
     function setDetailCollapsed(collapsed) {
       const views = ["#pilotView", "#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
-      $("#toggleDetailBtn").innerHTML = collapsed
-        ? `<span class="icon">▣</span> Näita detaili`
-        : `<span class="icon">▣</span> Peida detail`;
     }
 
     fillSelects();
@@ -4302,6 +4456,7 @@ Summa: 2 075,34 €`;
     renderAll();
     initSupabaseClient();
     if (supabaseClient) loadPilotDataFromDatabase(false);
+    loadLatestNewsHeadline();
 
     $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
     $("#themeToggleBtn").addEventListener("click", toggleTheme);
@@ -4329,7 +4484,6 @@ Summa: 2 075,34 €`;
     $("#analyzeImportImageBtn").addEventListener("click", analyzeImportedImage);
     $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
     $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
-    $("#toggleDetailBtn").addEventListener("click", toggleDetail);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#jobForm").addEventListener("submit", saveJob);
     $("#jobForm").elements.time.addEventListener("change", () => syncJobTimeFields("start"));
