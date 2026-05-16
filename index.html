@@ -1185,12 +1185,12 @@
             <div class="filters">
               <button class="btn ghost" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
               <button class="btn ghost" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
-              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">L/P</span> Näita L/P</button>
               <select class="select" id="calendarMode" aria-label="Kalendri vaade">
                 <option value="week">Nädal</option>
                 <option value="month">Kuu</option>
                 <option value="year">Aasta</option>
               </select>
+              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
               <select class="select" id="statusFilter" aria-label="Staatuse filter">
                 <option value="all">Kõik staatused</option>
                 <option value="uus">Uus</option>
@@ -3349,8 +3349,8 @@
       const btn = $("#toggleWeekendBtn");
       if (!btn) return;
       btn.innerHTML = showWeekends
-        ? `<span class="icon">E-R</span> Peida L/P`
-        : `<span class="icon">L/P</span> Näita L/P`;
+        ? `<span class="icon">▦</span> Peida L/P`
+        : `<span class="icon">▦</span> Näita L/P`;
     }
 
     function toggleWeekends() {
