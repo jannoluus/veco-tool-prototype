@@ -3299,18 +3299,34 @@
       return `<img class="ticker-logo" src="assets/veco-round-logo.jpg" alt="VECO">`;
     }
 
+    function tickerVisibleRange() {
+      const mode = $("#calendarMode")?.value || "week";
+      if (mode === "month") {
+        const start = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth(), 1, 12);
+        const end = new Date(calendarCursor.getFullYear(), calendarCursor.getMonth() + 1, 0, 12);
+        return { start: dateKey(start), end: dateKey(end), label: "Selles kuus" };
+      }
+      if (mode === "year") {
+        const year = calendarCursor.getFullYear();
+        return { start: `${year}-01-01`, end: `${year}-12-31`, label: "Sel aastal" };
+      }
+      const start = startOfWeek(calendarCursor);
+      const end = addDays(start, showWeekends ? 6 : 4);
+      return { start: dateKey(start), end: dateKey(end), label: "Selles nädalas" };
+    }
+
     function renderNewsTicker() {
       const track = $("#newsTickerTrack");
       if (!track) return;
-      const today = dateKey(new Date());
-      const upcoming = jobs
-        .filter(job => job.date >= today && job.status !== "arhiveeritud")
+      const range = tickerVisibleRange();
+      const visible = filteredJobs()
+        .filter(job => job.date >= range.start && job.date <= range.end && job.status !== "arhiveeritud")
         .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
         .slice(0, 8);
-      const workItems = upcoming.length ? upcoming.map(job => ({
-        label: job.date === today ? "Täna" : "Tulekul",
+      const workItems = visible.length ? visible.map(job => ({
+        label: job.date === dateKey(new Date()) ? "Täna" : range.label,
         text: `${job.date} ${job.time} · ${job.client} · ${job.address}${job.asset ? ` · ${job.asset}` : ""} · ${job.technician}`
-      })) : [{ label: "Kalender", text: "Tänaseid ega tulevasi töid pole veel planeeritud." }];
+      })) : [{ label: "Kalender", text: `${range.label} töid ei ole.` }];
       const jokes = [
         "Hooldusnali: kui filter on puhas, hingab ka graafik vabamalt.",
         "Päeva tarkus: enne kui seade vaikib, kuula laagrit.",
