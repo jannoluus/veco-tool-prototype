@@ -1328,6 +1328,7 @@
                 <option value="all">Kõik tööd</option>
                 <option value="waiting">Ainult ootel</option>
               </select>
+              <button class="btn primary" id="newObjectBtn"><span class="icon">＋</span> Lisa objekt</button>
             </div>
           </div>
           <div class="detail-body">
@@ -1669,7 +1670,7 @@
         <div class="dialog-body">
           <div class="form-grid">
             <label>Klient<select class="select" name="clientId" required></select></label>
-            <label>Tüüp<select class="select" name="type"><option value="object">Objekt</option><option value="contact">Kontakt</option></select></label>
+            <label>Tüüp<select class="select" name="type"><option value="object">Objekt</option><option value="device">Seade</option><option value="contact">Kontakt</option></select></label>
             <label>Nimi<input class="field" name="name" required></label>
             <label>Aadress / roll<input class="field" name="detail" placeholder="Objekti aadress või kontaktisiku roll"></label>
             <label>Telefon<input class="field" name="phone"></label>
@@ -1835,8 +1836,10 @@
     let selectedId = jobs[0].id;
     let editingId = null;
     let editingPersonId = null;
+    let editingEventId = null;
     let selectedClientId = clients[0].id;
     let editingClientId = null;
+    let editingClientItemId = null;
     let selectedObjectKey = "C-01::Pargi 12, Tallinn";
     let demoClock = new Date("2026-05-14T09:00:00");
     let calendarCursor = new Date("2026-05-14T12:00:00");
@@ -2592,6 +2595,10 @@
             <strong>${escapeHtml(personName(event.personId))} · ${escapeHtml(event.type)}</strong>
             <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
             <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+            <div class="person-actions">
+              <button class="btn" data-edit-event="${event.id}"><span class="icon">✎</span> Muuda</button>
+              <button class="btn danger" data-delete-event="${event.id}"><span class="icon">×</span> Kustuta</button>
+            </div>
           </div>
         `).join("") || `<div class="mobile-card">Puudumisi ega tähtpäevi ei ole sisestatud.</div>`;
 
@@ -2599,6 +2606,8 @@
       $$("[data-toggle-person]").forEach(btn => btn.addEventListener("click", () => togglePerson(btn.dataset.togglePerson)));
       $$("[data-event-person]").forEach(btn => btn.addEventListener("click", () => openEventModal(btn.dataset.eventPerson)));
       $$("[data-delete-person]").forEach(btn => btn.addEventListener("click", () => deletePerson(btn.dataset.deletePerson)));
+      $$("[data-edit-event]").forEach(btn => btn.addEventListener("click", () => openEventModal(null, btn.dataset.editEvent)));
+      $$("[data-delete-event]").forEach(btn => btn.addEventListener("click", () => deleteEvent(btn.dataset.deleteEvent)));
     }
 
     function renderVacations() {
@@ -2624,6 +2633,10 @@
                   <strong>${escapeHtml(event.type)}</strong>
                   <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
                   <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+                  <div class="person-actions">
+                    <button class="btn" data-edit-event="${event.id}"><span class="icon">✎</span> Muuda</button>
+                    <button class="btn danger" data-delete-event="${event.id}"><span class="icon">×</span> Kustuta</button>
+                  </div>
                 </div>
               `).join("") || `<div class="mobile-card">Puudumisi ei ole.</div>`}
             </div>
@@ -2636,8 +2649,14 @@
           <strong>${escapeHtml(personName(event.personId))} · ${escapeHtml(event.type)}</strong>
           <span>${escapeHtml(event.start)} kuni ${escapeHtml(event.end)}</span>
           <span class="job-meta">${escapeHtml(event.note || "Märkus puudub")}</span>
+          <div class="person-actions">
+            <button class="btn" data-edit-event="${event.id}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn danger" data-delete-event="${event.id}"><span class="icon">×</span> Kustuta</button>
+          </div>
         </div>
       `).join("") || `<div class="mobile-card">Valitud filtriga puudumisi ei ole.</div>`;
+      $$("[data-edit-event]").forEach(btn => btn.addEventListener("click", () => openEventModal(null, btn.dataset.editEvent)));
+      $$("[data-delete-event]").forEach(btn => btn.addEventListener("click", () => deleteEvent(btn.dataset.deleteEvent)));
     }
 
     function renderClients() {
@@ -2691,6 +2710,10 @@
               <strong>${escapeHtml(item.name)}</strong>
               <span>${escapeHtml(item.detail || "-")}</span>
               <span class="job-meta">${escapeHtml(item.note || "Märkus puudub")}</span>
+              <div class="person-actions">
+                <button class="btn" data-edit-client-item="${item.id}"><span class="icon">✎</span> Muuda</button>
+                <button class="btn danger" data-delete-client-item="${item.id}"><span class="icon">×</span> Kustuta</button>
+              </div>
             </div>
           `).join("") || `<div class="mobile-card">Objekte ei ole lisatud.</div>`}
         </div>
@@ -2701,6 +2724,10 @@
               <strong>${escapeHtml(item.name)}</strong>
               <span>${escapeHtml(item.detail || "-")}</span>
               <span class="job-meta">${escapeHtml(item.note || "Märkus puudub")}</span>
+              <div class="person-actions">
+                <button class="btn" data-edit-client-item="${item.id}"><span class="icon">✎</span> Muuda</button>
+                <button class="btn danger" data-delete-client-item="${item.id}"><span class="icon">×</span> Kustuta</button>
+              </div>
             </div>
           `).join("") || `<div class="mobile-card">Seadmeid ei ole lisatud.</div>`}
         </div>
@@ -2711,6 +2738,10 @@
               <strong>${escapeHtml(item.name)}</strong>
               <span>${escapeHtml(item.detail || "-")} · ${escapeHtml(item.phone || "-")}</span>
               <span class="job-meta">${escapeHtml(item.email || "")}</span>
+              <div class="person-actions">
+                <button class="btn" data-edit-client-item="${item.id}"><span class="icon">✎</span> Muuda</button>
+                <button class="btn danger" data-delete-client-item="${item.id}"><span class="icon">×</span> Kustuta</button>
+              </div>
             </div>
           `).join("") || `<div class="mobile-card">Kontaktisikuid ei ole lisatud.</div>`}
         </div>
@@ -2730,6 +2761,8 @@
       $$("[data-edit-client]").forEach(btn => btn.addEventListener("click", () => openClientModal(btn.dataset.editClient)));
       $$("[data-toggle-client]").forEach(btn => btn.addEventListener("click", () => toggleClient(btn.dataset.toggleClient)));
       $$("[data-delete-client]").forEach(btn => btn.addEventListener("click", () => deleteClient(btn.dataset.deleteClient)));
+      $$("[data-edit-client-item]").forEach(btn => btn.addEventListener("click", () => openClientItemModal(btn.dataset.editClientItem)));
+      $$("[data-delete-client-item]").forEach(btn => btn.addEventListener("click", () => deleteClientItem(btn.dataset.deleteClientItem)));
     }
 
     function objectJobs(object) {
@@ -2783,6 +2816,10 @@
         </div>
         <div class="kv"><span>Märkus</span><strong>${escapeHtml(object.note || "-")}</strong></div>
         <div class="kv"><span>Kontakt</span><strong>${escapeHtml(client?.contact || "-")} · ${escapeHtml(client?.phone || "-")}</strong></div>
+        <div class="mobile-actions">
+          <button class="btn" data-edit-object-item="${object.key}"><span class="icon">✎</span> Muuda objekt</button>
+          <button class="btn danger" data-delete-object-item="${object.key}"><span class="icon">×</span> Kustuta objekt</button>
+        </div>
         <p class="section-title">Objekti kalender</p>
         <div class="object-mini-calendar">
           ${Array.from({ length: 5 }, (_, index) => {
@@ -2843,6 +2880,16 @@
         switchView("calendar");
         setDetailCollapsed(false);
         renderAll();
+      }));
+      $$("[data-edit-object-item]").forEach(btn => btn.addEventListener("click", () => {
+        const object = allObjects().find(item => item.key === btn.dataset.editObjectItem);
+        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.type === "object" && entry.detail === object.address);
+        if (item) openClientItemModal(item.id);
+      }));
+      $$("[data-delete-object-item]").forEach(btn => btn.addEventListener("click", () => {
+        const object = allObjects().find(item => item.key === btn.dataset.deleteObjectItem);
+        const item = clients.find(client => client.id === object?.clientId)?.items.find(entry => entry.type === "object" && entry.detail === object.address);
+        if (item) deleteClientItem(item.id);
       }));
       $$("[data-drag-job]").forEach(row => {
         row.addEventListener("dragstart", event => {
@@ -3730,13 +3777,18 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    function openEventModal(personId = null) {
+    function openEventModal(personId = null, id = null) {
+      editingEventId = id;
       const form = $("#eventForm");
       form.reset();
       fillSelects();
-      form.elements.personId.value = personId || people[0]?.id || "";
-      form.elements.start.value = "2026-05-14";
-      form.elements.end.value = "2026-05-14";
+      $("#eventModalTitle").textContent = id ? "Muuda puudumist või tähtpäeva" : "Lisa puudumine või tähtpäev";
+      const item = id ? peopleEvents.find(event => event.id === id) : null;
+      form.elements.personId.value = item?.personId || personId || people[0]?.id || "";
+      form.elements.type.value = item?.type || "Puhkus";
+      form.elements.start.value = item?.start || dateKey(new Date());
+      form.elements.end.value = item?.end || item?.start || dateKey(new Date());
+      form.elements.note.value = item?.note || "";
       $("#eventModal").classList.add("open");
       $("#eventModal").setAttribute("aria-hidden", "false");
     }
@@ -3744,8 +3796,23 @@ Summa: 2 075,34 €`;
     function saveEvent(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
-      peopleEvents.push({ id: nextEventId(), ...data });
+      if (editingEventId) {
+        const item = peopleEvents.find(event => event.id === editingEventId);
+        if (item) Object.assign(item, data);
+      } else {
+        peopleEvents.push({ id: nextEventId(), ...data });
+      }
       closeModal("eventModal");
+      editingEventId = null;
+      renderAll();
+    }
+
+    function deleteEvent(id) {
+      const item = peopleEvents.find(event => event.id === id);
+      if (!item) return;
+      const ok = window.confirm(`Kas kustutada kirje?\n\n${personName(item.personId)} · ${item.type} · ${item.start} kuni ${item.end}`);
+      if (!ok) return;
+      peopleEvents = peopleEvents.filter(event => event.id !== id);
       renderAll();
     }
 
@@ -3800,11 +3867,28 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    function openClientItemModal() {
+    function findClientItem(id) {
+      for (const client of clients) {
+        const item = client.items.find(entry => entry.id === id);
+        if (item) return { client, item };
+      }
+      return null;
+    }
+
+    function openClientItemModal(id = null, forcedType = "") {
+      editingClientItemId = id;
       const form = $("#clientItemForm");
       form.reset();
       fillSelects();
-      form.elements.clientId.value = selectedClientId || clients[0]?.id || "";
+      $("#clientItemModalTitle").textContent = id ? "Muuda kliendi kirjet" : "Lisa kontakt, seade või objekt";
+      const found = id ? findClientItem(id) : null;
+      form.elements.clientId.value = found?.client.id || selectedClientId || clients[0]?.id || "";
+      form.elements.type.value = found?.item.type || forcedType || "object";
+      form.elements.name.value = found?.item.name || "";
+      form.elements.detail.value = found?.item.detail || "";
+      form.elements.phone.value = found?.item.phone || "";
+      form.elements.email.value = found?.item.email || "";
+      form.elements.note.value = found?.item.note || "";
       $("#clientItemModal").classList.add("open");
       $("#clientItemModal").setAttribute("aria-hidden", "false");
     }
@@ -3814,17 +3898,51 @@ Summa: 2 075,34 €`;
       const data = Object.fromEntries(new FormData(event.target).entries());
       const client = clients.find(item => item.id === data.clientId);
       if (!client) return;
-      client.items.push({
-        id: nextClientItemId(),
-        type: data.type,
-        name: data.name,
-        detail: data.detail,
-        phone: data.phone,
-        email: data.email,
-        note: data.note
-      });
+      if (editingClientItemId) {
+        const found = findClientItem(editingClientItemId);
+        if (found && found.client.id !== client.id) {
+          found.client.items = found.client.items.filter(item => item.id !== editingClientItemId);
+          client.items.push({ id: editingClientItemId });
+        }
+        const target = findClientItem(editingClientItemId)?.item;
+        if (target) Object.assign(target, {
+          type: data.type,
+          name: data.name,
+          detail: data.detail,
+          phone: data.phone,
+          email: data.email,
+          note: data.note
+        });
+      } else {
+        client.items.push({
+          id: nextClientItemId(),
+          type: data.type,
+          name: data.name,
+          detail: data.detail,
+          phone: data.phone,
+          email: data.email,
+          note: data.note
+        });
+      }
       selectedClientId = client.id;
+      if (data.type === "object") selectedObjectKey = objectKey(client.id, data.detail);
       closeModal("clientItemModal");
+      editingClientItemId = null;
+      renderAll();
+    }
+
+    function deleteClientItem(id) {
+      const found = findClientItem(id);
+      if (!found) return;
+      const hasJobs = found.item.type === "object" && jobs.some(job => job.client === found.client.name && job.address === found.item.detail);
+      if (hasJobs) {
+        alert("Selle objektiga on seotud töökäsud. Objekti ei kustutata, et tööde ajalugu säiliks.");
+        return;
+      }
+      const ok = window.confirm(`Kas kustutada kirje?\n\n${found.item.name}`);
+      if (!ok) return;
+      found.client.items = found.client.items.filter(item => item.id !== id);
+      selectedObjectKey = allObjects()[0]?.key || "";
       renderAll();
     }
 
@@ -4005,6 +4123,7 @@ Summa: 2 075,34 €`;
     $("#newClientBtn").addEventListener("click", () => openClientModal());
     $("#newClientItemBtn").addEventListener("click", openClientItemModal);
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
+    $("#newObjectBtn").addEventListener("click", () => openClientItemModal(null, "object"));
     $("#newObjectJobBtn").addEventListener("click", openObjectJobModal);
     $("#importJobBtn").addEventListener("click", openImportJobModal);
     $("#databaseBtn").addEventListener("click", openDatabaseModal);
