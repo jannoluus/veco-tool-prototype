@@ -2592,10 +2592,10 @@
       }${selectedJobRangeMarkers(endMinutes)}</div>`;
       $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
-        const holiday = holidayName(date);
-        const preHoliday = !holiday ? nextDayHolidayName(date) : "";
         const weekday = new Date(`${date}T12:00:00`).getDay();
         const isWeekend = [0, 6].includes(weekday);
+        const holiday = holidayName(date);
+        const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isActiveWorkday = date === jobs.find(job => job.id === selectedId)?.date && !isWeekend;
         const cards = dayJobs.map(job => `
           <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
