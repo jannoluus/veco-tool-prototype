@@ -114,8 +114,24 @@
       gap: 10px;
     }
 
+    .nav-file-action {
+      width: 100%;
+      color: #cdd8df;
+      background: transparent;
+      text-align: left;
+      padding: 11px 12px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 400;
+    }
+
     .nav button.active,
-    .nav button:hover {
+    .nav button:hover,
+    .nav-file-action:hover {
       color: #fff;
       background: rgba(255,255,255,.11);
     }
@@ -1296,6 +1312,9 @@
           <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
           <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
           <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
+          <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
+          <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
+          <label class="nav-file-action" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
         </div>
       </nav>
       <div class="side-stats">
@@ -1313,9 +1332,6 @@
             <option value="all">Kõik tehnikud</option>
           </select>
           <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-          <button class="btn" id="databaseBtn"><span class="icon">↔</span> Andmebaas: lokaalne</button>
-          <button class="btn" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
-          <label class="btn" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
           <input id="importDataFile" type="file" accept="application/json" class="hidden">
           <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
           <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
