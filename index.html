@@ -670,6 +670,7 @@
       z-index: 1;
       align-content: start;
       overflow: hidden;
+      padding-bottom: 18px;
     }
 
     .job-card:hover,
@@ -678,26 +679,21 @@
       box-shadow: 0 0 0 3px rgba(23,105,170,.14);
     }
 
-    .resize-row {
-      display: grid;
-      grid-template-columns: 32px 1fr 32px;
-      align-items: center;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 12px;
+    .resize-row { display: none; }
+
+    .job-resize-handle {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 5px;
+      height: 10px;
+      border-radius: 999px;
+      cursor: ns-resize;
+      background: linear-gradient(to bottom, transparent 0 3px, rgba(23,105,170,.42) 3px 5px, transparent 5px);
     }
 
-    .resize-row button {
-      min-height: 28px;
-      border-radius: 6px;
-      border: 1px solid var(--line);
-      background: #eef3f5;
-      color: var(--ink);
-      font-weight: 800;
-    }
-
-    .resize-row span {
-      text-align: center;
+    .job-resize-handle:hover {
+      background: linear-gradient(to bottom, transparent 0 2px, var(--blue) 2px 6px, transparent 6px);
     }
 
     .job-time {
@@ -1184,16 +1180,6 @@
       background: #3a2022;
       color: #ffb7b2;
       border-color: #6f3633;
-    }
-
-    body.theme-dark .resize-row button {
-      background: #22303a;
-      color: #f4f8fb;
-      border-color: #526371;
-    }
-
-    body.theme-dark .resize-row button:hover {
-      background: #2c3d49;
     }
 
     body.theme-dark .sidebar {
@@ -2671,12 +2657,8 @@
             <span class="job-meta">${escapeHtml(job.address)}</span>
             ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
             ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
-            <span class="resize-row">
-              <button type="button" data-resize-job="${job.id}" data-resize-minutes="-30">−</button>
-              <span>Kestvus ${escapeHtml(formatMinutes(Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60))}</span>
-              <button type="button" data-resize-job="${job.id}" data-resize-minutes="30">+</button>
-            </span>
             <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+            <span class="job-resize-handle" data-resize-handle="${job.id}" title="Muuda kestvust"></span>
           </button>
         `).join("");
         return `
@@ -2820,11 +2802,44 @@
     }
 
     function bindDurationResize() {
-      $$("[data-resize-job]").forEach(btn => btn.addEventListener("click", event => {
-        event.preventDefault();
-        event.stopPropagation();
-        resizeJobDuration(btn.dataset.resizeJob, Number(btn.dataset.resizeMinutes));
-      }));
+      $$("[data-resize-handle]").forEach(handle => {
+        handle.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+        });
+        handle.addEventListener("pointerdown", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          const job = jobs.find(item => item.id === handle.dataset.resizeHandle);
+          if (!job) return;
+          const startY = event.clientY;
+          const startMinutes = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+          handle.setPointerCapture(event.pointerId);
+
+          const onMove = moveEvent => {
+            const deltaMinutes = Math.round(((moveEvent.clientY - startY) / 40) * 2) * 30;
+            const nextMinutes = Math.max(30, Math.min(12 * 60, startMinutes + deltaMinutes));
+            job.durationHours = String(nextMinutes / 60);
+            job.endTime = addDurationToTime(job.time || "09:00", job.durationHours);
+            selectedId = job.id;
+            detailJobId = job.id;
+            renderCalendar();
+            renderDetail();
+            renderNewsTicker();
+          };
+
+          const onUp = upEvent => {
+            handle.releasePointerCapture(upEvent.pointerId);
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", onUp);
+            resolveWorkdayOverflow(job);
+            renderAll();
+          };
+
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", onUp);
+        });
+      });
     }
 
     function renderMonthCalendar(visible) {
