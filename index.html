@@ -658,6 +658,7 @@
       gap: 7px;
       text-align: left;
       box-shadow: 0 8px 18px rgba(18, 30, 40, .06);
+      cursor: pointer;
     }
 
     .day-body .job-card {
@@ -677,6 +678,64 @@
     .job-card.selected {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(23,105,170,.14);
+    }
+
+    .job-technicians {
+      color: var(--blue);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+
+    .job-action-menu {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      top: 8px;
+      z-index: 8;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      box-shadow: 0 14px 34px rgba(18, 30, 40, .18);
+      padding: 6px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .job-action-menu button {
+      width: 100%;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: var(--ink);
+      text-align: left;
+      padding: 7px 8px;
+      font: inherit;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .job-action-menu button:hover {
+      background: #eef5fb;
+      color: var(--blue);
+    }
+
+    .job-action-menu button:disabled {
+      color: var(--muted);
+      cursor: default;
+    }
+
+    .job-action-menu button:disabled:hover {
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .job-action-label {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      padding: 6px 8px 2px;
+      text-transform: uppercase;
     }
 
     .resize-row { display: none; }
@@ -1074,6 +1133,7 @@
     body.theme-dark .select,
     body.theme-dark textarea,
     body.theme-dark .job-card,
+    body.theme-dark .job-action-menu,
     body.theme-dark .mini-job,
     body.theme-dark .mobile-card,
     body.theme-dark .person-card,
@@ -1180,6 +1240,11 @@
       background: #3a2022;
       color: #ffb7b2;
       border-color: #6f3633;
+    }
+
+    body.theme-dark .job-action-menu button:hover {
+      background: #22303a;
+      color: #d7ecff;
     }
 
     body.theme-dark .sidebar {
@@ -2151,6 +2216,7 @@
     let lastRemoteLoadAt = "";
     let draggedCalendarJobId = null;
     let weekEdgeTimer = null;
+    let activeJobMenuId = null;
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2341,6 +2407,11 @@
 
     function unavailableTechniciansForJob(job) {
       return jobTechnicians(job).filter(name => isPersonUnavailable(name, job.date));
+    }
+
+    function copyTargetsForJob(job) {
+      const current = jobTechnicians(job);
+      return technicians().filter(name => !current.includes(name));
     }
 
     function unavailableNames(date) {
@@ -2690,16 +2761,25 @@
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
-          <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
-            <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(jobTechnicianLabel(job))}</span></span>
+          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
+            ${activeJobMenuId === job.id ? `
+              <div class="job-action-menu" data-job-menu="${job.id}">
+                <button type="button" data-open-job-detail="${job.id}">Ava detail</button>
+                <button type="button" data-edit-job-from-menu="${job.id}">Muuda töökäsku</button>
+                <div class="job-action-label">Kopeeri tehnikule</div>
+                ${copyTargetsForJob(job).map(name => `<button type="button" data-copy-job="${job.id}" data-copy-tech="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("") || `<button type="button" disabled>Kõik tehnikud on lisatud</button>`}
+              </div>
+            ` : ""}
+            <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
             <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
+            <span class="job-technicians">${escapeHtml(jobTechnicianLabel(job))}</span>
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
             <span class="job-meta">${escapeHtml(job.address)}</span>
             ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
             ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
             <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
             <span class="job-resize-handle" data-resize-handle="${job.id}" title="Muuda kestvust"></span>
-          </button>
+          </div>
         `).join("");
         return `
           <div class="day ${holiday ? "public-holiday" : ""} ${preHoliday ? "pre-holiday" : ""} ${isWeekend ? "weekend-day" : ""} ${isToday ? "today" : ""}" data-calendar-day="${date}">
@@ -2719,18 +2799,45 @@
 
     function bindCalendarSelection() {
       $$("#weekGrid [data-job]").forEach(card => {
-        card.addEventListener("click", () => {
-          const sameJob = detailJobId === card.dataset.job;
-          const detailHidden = $("#calendarView").classList.contains("detail-collapsed");
+        const openMenu = () => {
+          if (card.closest("[data-job-menu]")) return;
           selectedId = card.dataset.job;
-          detailJobId = sameJob && !detailHidden ? null : selectedId;
-          setDetailCollapsed(!detailJobId);
+          detailJobId = selectedId;
+          activeJobMenuId = activeJobMenuId === selectedId ? null : selectedId;
+          setDetailCollapsed(false);
           renderAll();
+        };
+        card.addEventListener("click", event => {
+          if (event.target.closest("[data-job-menu]") || event.target.closest("[data-resize-handle]")) return;
+          openMenu();
+        });
+        card.addEventListener("keydown", event => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          openMenu();
         });
       });
+      $$("#weekGrid [data-open-job-detail]").forEach(btn => btn.addEventListener("click", event => {
+        event.stopPropagation();
+        selectedId = btn.dataset.openJobDetail;
+        detailJobId = selectedId;
+        activeJobMenuId = null;
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+      $$("#weekGrid [data-edit-job-from-menu]").forEach(btn => btn.addEventListener("click", event => {
+        event.stopPropagation();
+        activeJobMenuId = null;
+        openJobModal(btn.dataset.editJobFromMenu);
+      }));
+      $$("#weekGrid [data-copy-job]").forEach(btn => btn.addEventListener("click", event => {
+        event.stopPropagation();
+        copyJobToTechnician(btn.dataset.copyJob, btn.dataset.copyTech);
+      }));
       $$("#weekGrid [data-calendar-day]").forEach(day => {
         day.addEventListener("click", event => {
           if (event.target.closest("[data-job]") || event.target.closest("button")) return;
+          activeJobMenuId = null;
           openJobModal(null, day.dataset.calendarDay);
         });
       });
@@ -2823,6 +2930,31 @@
       resolveWorkdayOverflow(job);
       selectedId = job.id;
       detailJobId = job.id;
+      setDetailCollapsed(false);
+      renderAll();
+    }
+
+    function copyJobToTechnician(jobId, technicianName) {
+      const source = jobs.find(item => item.id === jobId);
+      if (!source || !technicianName) return;
+      const job = {
+        ...source,
+        id: nextJobId(),
+        technician: technicianName,
+        technicians: [technicianName],
+        status: ["täidetud", "akt", "saadetud", "arhiveeritud"].includes(source.status) ? "planeeritud" : source.status,
+        timeLogs: [],
+        workDone: "",
+        materials: "",
+        hours: "",
+        travelTime: "",
+        photos: "",
+        approvedBy: ""
+      };
+      jobs.push(job);
+      selectedId = job.id;
+      detailJobId = job.id;
+      activeJobMenuId = null;
       setDetailCollapsed(false);
       renderAll();
     }
