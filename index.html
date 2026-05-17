@@ -1733,7 +1733,7 @@
             <label>Töö algus<select class="select" name="time" required></select></label>
             <label>Töö lõpp<select class="select" name="endTime"></select></label>
             <label>Kestvus tundides<input class="field" name="durationHours" type="number" min="0.5" step="0.5" placeholder="nt 2"></label>
-            <label>Tehnik<select class="select" name="technician" required></select></label>
+            <label>Tehnikud<select class="select multi" name="technician" multiple required></select></label>
             <label>Prioriteet<select class="select" name="priority"><option>Tavaline</option><option>Kõrge</option><option>Madal</option></select></label>
             <label>Korduvus<select class="select" name="recurrence"><option>Ühekordne</option><option>Iganädalane</option><option>Igakuine</option><option>Kvartaalne</option><option>Aastane</option></select></label>
             <label>Staatus<select class="select" name="status">
@@ -2321,6 +2321,28 @@
       return peopleEvents.some(event => event.personId === person.id && event.start <= date && event.end >= date);
     }
 
+    function jobTechnicians(job) {
+      if (Array.isArray(job.technicians) && job.technicians.length) {
+        return job.technicians.map(name => String(name).trim()).filter(Boolean);
+      }
+      return String(job.technician || "")
+        .split(",")
+        .map(name => name.trim())
+        .filter(Boolean);
+    }
+
+    function jobTechnicianLabel(job) {
+      return jobTechnicians(job).join(", ") || "määramata";
+    }
+
+    function jobHasTechnician(job, name) {
+      return name === "all" || jobTechnicians(job).includes(name);
+    }
+
+    function unavailableTechniciansForJob(job) {
+      return jobTechnicians(job).filter(name => isPersonUnavailable(name, job.date));
+    }
+
     function unavailableNames(date) {
       return people
         .filter(person => peopleEvents.some(event => event.personId === person.id && event.start <= date && event.end >= date))
@@ -2331,7 +2353,7 @@
       let score = 20;
       if (job.priority === "Kõrge") score += 45;
       if (job.status === "uus") score += 15;
-      if (isPersonUnavailable(job.technician, job.date)) score += 20;
+      if (unavailableTechniciansForJob(job).length) score += 20;
       return Math.min(score, 100);
     }
 
@@ -2379,11 +2401,29 @@
         return true;
       }
       const overflowMinutes = Math.max(30, end - workdayEnd);
-      job.durationHours = String(Math.max(0.5, Math.round((overflowMinutes / 60) * 2) / 2));
-      job.date = dateKey(nextBusinessDate(new Date(`${job.date}T12:00:00`)));
-      job.time = "09:00";
+      const firstDayMinutes = Math.max(30, workdayEnd - start);
+      const nextDate = dateKey(nextBusinessDate(new Date(`${job.date}T12:00:00`)));
+      const continuation = {
+        ...job,
+        id: nextJobId(),
+        referenceNo: job.referenceNo ? `${job.referenceNo}-JÄTK` : `${job.id}-JÄTK`,
+        date: nextDate,
+        time: "09:00",
+        durationHours: String(Math.max(0.5, Math.round((overflowMinutes / 60) * 2) / 2)),
+        endTime: addDurationToTime("09:00", Math.max(0.5, Math.round((overflowMinutes / 60) * 2) / 2)),
+        recurrence: "Jätkutöö",
+        description: `${job.description || ""}\nJätk eelmisest tööpäevast (${job.id}).`.trim(),
+        timeLogs: [],
+        workDone: "",
+        materials: "",
+        hours: "",
+        travelTime: "",
+        photos: "",
+        approvedBy: ""
+      };
+      job.durationHours = String(Math.max(0.5, Math.round((firstDayMinutes / 60) * 2) / 2));
       job.endTime = addDurationToTime(job.time, job.durationHours);
-      calendarCursor = new Date(`${job.date}T12:00:00`);
+      jobs.push(continuation);
       return true;
     }
 
@@ -2512,7 +2552,7 @@
       }
       for (let i = 0; i < 10; i += 1) {
         const date = dateKey(day);
-        const free = candidates.find(slot => !jobs.some(job => job.date === date && job.time === slot && job.technician === technician));
+        const free = candidates.find(slot => !jobs.some(job => job.date === date && job.time === slot && jobHasTechnician(job, technician)));
         if (free) return { date, time: free };
         day = nextBusinessDate(day);
         candidates = slots;
@@ -2554,7 +2594,7 @@
       $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
       $("#mobileTech").innerHTML = techOptions;
       $("#mobileTech").value = technicians().includes(selectedMobileTech) ? selectedMobileTech : technicians()[0] || "";
-      document.querySelector("[name='technician']").innerHTML = techOptions;
+      document.querySelector("#jobForm [name='technician']").innerHTML = techOptions;
       document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
       document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
       document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions;
@@ -2607,9 +2647,9 @@
       const status = $("#statusFilter").value;
       const query = $("#searchField").value.trim().toLowerCase();
       return jobs.filter(job => {
-        const matchesTech = tech === "all" || job.technician === tech;
+        const matchesTech = jobHasTechnician(job, tech);
         const matchesStatus = status === "all" || job.status === status;
-        const haystack = `${job.client} ${job.referenceNo} ${job.address} ${job.buildingPart} ${job.description} ${job.technician}`.toLowerCase();
+        const haystack = `${job.client} ${job.referenceNo} ${job.address} ${job.buildingPart} ${job.description} ${jobTechnicianLabel(job)}`.toLowerCase();
         return matchesTech && matchesStatus && haystack.includes(query);
       });
     }
@@ -2651,7 +2691,7 @@
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
           <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" draggable="true" style="${calendarCardStyle(job)}">
-            <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.technician)}</span></span>
+            <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(jobTechnicianLabel(job))}</span></span>
             <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
             <span class="job-meta">${escapeHtml(job.address)}</span>
@@ -2856,7 +2896,7 @@
             ${dayJobs.map(job => `
               <button class="mini-job" data-job="${job.id}">
                 <strong>${escapeHtml(job.time)} · ${escapeHtml(job.client)}</strong>
-                <span>${escapeHtml(job.technician)} · ${escapeHtml(statusLabels[job.status])}</span>
+                <span>${escapeHtml(jobTechnicianLabel(job))} · ${escapeHtml(statusLabels[job.status])}</span>
               </button>
             `).join("") || `<span class="job-meta">-</span>`}
           </div>
@@ -2882,7 +2922,7 @@
             ${monthJobs.slice(0, 3).map(job => `
               <button class="mini-job" data-job="${job.id}">
                 <strong>${escapeHtml(job.date.slice(8, 10))}. ${escapeHtml(job.client)}</strong>
-                <span>${escapeHtml(job.technician)}</span>
+                <span>${escapeHtml(jobTechnicianLabel(job))}</span>
               </button>
             `).join("")}
           </div>
@@ -2909,7 +2949,7 @@
         <div class="kv"><span>Hooneosa</span><strong>${escapeHtml(job.buildingPart || "määramata")}</strong></div>
         <div class="kv"><span>Seade</span><strong>${escapeHtml(job.asset || "sidumata")}</strong></div>
         <div class="kv"><span>Korduvus</span><strong>${escapeHtml(job.recurrence || "Ühekordne")}</strong></div>
-        <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}</strong></div>
+        <div class="kv"><span>Tehnikud</span><strong>${escapeHtml(jobTechnicianLabel(job))}</strong></div>
         <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))}</strong></div>
         <div class="kv"><span>Kontakt</span><strong>${escapeHtml(job.contact)} · ${escapeHtml(job.phone)}</strong></div>
         <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
@@ -2950,8 +2990,8 @@
       const tech = $("#mobileTech").value || technicians()[0];
       const today = dateKey(new Date());
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel"];
-      const todayJobs = jobs.filter(job => job.technician === tech && job.date === today && activeStatuses.includes(job.status));
-      const otherJobs = jobs.filter(job => job.technician === tech && job.date !== today && activeStatuses.includes(job.status));
+      const todayJobs = jobs.filter(job => jobHasTechnician(job, tech) && job.date === today && activeStatuses.includes(job.status));
+      const otherJobs = jobs.filter(job => jobHasTechnician(job, tech) && job.date !== today && activeStatuses.includes(job.status));
       const techJobs = todayJobs.length ? todayJobs : otherJobs;
       $("#mobileJobs").innerHTML = techJobs.map(job => `
         <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
@@ -3015,7 +3055,7 @@
       const visibleActs = jobs.filter(job => {
         if (!["täidetud", "akt", "saadetud", "arhiveeritud"].includes(job.status)) return false;
         if (job.status === "arhiveeritud" && !date && tech === "all" && !buildingPart && !address) return false;
-        if (tech !== "all" && job.technician !== tech) return false;
+        if (!jobHasTechnician(job, tech)) return false;
         if (date && job.date !== date) return false;
         if (buildingPart && !String(job.buildingPart || "").toLowerCase().includes(buildingPart)) return false;
         if (address && !String(job.address || "").toLowerCase().includes(address)) return false;
@@ -3038,7 +3078,7 @@
           <div class="timeline">
             ${groups[client].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)).map(job => `
               <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-act-job="${job.id}">
-                <span class="job-time"><span>${escapeHtml(job.id)} · ${escapeHtml(job.date)}</span><span>${escapeHtml(job.technician)}</span></span>
+                <span class="job-time"><span>${escapeHtml(job.id)} · ${escapeHtml(job.date)}</span><span>${escapeHtml(jobTechnicianLabel(job))}</span></span>
                 <span class="job-title">${escapeHtml(job.address)}</span>
                 ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
                 ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
@@ -3353,7 +3393,7 @@
           ${jobsForObject.map(job => `
             <div class="event-row" ${job.status === "ootel" ? `draggable="true" data-drag-job="${job.id}"` : ""}>
               <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(statusLabels[job.status])}</strong>
-              <span>${escapeHtml(job.technician)} · ${escapeHtml(job.asset || job.buildingPart || "-")}</span>
+              <span>${escapeHtml(jobTechnicianLabel(job))} · ${escapeHtml(job.asset || job.buildingPart || "-")}</span>
               <span class="job-meta">${escapeHtml(job.description)}</span>
             </div>
           `).join("") || `<div class="mobile-card">Selle filtriga töid ei ole.</div>`}
@@ -3459,7 +3499,7 @@
           </div>
           <div class="kv"><span>Prioriteet</span><strong>${escapeHtml(job.priority)}</strong></div>
           <div class="kv"><span>Aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))}</strong></div>
-          <div class="kv"><span>Tehnik</span><strong>${escapeHtml(job.technician)}${isPersonUnavailable(job.technician, job.date) ? " · puudub" : ""}</strong></div>
+          <div class="kv"><span>Tehnikud</span><strong>${escapeHtml(jobTechnicianLabel(job))}${unavailableTechniciansForJob(job).length ? ` · puudub: ${escapeHtml(unavailableTechniciansForJob(job).join(", "))}` : ""}</strong></div>
           <div class="mobile-card">${escapeHtml(aiReason(job))}</div>
           <div class="person-actions">
             <button class="btn primary" data-ai-open="${job.id}"><span class="icon">▣</span> Ava</button>
@@ -3491,7 +3531,7 @@
     function aiReason(job) {
       const reasons = [];
       if (job.priority === "Kõrge") reasons.push("kõrge prioriteet");
-      if (isPersonUnavailable(job.technician, job.date)) reasons.push("tehnik pole saadaval");
+      if (unavailableTechniciansForJob(job).length) reasons.push(`tehnik pole saadaval: ${unavailableTechniciansForJob(job).join(", ")}`);
       if (!reasons.length) reasons.push("töö sobib planeeritud järjekorda");
       return `Soovitus: ${reasons.join(", ")}.`;
     }
@@ -3502,9 +3542,9 @@
         if (job.priority === "Kõrge" && !["täidetud", "akt", "saadetud"].includes(job.status)) {
           items.push({ kind: "Prioriteet", title: `${job.id} vajab tähelepanu`, body: `${job.client}, ${job.address}` });
         }
-        if (isPersonUnavailable(job.technician, job.date)) {
-          items.push({ kind: "Saadavus", title: `${job.technician} puudub`, body: `${job.id} tuleks ümber planeerida.` });
-        }
+        unavailableTechniciansForJob(job).forEach(name => {
+          items.push({ kind: "Saadavus", title: `${name} puudub`, body: `${job.id} tuleks ümber planeerida.` });
+        });
       });
       return items;
     }
@@ -3545,7 +3585,7 @@
         .slice(0, 8);
       const workItems = visible.length ? visible.map(job => ({
         label: job.date === dateKey(new Date()) ? "Täna" : range.label,
-        text: `${job.date} ${job.time} · ${job.client} · ${job.address}${job.asset ? ` · ${job.asset}` : ""} · ${job.technician}`
+        text: `${job.date} ${job.time} · ${job.client} · ${job.address}${job.asset ? ` · ${job.asset}` : ""} · ${jobTechnicianLabel(job)}`
       })) : [{ label: "Kalender", text: `${range.label} töid ei ole.` }];
       const jokes = [
         "Hooldusnali: kui filter on puhas, hingab ka graafik vabamalt.",
@@ -3999,11 +4039,15 @@
       const job = id ? jobs.find(item => item.id === id) : {
         client: "", referenceNo: "", address: "", buildingPart: "", contact: "", phone: "", date: defaultSlot.date, time: defaultSlot.time,
         endTime: "", durationHours: "2",
-        technician: technicians()[0] || "", priority: "Tavaline", status: "uus", description: "",
+        technician: technicians()[0] || "", technicians: [technicians()[0] || ""].filter(Boolean), priority: "Tavaline", status: "uus", description: "",
         workDone: "", materials: "", hours: "", travelTime: "", timeLogs: [], photos: "", approvedBy: "", ezefsRef: ""
       };
       Object.entries(job).forEach(([key, value]) => {
         if (form.elements[key]) form.elements[key].value = value;
+      });
+      const selectedTechs = jobTechnicians(job);
+      Array.from(form.elements.technician.options).forEach(option => {
+        option.selected = selectedTechs.includes(option.value) || (!id && !selectedTechs.length && option.index === 0);
       });
       if (!id && form.elements.durationHours.value) {
         form.elements.endTime.value = addDurationToTime(form.elements.time.value, form.elements.durationHours.value);
@@ -4129,6 +4173,7 @@ Prioriteet: tavaline`;
         endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
+        technicians: [technicians()[0] || ""].filter(Boolean),
         priority,
         recurrence: "Ühekordne",
         status: "uus",
@@ -4171,6 +4216,7 @@ Prioriteet: tavaline`;
         endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
+        technicians: [technicians()[0] || ""].filter(Boolean),
         priority,
         recurrence: "Ühekordne",
         status: "uus",
@@ -4241,7 +4287,11 @@ Summa: 2 075,34 €`;
 
     function saveJob(event) {
       event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.target).entries());
+      const formData = new FormData(event.target);
+      const data = Object.fromEntries(formData.entries());
+      const selectedTechnicians = formData.getAll("technician").map(name => String(name).trim()).filter(Boolean);
+      data.technicians = selectedTechnicians;
+      data.technician = selectedTechnicians.join(", ");
       if (data.durationHours) {
         data.durationHours = String(Math.max(0.5, Math.round(Number(data.durationHours) * 2) / 2));
       }
@@ -4273,7 +4323,10 @@ Summa: 2 075,34 €`;
       job.date = "2026-05-14";
       job.time = "08:00";
       const available = technicians().find(name => !isPersonUnavailable(name, job.date));
-      if (available) job.technician = available;
+      if (available) {
+        job.technician = available;
+        job.technicians = [available];
+      }
       selectedId = job.id;
       detailJobId = selectedId;
       switchView("calendar");
@@ -4288,8 +4341,9 @@ Summa: 2 075,34 €`;
         .filter(job => !["täidetud", "akt", "saadetud"].includes(job.status))
         .sort((a, b) => priorityScore(b) - priorityScore(a))
         .forEach(job => {
-          const tech = technicians().find(name => !isPersonUnavailable(name, job.date)) || job.technician;
+          const tech = technicians().find(name => !isPersonUnavailable(name, job.date)) || jobTechnicians(job)[0] || job.technician;
           job.technician = tech;
+          job.technicians = [tech];
           job.time = slots[slotIndex % slots.length];
           job.status = job.status === "uus" ? "planeeritud" : job.status;
           slotIndex += 1;
@@ -4300,12 +4354,14 @@ Summa: 2 075,34 €`;
     function scheduleDraggedJob(jobId, date) {
       const job = jobs.find(item => item.id === jobId);
       if (!job) return;
-      const current = job.technician || technicians()[0] || "";
+      const current = jobTechnicians(job).join(", ") || technicians()[0] || "";
       const chosen = window.prompt(`Määra tehnik tööle ${job.id}`, current);
       if (chosen === null) return;
       job.date = date;
       job.time = job.time || "09:00";
-      job.technician = chosen.trim() || current;
+      const selectedTechnicians = (chosen.trim() || current).split(",").map(name => name.trim()).filter(Boolean);
+      job.technicians = selectedTechnicians;
+      job.technician = selectedTechnicians.join(", ");
       job.status = "planeeritud";
       selectedId = job.id;
       detailJobId = selectedId;
@@ -4390,7 +4446,7 @@ Summa: 2 075,34 €`;
     function deletePerson(id) {
       const person = people.find(item => item.id === id);
       if (!person) return;
-      if (jobs.some(job => job.technician === person.name)) {
+      if (jobs.some(job => jobHasTechnician(job, person.name))) {
         person.active = false;
       } else {
         people = people.filter(item => item.id !== id);
@@ -4661,6 +4717,7 @@ Summa: 2 075,34 €`;
             endTime: addDurationToTime(data.time, 2),
             durationHours: "2",
             technician: data.technician,
+            technicians: [data.technician].filter(Boolean),
             priority: data.priority,
             recurrence: recurrenceLabel(data.frequency, interval),
             status: "planeeritud",
@@ -4712,7 +4769,7 @@ Summa: 2 075,34 €`;
           <div class="act-box"><span>Hooneosa</span><strong>${escapeHtml(job.buildingPart || "-")}</strong></div>
           <div class="act-box"><span>Seade</span><strong>${escapeHtml(job.asset || "-")}</strong></div>
           <div class="act-box"><span>Kontakt</span><strong>${escapeHtml(job.contact)} ${escapeHtml(job.phone)}</strong></div>
-          <div class="act-box"><span>Tehnik</span><strong>${escapeHtml(job.technician)}</strong></div>
+          <div class="act-box"><span>Tehnikud</span><strong>${escapeHtml(jobTechnicianLabel(job))}</strong></div>
           <div class="act-box"><span>Töö aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(effectiveWorkTime(job) || "-")}</strong></div>
           <div class="act-box"><span>Transpordi aeg</span><strong>${escapeHtml(job.travelTime || "-")}</strong></div>
           <div class="act-box"><span>Staatus</span><strong>${statusLabels[job.status]}</strong></div>
@@ -4727,7 +4784,7 @@ Summa: 2 075,34 €`;
         <br>
         <div class="act-box"><span>Kasutatud materjalid</span>${escapeHtml(job.materials || "-")}</div>
         <div class="signature-row">
-          <div class="signature">VECO esindaja: ${escapeHtml(job.technician)}</div>
+          <div class="signature">VECO esindaja: ${escapeHtml(jobTechnicianLabel(job))}</div>
           <div class="signature">Kliendi esindaja: ${escapeHtml(job.approvedBy || "-")}</div>
         </div>
       `;
