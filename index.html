@@ -2768,6 +2768,7 @@
                 <button type="button" data-edit-job-from-menu="${job.id}">Muuda töökäsku</button>
                 <div class="job-action-label">Kopeeri tehnikule</div>
                 ${copyTargetsForJob(job).map(name => `<button type="button" data-copy-job="${job.id}" data-copy-tech="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("") || `<button type="button" disabled>Kõik tehnikud on lisatud</button>`}
+                <button type="button" data-close-job-menu>× Sulge</button>
               </div>
             ` : ""}
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
@@ -2833,6 +2834,11 @@
       $$("#weekGrid [data-copy-job]").forEach(btn => btn.addEventListener("click", event => {
         event.stopPropagation();
         copyJobToTechnician(btn.dataset.copyJob, btn.dataset.copyTech);
+      }));
+      $$("#weekGrid [data-close-job-menu]").forEach(btn => btn.addEventListener("click", event => {
+        event.stopPropagation();
+        activeJobMenuId = null;
+        renderCalendar();
       }));
       $$("#weekGrid [data-calendar-day]").forEach(day => {
         day.addEventListener("click", event => {
@@ -5045,6 +5051,17 @@ Summa: 2 075,34 €`;
     $$(".modal").forEach(modal => modal.addEventListener("click", event => {
       if (event.target === modal) closeModal(modal.id);
     }));
+    document.addEventListener("click", event => {
+      if (!activeJobMenuId) return;
+      if (event.target.closest("[data-job-menu]") || event.target.closest("[data-job]")) return;
+      activeJobMenuId = null;
+      renderCalendar();
+    });
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape" || !activeJobMenuId) return;
+      activeJobMenuId = null;
+      renderCalendar();
+    });
   </script>
 </body>
 </html>
