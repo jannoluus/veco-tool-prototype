@@ -3108,26 +3108,7 @@
         <div class="photo-strip">${photoTiles(job)}</div>
         <p class="section-title">Ajakulu lõigud</p>
         ${renderTimeLog(job)}
-        <p class="section-title">Tegevused</p>
-        <div class="mobile-actions">
-          <button class="btn" data-status="töös"><span class="icon">▶</span> Alusta</button>
-          <button class="btn" data-status="pausil"><span class="icon">Ⅱ</span> Pausile</button>
-          <button class="btn" data-status="täidetud"><span class="icon">✓</span> Lõpeta töökäsk</button>
-          <button class="btn primary" id="generateActBtn"><span class="icon">▣</span> Genereeri akt</button>
-          <button class="btn ghost" id="remoteFillBtn"><span class="icon">✎</span> Lisa täitmise info</button>
-          <button class="btn danger" id="deleteJobBtn"><span class="icon">×</span> Kustuta</button>
-        </div>
       `;
-      $$("[data-status]").forEach(btn => btn.addEventListener("click", () => {
-        if (btn.dataset.status === "täidetud") {
-          completeSelectedJob();
-        } else {
-          updateStatus(btn.dataset.status);
-        }
-      }));
-      $("#generateActBtn").addEventListener("click", openAct);
-      $("#remoteFillBtn").addEventListener("click", () => openJobModal(job.id));
-      $("#deleteJobBtn").addEventListener("click", deleteSelectedJob);
     }
 
     function renderMobile() {
