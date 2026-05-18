@@ -2303,8 +2303,11 @@
     }
 
     function nextTimestamp() {
-      demoClock = new Date(demoClock.getTime() + 23 * 60 * 1000);
-      return demoClock.toISOString().slice(0, 19);
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, "0");
+      const m = String(now.getMinutes()).padStart(2, "0");
+      const s = String(now.getSeconds()).padStart(2, "0");
+      return `${dateKey(now)}T${h}:${m}:${s}`;
     }
 
     function formatDateTime(value) {
@@ -2361,7 +2364,9 @@
 
     function minutesBetween(start, end) {
       if (!start || !end) return 0;
-      return Math.max(0, Math.round((new Date(end) - new Date(start)) / 60000));
+      const diff = new Date(end) - new Date(start);
+      if (diff <= 0) return 0;
+      return Math.max(60, Math.round(diff / 60000));
     }
 
     function totalWorkMinutes(job) {
