@@ -1855,6 +1855,7 @@
           </div>
         </div>
         <div class="dialog-actions">
+          <button class="btn danger hidden" id="deleteJobFromModalBtn" type="button"><span class="icon">×</span> Kustuta</button>
           <button class="btn ghost" type="button" data-close="jobModal">Tühista</button>
           <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
         </div>
@@ -2250,6 +2251,7 @@
     let draggedCalendarJobId = null;
     let weekEdgeTimer = null;
     let activeJobMenuId = null;
+    let calendarHourHeight = 40;
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2557,8 +2559,16 @@
       return Math.max(19 * 60, Math.min(23 * 60, Math.ceil(latest / 30) * 30));
     }
 
+    function fitCalendarHourHeight(endMinutes) {
+      const visibleHours = Math.max(1, (endMinutes - 7 * 60) / 60);
+      const reservedHeight = window.innerWidth <= 900 ? 360 : 330;
+      const availableHeight = Math.max(480, window.innerHeight - reservedHeight);
+      calendarHourHeight = Math.max(40, Math.min(72, Math.floor(availableHeight / visibleHours)));
+      return calendarHourHeight;
+    }
+
     function axisTopForMinutes(minutes) {
-      return Math.round(((minutes - 7 * 60) / 60) * 40);
+      return Math.round(((minutes - 7 * 60) / 60) * calendarHourHeight);
     }
 
     function selectedJobRangeMarkers(endMinutes) {
@@ -2584,8 +2594,8 @@
       const start = Math.min(Math.max(timeToMinutes(job.time || "09:00"), dayStart), dayEnd);
       const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
       const visibleDuration = Math.min(duration, dayEnd - start);
-      const top = Math.round(((start - dayStart) / 60) * 40);
-      const height = Math.max(96, Math.round((visibleDuration / 60) * 40) - 4);
+      const top = Math.round(((start - dayStart) / 60) * calendarHourHeight);
+      const height = Math.max(96, Math.round((visibleDuration / 60) * calendarHourHeight) - 4);
       return `--job-top:${top}px;--job-height:${height}px`;
     }
 
@@ -2786,7 +2796,9 @@
       $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const endMinutes = calendarEndMinutes(visibleWeekJobs);
-      const bodyHeight = Math.round(((endMinutes - 7 * 60) / 60) * 40);
+      const hourHeight = fitCalendarHourHeight(endMinutes);
+      const bodyHeight = Math.round(((endMinutes - 7 * 60) / 60) * hourHeight);
+      $("#weekGrid").style.setProperty("--calendar-hour-height", `${hourHeight}px`);
       $("#weekGrid").style.setProperty("--calendar-body-height", `${bodyHeight}px`);
       const timeAxis = `<div class="time-axis" aria-hidden="true">${
         Array.from({ length: Math.floor((endMinutes - 7 * 60) / 60) + 1 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
@@ -2841,10 +2853,13 @@
     function bindCalendarSelection() {
       $$("#weekGrid [data-job]").forEach(card => {
         const openDetail = () => {
-          selectedId = card.dataset.job;
-          detailJobId = selectedId;
+          const jobId = card.dataset.job;
+          const detailIsOpen = !$("#calendarView").classList.contains("detail-collapsed");
+          const sameOpenJob = detailIsOpen && detailJobId === jobId;
+          selectedId = jobId;
+          detailJobId = sameOpenJob ? null : jobId;
           activeJobMenuId = null;
-          setDetailCollapsed(false);
+          setDetailCollapsed(sameOpenJob);
           renderAll();
         };
         card.addEventListener("click", event => {
@@ -2926,11 +2941,11 @@
         if (!body) return "09:00";
         const rect = body.getBoundingClientRect();
         const relativeY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
-        const minutesFromStart = Math.round((relativeY / 40) * 2) * 30;
+        const minutesFromStart = Math.round((relativeY / calendarHourHeight) * 2) * 30;
         const minutes = Math.max(7 * 60, Math.min(23 * 60, 7 * 60 + minutesFromStart));
         const time = minutesToTime(minutes);
         day.dataset.previewTime = time;
-        day.style.setProperty("--preview-top", `${42 + Math.round(((minutes - 7 * 60) / 60) * 40)}px`);
+        day.style.setProperty("--preview-top", `${42 + axisTopForMinutes(minutes)}px`);
         day.classList.add("drag-time-preview");
         return time;
       }
@@ -3047,7 +3062,7 @@
           handle.setPointerCapture(event.pointerId);
 
           const onMove = moveEvent => {
-            const deltaMinutes = Math.round(((moveEvent.clientY - startY) / 40) * 2) * 30;
+            const deltaMinutes = Math.round(((moveEvent.clientY - startY) / calendarHourHeight) * 2) * 30;
             const nextMinutes = Math.max(30, Math.min(12 * 60, startMinutes + deltaMinutes));
             job.durationHours = String(nextMinutes / 60);
             job.endTime = addDurationToTime(job.time || "09:00", job.durationHours);
@@ -4191,12 +4206,13 @@
     function deleteSelectedJob(id = selectedId) {
       const job = jobs.find(item => item.id === id) || selectedJob();
       const ok = window.confirm(`Kas kustutada töökäsk ${job.id}?\n\n${job.client} · ${job.address}\n\nSeda toimingut ei saa tagasi võtta.`);
-      if (!ok) return;
+      if (!ok) return false;
       jobs = jobs.filter(item => item.id !== job.id);
       selectedId = jobs[0]?.id || "";
       detailJobId = null;
       setDetailCollapsed(true);
       renderAll();
+      return true;
     }
 
     function archiveAct(id) {
@@ -4220,6 +4236,7 @@
       const form = $("#jobForm");
       form.reset();
       $("#jobModalTitle").textContent = id ? "Muuda / täida töökäsk" : "Lisa töökäsk";
+      $("#deleteJobFromModalBtn").classList.toggle("hidden", !id);
       const defaultSlot = nextFreeSlot(technicians()[0] || "");
       if (preferredDate) defaultSlot.date = preferredDate;
       const job = id ? jobs.find(item => item.id === id) : {
@@ -4464,6 +4481,13 @@ Summa: 2 075,34 €`;
     function closeModal(id) {
       $(`#${id}`).classList.remove("open");
       $(`#${id}`).setAttribute("aria-hidden", "true");
+    }
+
+    function closeTopModal() {
+      const openModals = $$(".modal.open");
+      if (!openModals.length) return false;
+      closeModal(openModals[openModals.length - 1].id);
+      return true;
     }
 
     function syncJobTimeFields(source) {
@@ -5056,6 +5080,10 @@ Summa: 2 075,34 €`;
     $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
     $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
+    $("#deleteJobFromModalBtn").addEventListener("click", () => {
+      if (!editingId) return;
+      if (deleteSelectedJob(editingId)) closeModal("jobModal");
+    });
     $("#jobForm").addEventListener("submit", saveJob);
     $("#jobForm").elements.time.addEventListener("change", () => syncJobTimeFields("start"));
     $("#jobForm").elements.durationHours.addEventListener("input", () => syncJobTimeFields("duration"));
@@ -5122,9 +5150,18 @@ Summa: 2 075,34 €`;
       renderCalendar();
     });
     document.addEventListener("keydown", event => {
-      if (event.key !== "Escape" || !activeJobMenuId) return;
+      if (event.key !== "Escape") return;
+      if (closeTopModal()) {
+        event.preventDefault();
+        return;
+      }
+      if (!activeJobMenuId) return;
       activeJobMenuId = null;
+      event.preventDefault();
       renderCalendar();
+    });
+    window.addEventListener("resize", () => {
+      if ($("#calendarView").classList.contains("active")) renderCalendar();
     });
   </script>
 </body>
