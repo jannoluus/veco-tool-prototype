@@ -920,6 +920,21 @@
       gap: 8px;
     }
 
+    .ai-select-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .ai-select-row input {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+    }
+
     .timeline {
       display: grid;
       gap: 8px;
@@ -1385,6 +1400,7 @@
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
+        <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
         <button id="moreNavBtn" type="button" aria-expanded="false"><span class="icon">⋯</span> Veel</button>
         <div class="nav-more" id="moreNav" hidden>
@@ -1726,11 +1742,40 @@
         </aside>
       </section>
 
+      <section class="content hidden" id="projectsView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Projektid ja lepingulised plaanid</h2>
+            <div class="filters">
+              <select class="select" id="projectStatusFilter" aria-label="Projektide filter">
+                <option value="active">Aktiivsed</option>
+                <option value="all">Kõik projektid</option>
+                <option value="paused">Pausil</option>
+              </select>
+              <button class="btn primary" id="newProjectPlanBtn"><span class="icon">＋</span> Planeeri kliendi töö</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="projectsGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Projekti detail</h2>
+            <button class="btn primary" id="generateProjectJobsBtn"><span class="icon">▦</span> Genereeri tööd</button>
+          </div>
+          <div class="detail-body" id="projectDetail"></div>
+        </aside>
+      </section>
+
       <section class="content hidden" id="aiView">
         <div class="panel">
           <div class="panel-head">
             <h2>AI planeerimine ja teavitused</h2>
             <div class="filters">
+              <button class="btn" id="aiSelectAllBtn"><span class="icon">☑</span> Vali kõik</button>
+              <button class="btn" id="aiClearSelectionBtn"><span class="icon">□</span> Tühjenda</button>
+              <button class="btn danger" id="aiDeleteSelectedBtn"><span class="icon">×</span> Kustuta valitud</button>
               <button class="btn" id="simulateEmailBtn"><span class="icon">✉</span> Simuleeri saabunud kiri</button>
               <button class="btn primary" id="autoScheduleBtn"><span class="icon">✦</span> Mahuta tööd automaatselt</button>
             </div>
@@ -2125,6 +2170,44 @@
       { id: "EV-01", personId: "U-02", type: "Puhkus", start: "2026-05-18", end: "2026-05-22", note: "Kevadine puhkus" },
       { id: "EV-02", personId: "U-03", type: "Koolitus", start: "2026-05-15", end: "2026-05-15", note: "Automaatika täiendkoolitus" }
     ];
+    let projects = [
+      {
+        id: "PRJ-01",
+        name: "Baltic Office kvartaalne hooldus",
+        clientId: "C-02",
+        objectId: "CI-03",
+        deviceIds: ["CI-08", "CI-10"],
+        frequency: "month",
+        interval: 3,
+        startDate: "2026-06-01",
+        endDate: "2027-06-01",
+        nextDate: "2026-06-17",
+        time: "09:00",
+        durationHours: "2",
+        technician: "Aleksei",
+        priority: "Tavaline",
+        status: "aktiivne",
+        description: "Kvartaalne ventilatsiooniseadme ja kondensaadipumba hooldus."
+      },
+      {
+        id: "PRJ-02",
+        name: "Pargi 12 ventilatsiooni hooldus",
+        clientId: "C-01",
+        objectId: "CI-01",
+        deviceIds: ["CI-05"],
+        frequency: "month",
+        interval: 6,
+        startDate: "2026-05-01",
+        endDate: "2027-05-01",
+        nextDate: "2026-11-12",
+        time: "10:00",
+        durationHours: "2",
+        technician: "Sergei",
+        priority: "Tavaline",
+        status: "aktiivne",
+        description: "Pooleaastane ventilatsiooniseadme ülevaatus ja filtrite kontroll."
+      }
+    ];
     let clients = [
       {
         id: "C-01", name: "KÜ Pargi 12", regNo: "80445566", contact: "Maarika Tamm", phone: "+372 5551 2211",
@@ -2230,6 +2313,7 @@
     let selectedClientId = clients[0].id;
     let editingClientId = null;
     let editingClientItemId = null;
+    let selectedProjectId = projects[0]?.id || "";
     let selectedObjectKey = "C-01::Pargi 12, Tallinn";
     let demoClock = new Date("2026-05-14T09:00:00");
     let calendarCursor = new Date();
@@ -2252,6 +2336,7 @@
     let weekEdgeTimer = null;
     let activeJobMenuId = null;
     let calendarHourHeight = 40;
+    let selectedAiJobIds = new Set();
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2265,6 +2350,7 @@
     const demoData = {
       people: JSON.parse(JSON.stringify(people)),
       peopleEvents: JSON.parse(JSON.stringify(peopleEvents)),
+      projects: JSON.parse(JSON.stringify(projects)),
       clients: JSON.parse(JSON.stringify(clients)),
       jobs: JSON.parse(JSON.stringify(jobs))
     };
@@ -3683,14 +3769,242 @@
       });
     }
 
+    function projectClient(project) {
+      return clients.find(client => client.id === project?.clientId);
+    }
+
+    function projectObject(project) {
+      const client = projectClient(project);
+      const item = client?.items.find(entry => entry.type === "object" && entry.id === project?.objectId);
+      if (!client || !item) return null;
+      return {
+        key: objectKey(client.id, item.detail),
+        clientId: client.id,
+        clientName: client.name,
+        itemId: item.id,
+        name: item.name,
+        address: item.detail,
+        note: item.note || ""
+      };
+    }
+
+    function projectDevices(project) {
+      const client = projectClient(project);
+      if (!client) return [];
+      return client.items.filter(item => project.deviceIds?.includes(item.id));
+    }
+
+    function selectedProject() {
+      return projects.find(project => project.id === selectedProjectId) || projects[0];
+    }
+
+    function projectJobs(project) {
+      if (!project) return [];
+      return jobs.filter(job => job.projectId === project.id || String(job.referenceNo || "").startsWith(`${project.id}-`));
+    }
+
+    function previewProjectDates(project, count = 4) {
+      if (!project) return [];
+      const interval = Math.max(1, Number(project.interval) || 1);
+      const dates = [];
+      let cursor = new Date(`${project.nextDate || project.startDate || dateKey(new Date())}T12:00:00`);
+      const endDate = project.endDate ? new Date(`${project.endDate}T12:00:00`) : null;
+      while (dates.length < count && (!endDate || cursor <= endDate)) {
+        dates.push(dateKey(cursor));
+        cursor = addInterval(cursor, project.frequency, interval);
+      }
+      return dates;
+    }
+
+    function renderProjects() {
+      const status = $("#projectStatusFilter")?.value || "active";
+      const visibleProjects = projects.filter(project => {
+        if (status === "active") return project.status === "aktiivne";
+        if (status === "paused") return project.status === "pausil";
+        return true;
+      });
+
+      $("#projectsGrid").innerHTML = visibleProjects.map(project => {
+        const client = projectClient(project);
+        const object = projectObject(project);
+        const devices = projectDevices(project);
+        const generated = projectJobs(project);
+        return `
+          <button class="person-card ${project.id === selectedProjectId ? "selected" : ""}" data-select-project="${project.id}">
+            <div class="person-top">
+              <div>
+                <h3>${escapeHtml(project.name)}</h3>
+                <div class="job-meta">${escapeHtml(client?.name || "-")} · ${escapeHtml(object?.name || "objekt puudub")}</div>
+              </div>
+              <span class="status ${project.status === "aktiivne" ? "planeeritud" : "ootel"}">${escapeHtml(project.status)}</span>
+            </div>
+            <div class="kv"><span>Korduvus</span><strong>${escapeHtml(recurrenceLabel(project.frequency, Number(project.interval) || 1))}</strong></div>
+            <div class="kv"><span>Järgmine</span><strong>${escapeHtml(project.nextDate || "-")} ${escapeHtml(project.time || "")}</strong></div>
+            <div class="kv"><span>Seadmed</span><strong>${devices.length || "kogu objekt"}</strong></div>
+            <div class="kv"><span>Kalendris</span><strong>${generated.length}</strong></div>
+          </button>
+        `;
+      }).join("") || `<div class="mobile-card">Selle filtriga projekte ei ole.</div>`;
+
+      const project = selectedProject();
+      const client = projectClient(project);
+      const object = projectObject(project);
+      const devices = projectDevices(project);
+      const upcoming = previewProjectDates(project);
+      const generated = projectJobs(project).sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      $("#projectDetail").innerHTML = project ? `
+        <div class="detail-title">
+          <div>
+            <h2>${escapeHtml(project.name)}</h2>
+            <div class="job-meta">${escapeHtml(project.id)} · ${escapeHtml(client?.name || "-")}</div>
+          </div>
+        </div>
+        <div class="kv"><span>Objekt</span><strong>${escapeHtml(object?.name || "-")} · ${escapeHtml(object?.address || "-")}</strong></div>
+        <div class="kv"><span>Intervall</span><strong>${escapeHtml(recurrenceLabel(project.frequency, Number(project.interval) || 1))}</strong></div>
+        <div class="kv"><span>Kehtivus</span><strong>${escapeHtml(project.startDate || "-")} kuni ${escapeHtml(project.endDate || "-")}</strong></div>
+        <div class="kv"><span>Tehnik</span><strong>${escapeHtml(project.technician || "-")}</strong></div>
+        <div class="kv"><span>Kestvus</span><strong>${escapeHtml(project.durationHours || "2")} h</strong></div>
+        <div class="mobile-card">${escapeHtml(project.description || "Kirjeldus puudub.")}</div>
+        <div class="mobile-actions">
+          <button class="btn primary" data-generate-project="${project.id}"><span class="icon">▦</span> Genereeri järgmised tööd</button>
+          <button class="btn" data-open-project-object="${project.id}"><span class="icon">⌂</span> Ava objekt</button>
+          <button class="btn" data-toggle-project="${project.id}">${project.status === "aktiivne" ? "Pane pausile" : "Aktiveeri"}</button>
+        </div>
+        <p class="section-title">Seadmed projektis</p>
+        <div class="timeline">
+          ${devices.map(device => `
+            <div class="event-row">
+              <strong>${escapeHtml(device.name)}</strong>
+              <span>${escapeHtml(device.detail || "-")}</span>
+              <span class="job-meta">${escapeHtml(device.note || "")}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Projekt käib kogu objekti kohta.</div>`}
+        </div>
+        <p class="section-title">Järgmised planeeritavad kuupäevad</p>
+        <div class="timeline">
+          ${upcoming.map(date => `
+            <div class="event-row">
+              <strong>${escapeHtml(date)} ${escapeHtml(project.time || "")}</strong>
+              <span>${escapeHtml(object?.name || "-")} · ${escapeHtml(recurrenceLabel(project.frequency, Number(project.interval) || 1))}</span>
+            </div>
+          `).join("") || `<div class="mobile-card">Kehtivuse lõpp on käes.</div>`}
+        </div>
+        <p class="section-title">Selle projekti tööd kalendris</p>
+        <div class="timeline">
+          ${generated.slice(0, 8).map(job => `
+            <button class="event-row" data-project-job="${job.id}">
+              <strong>${escapeHtml(job.id)} · ${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))}</strong>
+              <span>${escapeHtml(job.asset || job.buildingPart || "-")} · ${escapeHtml(jobTechnicianLabel(job))}</span>
+              <span class="job-meta">${escapeHtml(statusLabels[job.status])}</span>
+            </button>
+          `).join("") || `<div class="mobile-card">Selle projekti töid pole veel kalendrisse loodud.</div>`}
+        </div>
+      ` : `<div class="mobile-card">Vali projekt.</div>`;
+
+      $$("[data-select-project]").forEach(btn => btn.addEventListener("click", () => {
+        selectedProjectId = btn.dataset.selectProject;
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+      $$("[data-generate-project]").forEach(btn => btn.addEventListener("click", () => generateProjectJobs(btn.dataset.generateProject)));
+      $$("[data-toggle-project]").forEach(btn => btn.addEventListener("click", () => toggleProjectStatus(btn.dataset.toggleProject)));
+      $$("[data-open-project-object]").forEach(btn => btn.addEventListener("click", () => {
+        const object = projectObject(projects.find(item => item.id === btn.dataset.openProjectObject));
+        if (!object) return;
+        selectedObjectKey = object.key;
+        switchView("objects");
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+      $$("[data-project-job]").forEach(btn => btn.addEventListener("click", () => {
+        selectedId = btn.dataset.projectJob;
+        detailJobId = selectedId;
+        const job = jobs.find(item => item.id === selectedId);
+        if (job) calendarCursor = new Date(`${job.date}T12:00:00`);
+        switchView("calendar");
+        setDetailCollapsed(false);
+        renderAll();
+      }));
+    }
+
+    function generateProjectJobs(projectId = selectedProjectId, count = 3) {
+      const project = projects.find(item => item.id === projectId);
+      const client = projectClient(project);
+      const object = projectObject(project);
+      if (!project || !client || !object || project.status !== "aktiivne") return;
+      const devices = projectDevices(project);
+      const plannedItems = devices.length ? devices : [{ id: "", name: "", detail: object.name }];
+      const interval = Math.max(1, Number(project.interval) || 1);
+      const endDate = project.endDate ? new Date(`${project.endDate}T12:00:00`) : null;
+      let cursor = new Date(`${project.nextDate || project.startDate || dateKey(new Date())}T12:00:00`);
+      let createdDates = 0;
+
+      while (createdDates < count && (!endDate || cursor <= endDate)) {
+        const plannedDate = dateKey(cursor);
+        plannedItems.forEach((device, index) => {
+          const duplicate = jobs.some(job => job.projectId === project.id && job.date === plannedDate && (job.asset || "") === (device.name || ""));
+          if (duplicate) return;
+          jobs.push({
+            id: nextJobId(),
+            projectId: project.id,
+            client: client.name,
+            referenceNo: `${project.id}-${plannedDate.replaceAll("-", "")}-${index + 1}`,
+            address: object.address,
+            buildingPart: device.detail || object.name,
+            asset: device.name || "",
+            contact: client.contact,
+            phone: client.phone,
+            date: plannedDate,
+            time: project.time || "09:00",
+            endTime: addDurationToTime(project.time || "09:00", project.durationHours || 2),
+            durationHours: String(project.durationHours || 2),
+            technician: project.technician,
+            technicians: [project.technician].filter(Boolean),
+            priority: project.priority || "Tavaline",
+            recurrence: recurrenceLabel(project.frequency, interval),
+            status: "planeeritud",
+            description: device.name ? `${project.description}\nSeade: ${device.name}` : project.description,
+            workDone: "",
+            materials: "",
+            hours: "",
+            travelTime: "",
+            timeLogs: [],
+            photos: "",
+            approvedBy: "",
+            ezefsRef: ""
+          });
+        });
+        cursor = addInterval(cursor, project.frequency, interval);
+        createdDates += 1;
+      }
+      project.nextDate = dateKey(cursor);
+      selectedProjectId = project.id;
+      renderAll();
+    }
+
+    function toggleProjectStatus(projectId) {
+      const project = projects.find(item => item.id === projectId);
+      if (!project) return;
+      project.status = project.status === "aktiivne" ? "pausil" : "aktiivne";
+      selectedProjectId = project.id;
+      renderAll();
+    }
+
     function renderAi() {
       const candidates = jobs
         .filter(job => !["täidetud", "akt", "saadetud"].includes(job.status))
         .map(job => ({ job, score: priorityScore(job) }))
         .sort((a, b) => b.score - a.score);
+      const candidateIds = new Set(candidates.map(({ job }) => job.id));
+      selectedAiJobIds = new Set([...selectedAiJobIds].filter(id => candidateIds.has(id)));
+      $("#aiDeleteSelectedBtn").disabled = selectedAiJobIds.size === 0;
 
       $("#aiSuggestions").innerHTML = candidates.map(({ job, score }) => `
         <div class="person-card">
+          <label class="ai-select-row">
+            <input type="checkbox" data-ai-select="${job.id}" ${selectedAiJobIds.has(job.id) ? "checked" : ""}>
+            <span>Vali kustutamiseks</span>
+          </label>
           <div class="person-top">
             <div>
               <h3>${escapeHtml(job.client)}</h3>
@@ -3705,6 +4019,7 @@
           <div class="person-actions">
             <button class="btn primary" data-ai-open="${job.id}"><span class="icon">▣</span> Ava</button>
             <button class="btn" data-ai-prioritize="${job.id}"><span class="icon">✦</span> Tõsta ette</button>
+            <button class="btn danger" data-ai-delete="${job.id}"><span class="icon">×</span> Kustuta</button>
           </div>
         </div>
       `).join("") || `<div class="mobile-card">AI soovitusi ei ole.</div>`;
@@ -3727,6 +4042,35 @@
       $$("[data-ai-prioritize]").forEach(btn => btn.addEventListener("click", () => {
         prioritizeJob(btn.dataset.aiPrioritize);
       }));
+      $$("[data-ai-delete]").forEach(btn => btn.addEventListener("click", () => {
+        deleteAiJobs([btn.dataset.aiDelete]);
+      }));
+      $$("[data-ai-select]").forEach(input => input.addEventListener("change", () => {
+        if (input.checked) selectedAiJobIds.add(input.dataset.aiSelect);
+        else selectedAiJobIds.delete(input.dataset.aiSelect);
+        renderAi();
+      }));
+    }
+
+    function deleteAiJobs(ids) {
+      const deleteIds = ids.filter(id => jobs.some(job => job.id === id));
+      if (!deleteIds.length) return;
+      const ok = window.confirm(`Kas kustutada ${deleteIds.length} töökäsk(u)?\n\n${deleteIds.join(", ")}\n\nSeda toimingut ei saa tagasi võtta.`);
+      if (!ok) return;
+      jobs = jobs.filter(job => !deleteIds.includes(job.id));
+      selectedAiJobIds = new Set([...selectedAiJobIds].filter(id => !deleteIds.includes(id)));
+      if (deleteIds.includes(selectedId)) {
+        selectedId = jobs[0]?.id || "";
+        detailJobId = null;
+        setDetailCollapsed(true);
+      }
+      renderAll();
+    }
+
+    function aiCandidateIds() {
+      return jobs
+        .filter(job => !["täidetud", "akt", "saadetud"].includes(job.status))
+        .map(job => job.id);
     }
 
     function aiReason(job) {
@@ -3839,15 +4183,17 @@
     }
 
     function pilotPayload() {
-      return { people, peopleEvents, clients, jobs };
+      return { people, peopleEvents, projects, clients, jobs };
     }
 
     function applyPilotPayload(data) {
       people = data.people || people;
       peopleEvents = data.peopleEvents || peopleEvents;
+      projects = data.projects || projects;
       clients = data.clients || clients;
       jobs = data.jobs || jobs;
       selectedId = jobs.find(job => job.id === selectedId)?.id || jobs[0]?.id || "";
+      selectedProjectId = projects.find(project => project.id === selectedProjectId)?.id || projects[0]?.id || "";
       selectedClientId = clients.find(client => client.id === selectedClientId)?.id || clients[0]?.id || "";
       selectedObjectKey = allObjects().find(object => object.key === selectedObjectKey)?.key || allObjects()[0]?.key || "";
     }
@@ -4106,9 +4452,11 @@
       if (!window.confirm("Kas taastada demo algandmed? Brauserisse salvestatud muudatused asendatakse.")) return;
       people = JSON.parse(JSON.stringify(demoData.people));
       peopleEvents = JSON.parse(JSON.stringify(demoData.peopleEvents));
+      projects = JSON.parse(JSON.stringify(demoData.projects));
       clients = JSON.parse(JSON.stringify(demoData.clients));
       jobs = JSON.parse(JSON.stringify(demoData.jobs));
       selectedId = jobs[0]?.id || "";
+      selectedProjectId = projects[0]?.id || "";
       detailJobId = null;
       localStorage.removeItem(STORAGE_KEY);
       renderAll();
@@ -4124,6 +4472,7 @@
       renderVacations();
       renderClients();
       renderObjects();
+      renderProjects();
       renderAi();
       renderStats();
       renderWeekendToggle();
@@ -5019,7 +5368,7 @@ Summa: 2 075,34 €`;
     }
 
     function switchView(name) {
-      ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "acts", "ai", "ezefs"].forEach(view => {
+      ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"].forEach(view => {
         $(`#${view}View`).classList.toggle("hidden", view !== name);
       });
       $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === name));
@@ -5038,7 +5387,7 @@ Summa: 2 075,34 €`;
     }
 
     function setDetailCollapsed(collapsed) {
-      const views = ["#pilotView", "#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
+      const views = ["#pilotView", "#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#projectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
     }
 
@@ -5064,6 +5413,13 @@ Summa: 2 075,34 €`;
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
     $("#newObjectBtn").addEventListener("click", () => openClientItemModal(null, "object"));
     $("#newObjectJobBtn").addEventListener("click", openObjectJobModal);
+    $("#newProjectPlanBtn").addEventListener("click", () => {
+      const project = selectedProject();
+      const object = projectObject(project);
+      if (project?.clientId) selectedClientId = project.clientId;
+      openClientPlanModal(object?.key || "");
+    });
+    $("#generateProjectJobsBtn").addEventListener("click", () => generateProjectJobs(selectedProjectId));
     $("#newMobileJobBtn").addEventListener("click", openTechnicianJobModal);
     $("#importJobBtn").addEventListener("click", openImportJobModal);
     $("#databaseBtn").addEventListener("click", openDatabaseModal);
@@ -5078,6 +5434,15 @@ Summa: 2 075,34 €`;
     $("#imagePasteZone").addEventListener("paste", handleImportPaste);
     $("#analyzeImportImageBtn").addEventListener("click", analyzeImportedImage);
     $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
+    $("#aiSelectAllBtn").addEventListener("click", () => {
+      selectedAiJobIds = new Set(aiCandidateIds());
+      renderAi();
+    });
+    $("#aiClearSelectionBtn").addEventListener("click", () => {
+      selectedAiJobIds.clear();
+      renderAi();
+    });
+    $("#aiDeleteSelectedBtn").addEventListener("click", () => deleteAiJobs([...selectedAiJobIds]));
     $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#deleteJobFromModalBtn").addEventListener("click", () => {
@@ -5136,6 +5501,7 @@ Summa: 2 075,34 €`;
     $("#clientSearchField").addEventListener("input", renderAll);
     $("#objectSearchField").addEventListener("input", renderAll);
     $("#objectStatusFilter").addEventListener("change", renderAll);
+    $("#projectStatusFilter").addEventListener("change", renderAll);
     $("#searchField").addEventListener("input", renderAll);
     $("#mobileTech").addEventListener("change", renderAll);
     $$(".nav button").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.view)));
