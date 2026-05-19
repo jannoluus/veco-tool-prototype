@@ -1572,7 +1572,10 @@
         <aside class="panel detail">
           <div class="panel-head">
             <h2>Töökäsk</h2>
-            <button class="btn ghost" id="editSelectedBtn"><span class="icon">✎</span> Muuda</button>
+            <div class="filters">
+              <button class="btn ghost" id="editSelectedBtn"><span class="icon">✎</span> Muuda</button>
+              <button class="btn danger" id="deleteSelectedBtn"><span class="icon">×</span> Kustuta</button>
+            </div>
           </div>
           <div class="detail-body" id="detailBody"></div>
         </aside>
@@ -4369,11 +4372,9 @@
     }
 
     function refreshFromBrand() {
-      if (supabaseClient) {
-        loadPilotDataFromDatabase(true);
-        return;
-      }
-      window.location.reload();
+      const url = new URL(window.location.href);
+      url.searchParams.set("refresh", Date.now().toString());
+      window.location.replace(url.toString());
     }
 
     function applyTheme(theme) {
@@ -4554,6 +4555,7 @@
 
     function deleteSelectedJob(id = selectedId) {
       const job = jobs.find(item => item.id === id) || selectedJob();
+      if (!job) return false;
       const ok = window.confirm(`Kas kustutada töökäsk ${job.id}?\n\n${job.client} · ${job.address}\n\nSeda toimingut ei saa tagasi võtta.`);
       if (!ok) return false;
       jobs = jobs.filter(item => item.id !== job.id);
@@ -5445,6 +5447,7 @@ Summa: 2 075,34 €`;
     $("#aiDeleteSelectedBtn").addEventListener("click", () => deleteAiJobs([...selectedAiJobIds]));
     $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
+    $("#deleteSelectedBtn").addEventListener("click", () => deleteSelectedJob(detailJobId || selectedId));
     $("#deleteJobFromModalBtn").addEventListener("click", () => {
       if (!editingId) return;
       if (deleteSelectedJob(editingId)) closeModal("jobModal");
