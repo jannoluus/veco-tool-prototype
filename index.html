@@ -674,6 +674,11 @@
       padding-bottom: 18px;
     }
 
+    .day-body .job-card.menu-open {
+      overflow: visible;
+      z-index: 12;
+    }
+
     .job-card:hover,
     .job-card.selected {
       border-color: var(--blue);
@@ -2794,7 +2799,7 @@
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
-          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
+          <div class="job-card ${job.id === selectedId ? "selected" : ""} ${activeJobMenuId === job.id ? "menu-open" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
             <button class="job-menu-trigger" type="button" data-toggle-job-menu="${job.id}" aria-label="Töökäsu tegevused">⋯</button>
             ${activeJobMenuId === job.id ? `
               <div class="job-action-menu" data-job-menu="${job.id}">
