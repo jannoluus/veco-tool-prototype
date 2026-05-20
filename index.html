@@ -53,6 +53,15 @@
       display: none;
     }
 
+    .app.technician-standalone {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .app.technician-standalone .sidebar,
+    .app.technician-standalone #toggleSidebarBtn {
+      display: none;
+    }
+
     .sidebar {
       background: #101820;
       color: #f8fbfc;
@@ -1754,6 +1763,7 @@
                 <option value="active">Aktiivsed</option>
                 <option value="all">Kõik projektid</option>
                 <option value="paused">Pausil</option>
+                <option value="archived">Arhiveeritud</option>
               </select>
               <button class="btn primary" id="newProjectPlanBtn"><span class="icon">＋</span> Planeeri kliendi töö</button>
             </div>
@@ -3808,6 +3818,7 @@
 
     function previewProjectDates(project, count = 4) {
       if (!project) return [];
+      if (project.status === "arhiveeritud") return [];
       const interval = Math.max(1, Number(project.interval) || 1);
       const dates = [];
       let cursor = new Date(`${project.nextDate || project.startDate || dateKey(new Date())}T12:00:00`);
@@ -3824,6 +3835,7 @@
       const visibleProjects = projects.filter(project => {
         if (status === "active") return project.status === "aktiivne";
         if (status === "paused") return project.status === "pausil";
+        if (status === "archived") return project.status === "arhiveeritud";
         return true;
       });
 
@@ -3839,7 +3851,7 @@
                 <h3>${escapeHtml(project.name)}</h3>
                 <div class="job-meta">${escapeHtml(client?.name || "-")} · ${escapeHtml(object?.name || "objekt puudub")}</div>
               </div>
-              <span class="status ${project.status === "aktiivne" ? "planeeritud" : "ootel"}">${escapeHtml(project.status)}</span>
+              <span class="status ${projectStatusClass(project)}">${escapeHtml(project.status)}</span>
             </div>
             <div class="kv"><span>Korduvus</span><strong>${escapeHtml(recurrenceLabel(project.frequency, Number(project.interval) || 1))}</strong></div>
             <div class="kv"><span>Järgmine</span><strong>${escapeHtml(project.nextDate || "-")} ${escapeHtml(project.time || "")}</strong></div>
@@ -3869,9 +3881,11 @@
         <div class="kv"><span>Kestvus</span><strong>${escapeHtml(project.durationHours || "2")} h</strong></div>
         <div class="mobile-card">${escapeHtml(project.description || "Kirjeldus puudub.")}</div>
         <div class="mobile-actions">
-          <button class="btn primary" data-generate-project="${project.id}"><span class="icon">▦</span> Genereeri järgmised tööd</button>
+          ${project.status === "arhiveeritud" ? "" : `<button class="btn primary" data-generate-project="${project.id}"><span class="icon">▦</span> Genereeri järgmised tööd</button>`}
           <button class="btn" data-open-project-object="${project.id}"><span class="icon">⌂</span> Ava objekt</button>
-          <button class="btn" data-toggle-project="${project.id}">${project.status === "aktiivne" ? "Pane pausile" : "Aktiveeri"}</button>
+          ${project.status === "arhiveeritud" ? "" : `<button class="btn" data-toggle-project="${project.id}">${project.status === "aktiivne" ? "Pane pausile" : "Aktiveeri"}</button>`}
+          ${project.status === "arhiveeritud" ? `<button class="btn" data-restore-project="${project.id}"><span class="icon">↺</span> Taasta</button>` : `<button class="btn" data-archive-project="${project.id}"><span class="icon">▧</span> Arhiveeri</button>`}
+          <button class="btn danger" data-delete-project="${project.id}"><span class="icon">×</span> Kustuta</button>
         </div>
         <p class="section-title">Seadmed projektis</p>
         <div class="timeline">
@@ -3911,6 +3925,9 @@
       }));
       $$("[data-generate-project]").forEach(btn => btn.addEventListener("click", () => generateProjectJobs(btn.dataset.generateProject)));
       $$("[data-toggle-project]").forEach(btn => btn.addEventListener("click", () => toggleProjectStatus(btn.dataset.toggleProject)));
+      $$("[data-archive-project]").forEach(btn => btn.addEventListener("click", () => archiveProject(btn.dataset.archiveProject)));
+      $$("[data-restore-project]").forEach(btn => btn.addEventListener("click", () => restoreProject(btn.dataset.restoreProject)));
+      $$("[data-delete-project]").forEach(btn => btn.addEventListener("click", () => deleteProject(btn.dataset.deleteProject)));
       $$("[data-open-project-object]").forEach(btn => btn.addEventListener("click", () => {
         const object = projectObject(projects.find(item => item.id === btn.dataset.openProjectObject));
         if (!object) return;
@@ -3928,6 +3945,12 @@
         setDetailCollapsed(false);
         renderAll();
       }));
+    }
+
+    function projectStatusClass(project) {
+      if (project.status === "aktiivne") return "planeeritud";
+      if (project.status === "arhiveeritud") return "saadetud";
+      return "ootel";
     }
 
     function generateProjectJobs(projectId = selectedProjectId, count = 3) {
@@ -3987,9 +4010,44 @@
 
     function toggleProjectStatus(projectId) {
       const project = projects.find(item => item.id === projectId);
-      if (!project) return;
+      if (!project || project.status === "arhiveeritud") return;
       project.status = project.status === "aktiivne" ? "pausil" : "aktiivne";
       selectedProjectId = project.id;
+      renderAll();
+    }
+
+    function archiveProject(projectId) {
+      const project = projects.find(item => item.id === projectId);
+      if (!project) return;
+      const ok = window.confirm(`Kas arhiveerida projekt?\n\n${project.name}\n\nArhiveeritud projekt ei genereeri uusi töid, kuid olemasolevad töökäsud jäävad alles.`);
+      if (!ok) return;
+      project.status = "arhiveeritud";
+      selectedProjectId = project.id;
+      renderAll();
+    }
+
+    function restoreProject(projectId) {
+      const project = projects.find(item => item.id === projectId);
+      if (!project) return;
+      project.status = "aktiivne";
+      selectedProjectId = project.id;
+      renderAll();
+    }
+
+    function deleteProject(projectId) {
+      const project = projects.find(item => item.id === projectId);
+      if (!project) return;
+      const linkedJobs = projectJobs(project);
+      const message = linkedJobs.length
+        ? `Kas kustutada projekt?\n\n${project.name}\n\n${linkedJobs.length} seotud töökäsku jäävad kalendrisse alles, aga projekti seos eemaldatakse.`
+        : `Kas kustutada projekt?\n\n${project.name}`;
+      const ok = window.confirm(`${message}\n\nSeda toimingut ei saa tagasi võtta.`);
+      if (!ok) return;
+      linkedJobs.forEach(job => {
+        if (job.projectId === project.id) job.projectId = "";
+      });
+      projects = projects.filter(item => item.id !== project.id);
+      selectedProjectId = projects[0]?.id || "";
       renderAll();
     }
 
@@ -5369,11 +5427,25 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    function switchView(name) {
-      ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"].forEach(view => {
-        $(`#${view}View`).classList.toggle("hidden", view !== name);
+    const viewNames = ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"];
+
+    function currentUrlView() {
+      const view = new URLSearchParams(window.location.search).get("view");
+      return viewNames.includes(view) ? view : "calendar";
+    }
+
+    function switchView(name, updateUrl = true) {
+      const targetView = viewNames.includes(name) ? name : "calendar";
+      $("#appShell").classList.toggle("technician-standalone", targetView === "mobile");
+      viewNames.forEach(view => {
+        $(`#${view}View`).classList.toggle("hidden", view !== targetView);
       });
-      $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === name));
+      $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === targetView));
+      if (updateUrl) {
+        const url = new URL(window.location.href);
+        url.searchParams.set("view", targetView);
+        window.history.replaceState({}, "", url.toString());
+      }
     }
 
     function toggleSidebar() {
@@ -5398,6 +5470,7 @@ Summa: 2 075,34 €`;
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
     applyTickerSettings();
     setDetailCollapsed(true);
+    switchView(currentUrlView(), false);
     renderAll();
     initSupabaseClient();
     if (supabaseClient) loadPilotDataFromDatabase(false);
