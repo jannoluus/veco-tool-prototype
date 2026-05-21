@@ -1583,6 +1583,8 @@
           <div class="panel-head">
             <h2>Töökäsk</h2>
             <div class="filters">
+              <select class="select" id="copySelectedTech" aria-label="Kopeeri tehnikule"></select>
+              <button class="btn" id="copySelectedBtn"><span class="icon">▣</span> Kopeeri</button>
               <button class="btn ghost" id="editSelectedBtn"><span class="icon">✎</span> Muuda</button>
               <button class="btn danger" id="deleteSelectedBtn"><span class="icon">×</span> Kustuta</button>
             </div>
@@ -2913,18 +2915,7 @@
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
-          <div class="job-card ${job.id === selectedId ? "selected" : ""} ${activeJobMenuId === job.id ? "menu-open" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
-            <button class="job-menu-trigger" type="button" data-toggle-job-menu="${job.id}" aria-label="Töökäsu tegevused">⋯</button>
-            ${activeJobMenuId === job.id ? `
-              <div class="job-action-menu" data-job-menu="${job.id}">
-                <button type="button" data-open-job-detail="${job.id}">Ava detail</button>
-                <button type="button" data-edit-job-from-menu="${job.id}">Muuda töökäsku</button>
-                <div class="job-action-label">Kopeeri tehnikule</div>
-                ${copyTargetsForJob(job).map(name => `<button type="button" data-copy-job="${job.id}" data-copy-tech="${escapeHtml(name)}">${escapeHtml(name)}</button>`).join("") || `<button type="button" disabled>Kõik tehnikud on lisatud</button>`}
-                <button type="button" data-delete-job-from-menu="${job.id}">× Kustuta töökäsk</button>
-                <button type="button" data-close-job-menu>× Sulge</button>
-              </div>
-            ` : ""}
+          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
             <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
             <span class="job-technicians">${escapeHtml(jobTechnicianLabel(job))}</span>
@@ -2965,7 +2956,7 @@
           renderAll();
         };
         card.addEventListener("click", event => {
-          if (event.target.closest("[data-job-menu]") || event.target.closest("[data-resize-handle]") || event.target.closest("[data-toggle-job-menu]")) return;
+          if (event.target.closest("[data-resize-handle]")) return;
           openDetail();
         });
         card.addEventListener("keydown", event => {
@@ -2974,41 +2965,6 @@
           openDetail();
         });
       });
-      $$("#weekGrid [data-toggle-job-menu]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        selectedId = btn.dataset.toggleJobMenu;
-        detailJobId = selectedId;
-        activeJobMenuId = activeJobMenuId === selectedId ? null : selectedId;
-        setDetailCollapsed(false);
-        renderAll();
-      }));
-      $$("#weekGrid [data-open-job-detail]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        selectedId = btn.dataset.openJobDetail;
-        detailJobId = selectedId;
-        activeJobMenuId = null;
-        setDetailCollapsed(false);
-        renderAll();
-      }));
-      $$("#weekGrid [data-edit-job-from-menu]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        activeJobMenuId = null;
-        openJobModal(btn.dataset.editJobFromMenu);
-      }));
-      $$("#weekGrid [data-copy-job]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        copyJobToTechnician(btn.dataset.copyJob, btn.dataset.copyTech);
-      }));
-      $$("#weekGrid [data-delete-job-from-menu]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        activeJobMenuId = null;
-        deleteSelectedJob(btn.dataset.deleteJobFromMenu);
-      }));
-      $$("#weekGrid [data-close-job-menu]").forEach(btn => btn.addEventListener("click", event => {
-        event.stopPropagation();
-        activeJobMenuId = null;
-        renderCalendar();
-      }));
       $$("#weekGrid [data-calendar-day]").forEach(day => {
         day.addEventListener("click", event => {
           if (event.target.closest("[data-job]") || event.target.closest("button")) return;
@@ -3241,9 +3197,11 @@
     function renderDetail() {
       const job = jobs.find(item => item.id === detailJobId);
       if (!job) {
+        renderCopyControls(null);
         $("#detailBody").innerHTML = `<div class="mobile-card">Vali kalendrist töökäsk.</div>`;
         return;
       }
+      renderCopyControls(job);
       $("#detailBody").innerHTML = `
         <div class="detail-title">
           <div>
@@ -3272,6 +3230,17 @@
         <p class="section-title">Ajakulu lõigud</p>
         ${renderTimeLog(job)}
       `;
+    }
+
+    function renderCopyControls(job) {
+      const select = $("#copySelectedTech");
+      const button = $("#copySelectedBtn");
+      if (!select || !button) return;
+      const targets = job ? copyTargetsForJob(job) : [];
+      select.innerHTML = targets.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join("");
+      select.disabled = !job || targets.length === 0;
+      button.disabled = !job || targets.length === 0;
+      button.title = targets.length ? "Kopeeri valitud tehnikule" : "Kõik tehnikud on juba lisatud";
     }
 
     function renderMobile() {
@@ -4256,6 +4225,7 @@
       projects = data.projects || projects;
       clients = data.clients || clients;
       jobs = data.jobs || jobs;
+      normalizeLegacyJobIds();
       selectedId = jobs.find(job => job.id === selectedId)?.id || jobs[0]?.id || "";
       selectedProjectId = projects.find(project => project.id === selectedProjectId)?.id || projects[0]?.id || "";
       selectedClientId = clients.find(client => client.id === selectedClientId)?.id || clients[0]?.id || "";
@@ -4639,8 +4609,35 @@
     }
 
     function nextJobId() {
-      const max = jobs.reduce((num, job) => Math.max(num, Number(job.id.split("-")[1]) || 0), 0);
+      const max = jobs.reduce((num, job) => {
+        const match = String(job.id || "").match(/^VK-(\d+)$/);
+        return Math.max(num, match ? Number(match[1]) : 0);
+      }, 1023);
       return `VK-${max + 1}`;
+    }
+
+    function normalizeLegacyJobIds() {
+      const usedIds = new Set(jobs.map(job => String(job.id || "")));
+      let nextNumber = jobs.reduce((num, job) => {
+        const match = String(job.id || "").match(/^VK-(\d+)$/);
+        return Math.max(num, match ? Number(match[1]) : 0);
+      }, 1023);
+      const renamed = new Map();
+      jobs.forEach(job => {
+        const match = String(job.id || "").match(/^VK-(\d+)$/);
+        if (!match || Number(match[1]) >= 1000) return;
+        let nextId = "";
+        do {
+          nextNumber += 1;
+          nextId = `VK-${nextNumber}`;
+        } while (usedIds.has(nextId));
+        usedIds.delete(job.id);
+        usedIds.add(nextId);
+        renamed.set(job.id, nextId);
+        job.id = nextId;
+      });
+      if (renamed.has(selectedId)) selectedId = renamed.get(selectedId);
+      if (renamed.has(detailJobId)) detailJobId = renamed.get(detailJobId);
     }
 
     function openJobModal(id = null, preferredDate = "") {
@@ -5605,6 +5602,10 @@ Summa: 2 075,34 €`;
     });
     $("#aiDeleteSelectedBtn").addEventListener("click", () => deleteAiJobs([...selectedAiJobIds]));
     $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
+    $("#copySelectedBtn").addEventListener("click", () => {
+      const targetTech = $("#copySelectedTech").value;
+      copyJobToTechnician(detailJobId || selectedId, targetTech);
+    });
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#deleteSelectedBtn").addEventListener("click", () => deleteSelectedJob(detailJobId || selectedId));
     $("#deleteJobFromModalBtn").addEventListener("click", () => {
