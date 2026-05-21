@@ -58,7 +58,8 @@
     }
 
     .app.technician-standalone .sidebar,
-    .app.technician-standalone #toggleSidebarBtn {
+    .app.technician-standalone #toggleSidebarBtn,
+    .app.technician-standalone #importJobBtn {
       display: none;
     }
 
@@ -2018,7 +2019,9 @@
       </div>
       <div class="dialog-actions">
         <button class="btn ghost" id="markSentBtn"><span class="icon">↗</span> Märgi saadetuks</button>
-        <button class="btn primary" id="printActBtn"><span class="icon">⎙</span> Prindi / salvesta PDF</button>
+        <button class="btn" id="openActWindowBtn"><span class="icon">↗</span> Ava uues aknas</button>
+        <button class="btn" id="printActBtn"><span class="icon">⎙</span> Prindi</button>
+        <button class="btn primary" id="saveActPdfBtn"><span class="icon">⇩</span> Salvesta PDF</button>
       </div>
     </div>
   </div>
@@ -5381,10 +5384,8 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    function openAct() {
-      const job = selectedJob();
-      if (job.status === "täidetud") job.status = "akt";
-      $("#actPreview").innerHTML = `
+    function actHtml(job) {
+      return `
         <div class="act-top">
           <div>
             <div class="act-logo">VECO</div>
@@ -5422,8 +5423,93 @@ Summa: 2 075,34 €`;
           <div class="signature">Kliendi esindaja: ${escapeHtml(job.approvedBy || "-")}</div>
         </div>
       `;
+    }
+
+    function openAct() {
+      const job = selectedJob();
+      if (job.status === "täidetud") job.status = "akt";
+      $("#actPreview").innerHTML = actHtml(job);
       $("#actModal").classList.add("open");
       $("#actModal").setAttribute("aria-hidden", "false");
+      renderAll();
+    }
+
+    function printAct() {
+      window.print();
+    }
+
+    function openActInNewWindow(printImmediately = false) {
+      const job = selectedJob();
+      if (!job) return;
+      if (job.status === "täidetud") job.status = "akt";
+      const popup = window.open("", "_blank");
+      if (!popup) {
+        alert("Brauser blokeeris uue akna. Luba sellel lehel hüpikaknad ja proovi uuesti.");
+        return;
+      }
+      popup.document.write(`
+        <!doctype html>
+        <html lang="et">
+        <head>
+          <meta charset="utf-8">
+          <title>Akt ${escapeHtml(job.id)}</title>
+          <style>
+            :root { font-family: Inter, "Segoe UI", Arial, sans-serif; color: #172026; }
+            body { margin: 0; background: #eef2f5; }
+            .act-window-toolbar {
+              position: sticky;
+              top: 0;
+              z-index: 2;
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+              padding: 12px 18px;
+              background: #ffffff;
+              border-bottom: 1px solid #dce3e8;
+            }
+            button {
+              min-height: 38px;
+              padding: 0 14px;
+              border: 1px solid #dce3e8;
+              border-radius: 7px;
+              background: #e7edf1;
+              color: #172026;
+              font: inherit;
+              cursor: pointer;
+            }
+            button.primary { background: #1769aa; color: #fff; border-color: #1769aa; }
+            .act-page { max-width: 960px; margin: 22px auto; padding: 32px; background: #fff; box-shadow: 0 16px 36px rgba(20,33,44,.12); }
+            .act-top { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #172026; padding-bottom: 18px; margin-bottom: 22px; }
+            .act-logo { font-size: 32px; font-weight: 900; color: #1769aa; letter-spacing: -0.04em; }
+            .act-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+            .act-box { border: 1px solid #b8c5ce; padding: 12px; min-height: 62px; margin-bottom: 14px; white-space: pre-wrap; }
+            .act-box span { display: block; color: #61707c; font-size: 12px; margin-bottom: 8px; }
+            .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 34px; }
+            .signature { border-top: 1px solid #172026; padding-top: 10px; min-height: 52px; }
+            .photo-strip { display: flex; flex-wrap: wrap; gap: 10px; }
+            .photo-tile { border: 1px dashed #8fa4b4; border-radius: 7px; padding: 12px; min-width: 110px; text-align: center; color: #61707c; }
+            .time-log-card { border: 1px solid #dce3e8; border-radius: 7px; padding: 10px; margin-bottom: 8px; }
+            @media print {
+              body { background: #fff; }
+              .act-window-toolbar { display: none; }
+              .act-page { max-width: none; margin: 0; padding: 20mm; box-shadow: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="act-window-toolbar">
+            <button onclick="window.print()">Prindi</button>
+            <button class="primary" onclick="window.print()">Salvesta PDF</button>
+          </div>
+          <main class="act-page">${actHtml(job)}</main>
+        </body>
+        </html>
+      `);
+      popup.document.close();
+      if (printImmediately) {
+        popup.addEventListener("load", () => popup.print(), { once: true });
+        setTimeout(() => popup.print(), 300);
+      }
       renderAll();
     }
 
@@ -5541,7 +5627,9 @@ Summa: 2 075,34 €`;
     $("#clientPlanForm").elements.objectId.addEventListener("change", updateClientPlanFormDevices);
     $("#clientPlanForm").elements.deviceMode.addEventListener("change", updateClientPlanFormDevices);
     if ($("#openActBtn")) $("#openActBtn").addEventListener("click", openAct);
-    $("#printActBtn").addEventListener("click", () => window.print());
+    $("#openActWindowBtn").addEventListener("click", () => openActInNewWindow(false));
+    $("#printActBtn").addEventListener("click", printAct);
+    $("#saveActPdfBtn").addEventListener("click", () => openActInNewWindow(true));
     $("#printActSideBtn").addEventListener("click", openAct);
     $("#markSentBtn").addEventListener("click", () => { updateStatus("saadetud"); closeModal("actModal"); });
     $("#todayBtn").addEventListener("click", resetCalendarToToday);
