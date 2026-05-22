@@ -5140,9 +5140,38 @@
       });
     }
 
+    function preprocessImageForOcr(dataUrl) {
+      return new Promise(resolve => {
+        const image = new Image();
+        image.onload = () => {
+          const scale = Math.max(2, Math.min(4, Math.ceil(1800 / Math.max(image.width, 1))));
+          const canvas = document.createElement("canvas");
+          canvas.width = image.width * scale;
+          canvas.height = image.height * scale;
+          const ctx = canvas.getContext("2d", { willReadFrequently: true });
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+          const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          const data = imageData.data;
+          for (let index = 0; index < data.length; index += 4) {
+            const gray = data[index] * 0.299 + data[index + 1] * 0.587 + data[index + 2] * 0.114;
+            const value = gray > 188 ? 255 : gray < 92 ? 0 : gray;
+            data[index] = value;
+            data[index + 1] = value;
+            data[index + 2] = value;
+          }
+          ctx.putImageData(imageData, 0, 0);
+          resolve(canvas.toDataURL("image/png"));
+        };
+        image.onerror = () => resolve(dataUrl);
+        image.src = dataUrl;
+      });
+    }
+
     async function recognizeImageText(dataUrl, label = "pilt") {
       if (!window.Tesseract?.recognize) return "";
-      const result = await Tesseract.recognize(dataUrl, "est+eng", {
+      const preparedImage = await preprocessImageForOcr(dataUrl);
+      const result = await Tesseract.recognize(preparedImage, "est+eng", {
         logger: progress => {
           if (progress.status === "recognizing text") {
             const pct = Math.round((progress.progress || 0) * 100);
@@ -5321,6 +5350,17 @@ Prioriteet: tavaline`;
       return { title, object, servicePart };
     }
 
+    function detectMaintenanceNotice(text) {
+      const normalized = String(text || "").replace(/\s+/g, " ");
+      const title = normalized.match(/hooldusteatis\s+(.+?)(?:\s+Loodud:|\s+\|\s+Objekt|\s+ID[:\s]|\n|$)/i)?.[1] || "";
+      const object = normalized.match(/Objekt\s+([^|]+?)\s*\|\s*ID[:\s]*(\d+)/i);
+      return {
+        title: stripOcrNoise(title),
+        object: object ? stripOcrNoise(object[1]) : "",
+        id: object ? object[2] : ""
+      };
+    }
+
     function detectRelatedObjectsFromText(text) {
       const block = String(text || "").match(/Tööga seotud objektid\s*([\s\S]+?)(?:\n\s*(?:Töökirjeldused|Tegevused|Tähtaeg|Teeninduspiirkond)\b|$)/i)?.[1] || "";
       return block
@@ -5332,6 +5372,9 @@ Prioriteet: tavaline`;
     function detectAssetFromText(text, client) {
       const explicit = labeledValue(text, ["Seade", "Seadme nimi"]);
       if (explicit) return stripOcrNoise(explicit.replace(/\s*\(ID[:\s]*\d+\)\s*/i, ""));
+      const notice = detectMaintenanceNotice(text);
+      const noticeAsset = notice.title.match(/\b(km\d+|rk\d+|sv\d+|vent\d+|ttk)\b/i)?.[1];
+      if (noticeAsset) return noticeAsset.toUpperCase();
       const activityTitle = String(text || "").match(/(?:^|\n)\s*([A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+)\s*-/i)?.[1];
       if (activityTitle) return stripOcrNoise(activityTitle);
       const related = detectRelatedObjectsFromText(text);
@@ -5350,6 +5393,8 @@ Prioriteet: tavaline`;
       }
       const granlund = granlundParts(text);
       if (granlund.servicePart) return granlund.servicePart;
+      const notice = detectMaintenanceNotice(text);
+      if (/kontuuri?1/i.test(notice.title)) return "Kontuur 1";
       const activityArea = String(text || "").match(/(?:^|\n)\s*[A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+\s*-\s*([^\n]+)/i)?.[1];
       if (activityArea) return stripOcrNoise(activityArea);
       const device = client.items?.find(item => item.type === "device");
@@ -5359,8 +5404,18 @@ Prioriteet: tavaline`;
     function detectClientFromText(text) {
       const lower = text.toLowerCase();
       const explicit = labeledValue(text, ["Klient", "Tellija", "Saaja", "Saatja"]);
+      const notice = detectMaintenanceNotice(text);
       const found = clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase()));
       if (found) return found;
+      if (notice.object) {
+        return {
+          id: `OCR-${notice.object}`,
+          name: notice.object,
+          contact: detectContactFromText(text).name,
+          phone: detectContactFromText(text).phone,
+          items: []
+        };
+      }
       if (explicit) {
         return {
           id: `OCR-${explicit}`,
@@ -5379,6 +5434,8 @@ Prioriteet: tavaline`;
       if (object) return object.detail;
       const granlund = granlundParts(text);
       if (granlund.object) return granlund.object;
+      const notice = detectMaintenanceNotice(text);
+      if (notice.object) return notice.object;
       const objectAddress = labeledValue(text, ["Objekti aadress", "Aadress", "Objekt"]);
       if (objectAddress) return stripOcrNoise(objectAddress);
       const location = labeledValue(text, ["Asukoht"]);
@@ -5389,6 +5446,8 @@ Prioriteet: tavaline`;
     function detectReferenceFromText(text) {
       const explicit = labeledValue(text, ["Töökäsu number", "Töökäsu ID", "Töökäsk", "Viide"]);
       if (explicit) return stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit);
+      const notice = detectMaintenanceNotice(text);
+      if (notice.id) return notice.id;
       const granlundId = text.match(/\bID\s*:\s*(\d{3,})/i)?.[1];
       if (granlundId) return granlundId;
       const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
@@ -5398,7 +5457,7 @@ Prioriteet: tavaline`;
     function detectContactFromText(text) {
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
       const phone = text.match(/(?:\+372\s?)?[\d\s]{7,}/)?.[0]?.trim() || "";
-      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]);
+      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || "";
       return { email, phone, name };
     }
 
@@ -5420,6 +5479,8 @@ Prioriteet: tavaline`;
           .map(line => line.replace(/^(\d{2})\s+/, "$1. "))
           .join("\n");
       }
+      const notice = detectMaintenanceNotice(text);
+      if (notice.title) return notice.title;
       const previous = labeledValue(text, ["Teema", "Tööde grupp"]);
       if (previous) return previous;
       const match = text.match(/(?:töö sisu|töö kirjeldus|kirjeldus|teade|tellimus|probleem)[:\s]+([\s\S]{8,260})/i);
