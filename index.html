@@ -2711,6 +2711,13 @@
       });
     }
 
+    function formatDateEt(value) {
+      if (!value) return "-";
+      const date = new Date(`${value}T12:00:00`);
+      if (Number.isNaN(date.getTime())) return value;
+      return date.toLocaleDateString("et-EE", { day: "2-digit", month: "2-digit", year: "numeric" });
+    }
+
     function dateKey(date) {
       const y = date.getFullYear();
       const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -2910,6 +2917,10 @@
       return job.time || "";
     }
 
+    function displayActWorkTime(job) {
+      return [formatDateEt(job.date), displayWorkWindow(job)].filter(Boolean).join(" ");
+    }
+
     function calendarEndMinutes(dayJobs = []) {
       const latest = dayJobs.reduce((max, job) => {
         const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
@@ -3068,8 +3079,19 @@
       return text.split(",").map(item => item.trim()).filter(Boolean);
     }
 
+    function isEvidencePhotoEntry(item) {
+      const text = String(item || "").trim();
+      if (!text) return false;
+      if (/^allikas\s*:/i.test(text)) return false;
+      return true;
+    }
+
+    function evidencePhotoEntries(value) {
+      return parsePhotoEntries(value).filter(isEvidencePhotoEntry);
+    }
+
     function photoTextValue(value) {
-      return parsePhotoEntries(value).filter(item => !item.startsWith("data:image/")).join(", ");
+      return evidencePhotoEntries(value).filter(item => !item.startsWith("data:image/")).join(", ");
     }
 
     function serializePhotoEntries(entries) {
@@ -3103,7 +3125,7 @@
     }
 
     function photoTiles(job) {
-      const photos = parsePhotoEntries(job.photos);
+      const photos = evidencePhotoEntries(job.photos);
       if (!photos.length) return `<div class="photo-tile">Fotosid pole lisatud</div>`;
       return photos.map(photo => {
         if (photo.startsWith("data:image/") || /^https?:\/\/.+\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(photo)) {
@@ -3114,7 +3136,7 @@
     }
 
     function actPhotoSection(job) {
-      const photos = parsePhotoEntries(job.photos);
+      const photos = evidencePhotoEntries(job.photos);
       if (!photos.length) return "";
       return `
         <section class="act-photo-page">
@@ -5354,9 +5376,20 @@ Prioriteet: tavaline`;
 
     function compactImportedValue(value) {
       return stripOcrNoise(value)
+        .replace(/^[\s—–-]+/, "")
         .replace(/\b(Töökäsu number|Töökäsu ID|Tähtaeg|Loodud|Looja|Asukoht|Teema|Seadme andmed|Seadme kategooria|Failid|Pildid|Raportid|Vaheetapid|Tööajad|Logi)\b.*$/i, "")
         .replace(/\s+[-–—]\s*$/g, "")
         .trim();
+    }
+
+    function normalizeImportedLocation(value) {
+      return compactImportedValue(value)
+        .replace(/\b(TELLISKIVI\s+60)8\b/ig, "$1A8")
+        .trim();
+    }
+
+    function cleanReferenceNo(value) {
+      return compactImportedValue(value).replace(/^[\s—–-]+/, "").trim();
     }
 
     function detectGranlundTitle(text) {
@@ -5399,11 +5432,11 @@ Prioriteet: tavaline`;
         const match = normalized.match(new RegExp(`${escapeRegExp(label)}\\s*:?\\s*(.+?)(?=\\s+(?:${next})\\s*:|\\s+(?:${next})\\b|$)`, "i"));
         return compactImportedValue(match?.[1] || "");
       };
-      const location = between("Asukoht", ["Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme kategooria"]);
+      const location = normalizeImportedLocation(between("Asukoht", ["Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme kategooria"]));
       const locationParts = location.split("/").map(part => stripOcrNoise(part)).filter(Boolean);
       const object = (locationParts[0] || location).replace(/\s*\(\d+\)\s*$/g, "").trim();
       return {
-        number: between("Töökäsu number", ["Tähtaeg", "Seade", "Asukoht", "Töökäsu ID", "Loodud"]),
+        number: cleanReferenceNo(between("Töökäsu number", ["Tähtaeg", "Seade", "Asukoht", "Töökäsu ID", "Loodud"])),
         dueDate: between("Tähtaeg", ["Seade", "Asukoht", "Töökäsu ID", "Loodud", "Looja"]),
         asset: between("Seade", ["Asukoht", "Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme andmed", "Seadme kategooria"]),
         location,
@@ -5556,7 +5589,7 @@ Prioriteet: tavaline`;
       const explicit = labeledValue(text, ["Töökäsu number", "Töökäsu ID", "Töökäsk", "Viide"]);
       const allDevice = detectAllDeviceWork(text);
       if (allDevice.number) return allDevice.number;
-      if (explicit) return stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit);
+      if (explicit) return cleanReferenceNo(stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit));
       const notice = detectMaintenanceNotice(text);
       if (notice.id) return notice.id;
       const granlundId = text.match(/\b[I1]D\s*:\s*(\d{3,})/i)?.[1];
@@ -5565,7 +5598,7 @@ Prioriteet: tavaline`;
       const exportCode = exportRow.servicePart.match(/\b\d{3}(?:\.\d+)?\b/)?.[0];
       if (exportCode) return exportCode;
       const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
-      return match ? match[1].trim() : "";
+      return match ? cleanReferenceNo(match[1]) : "";
     }
 
     function detectContactFromText(text) {
@@ -5672,7 +5705,7 @@ Prioriteet: tavaline`;
         hours: "",
         travelTime: "",
         timeLogs: [],
-        photos: data.fileName ? `allikas: ${data.fileName}` : "",
+        photos: "",
         approvedBy: "",
         ezefsRef: data.source
       };
@@ -5717,7 +5750,7 @@ Prioriteet: tavaline`;
         hours: "",
         travelTime: "",
         timeLogs: [],
-        photos: fileName ? `allikas: ${fileName}` : "",
+        photos: "",
         approvedBy: "",
         ezefsRef: source
       };
@@ -6276,7 +6309,7 @@ Summa: 2 075,34 €`;
           <div class="act-box"><span>Seade</span><strong>${escapeHtml(job.asset || "-")}</strong></div>
           <div class="act-box"><span>Kontakt</span><strong>${escapeHtml(job.contact)} ${escapeHtml(job.phone)}</strong></div>
           <div class="act-box"><span>Tehnikud</span><strong>${escapeHtml(jobTechnicianLabel(job))}</strong></div>
-          <div class="act-box"><span>Töö aeg</span><strong>${escapeHtml(job.date)} ${escapeHtml(job.time)} · ${escapeHtml(effectiveWorkTime(job) || "-")}</strong></div>
+          <div class="act-box"><span>Töö aeg</span><strong>${escapeHtml(displayActWorkTime(job))}</strong></div>
           <div class="act-box"><span>Transpordi aeg</span><strong>${escapeHtml(job.travelTime || "-")}</strong></div>
           <div class="act-box"><span>Staatus</span><strong>${statusLabels[job.status]}</strong></div>
         </div>
