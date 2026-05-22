@@ -2136,6 +2136,10 @@
                 </div>
                 <img class="image-preview" id="importImagePreview" alt="Kleebitud pildi eelvaade">
               </div>
+              <div class="photo-choice">
+                <label class="btn ghost"><span class="icon">⇧</span> Vali pilt failist<input id="importImageFile" type="file" accept="image/*"></label>
+                <button class="btn ghost" type="button" id="clearImportImageBtn"><span class="icon">×</span> Eemalda pilt</button>
+              </div>
             </div>
             <label class="full">AI/OCR tuvastatud tekst<textarea name="sourceText" placeholder="Pärast pildi kleepimist täidab süsteem siia tuvastatud info. Võid seda käsitsi parandada."></textarea></label>
             <label class="full">Analüüsi tulemus<textarea name="aiNote" readonly>Ootan pilti või teksti.</textarea></label>
@@ -2369,6 +2373,7 @@
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script>
     let people = [
       { id: "U-01", name: "Aleksei", role: "Tehnik", phone: "+372 5551 1001", email: "aleksei@veco.ee", region: "Tallinn", skills: "HVAC, automaatika", active: true },
@@ -2530,6 +2535,7 @@
     calendarCursor.setHours(12, 0, 0, 0);
     let detailJobId = null;
     let importedImageName = "";
+    let importedImageDataUrl = "";
     let emailAgentDraftId = null;
     const STORAGE_KEY = "vecoPilotDataV1";
     const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
@@ -4701,6 +4707,7 @@
 
     function refreshFromBrand() {
       const url = new URL(window.location.href);
+      url.searchParams.set("view", "calendar");
       url.searchParams.set("refresh", Date.now().toString());
       window.location.replace(url.toString());
     }
@@ -5021,6 +5028,7 @@
     function openImportJobModal() {
       $("#importJobForm").reset();
       importedImageName = "";
+      importedImageDataUrl = "";
       $("#importImagePreview").style.display = "none";
       $("#importImagePreview").removeAttribute("src");
       $("#imagePasteZone").querySelector("div").style.display = "block";
@@ -5029,9 +5037,74 @@
       setTimeout(() => $("#imagePasteZone").focus(), 0);
     }
 
-    function analyzeImportedImage() {
+    function clearImportImage() {
+      importedImageName = "";
+      importedImageDataUrl = "";
+      const form = $("#importJobForm");
+      form.elements.fileName.value = "";
+      form.elements.sourceText.value = "";
+      form.elements.aiNote.value = "Ootan pilti või teksti.";
+      $("#importImagePreview").style.display = "none";
+      $("#importImagePreview").removeAttribute("src");
+      $("#imagePasteZone").querySelector("div").style.display = "block";
+    }
+
+    function setImportImage(dataUrl, name = "kleebitud-ekraanitommis.png", autoAnalyze = true) {
+      importedImageName = name || "kleebitud-ekraanitommis.png";
+      importedImageDataUrl = dataUrl || "";
+      $("#importImagePreview").src = importedImageDataUrl;
+      $("#importImagePreview").style.display = "block";
+      $("#imagePasteZone").querySelector("div").style.display = "none";
+      $("#importJobForm").elements.fileName.value = importedImageName;
+      if (autoAnalyze) analyzeImportedImage();
+    }
+
+    function parseImportedTextSummary(text) {
+      const client = detectClientFromText(text);
+      return [
+        `Klient: ${client?.name || "tuvastamata"}`,
+        `Objekt: ${detectAddressFromText(text, client || clients[0]) || "tuvastamata"}`,
+        `Viide: ${detectReferenceFromText(text) || "puudub"}`,
+        `Kontakt: ${detectContactFromText(text).phone || detectContactFromText(text).email || "puudub"}`,
+        `Töö: ${detectDescriptionFromText(text).slice(0, 120) || "tuvastamata"}`
+      ].join("\n");
+    }
+
+    async function analyzeImportedImage() {
       const form = $("#importJobForm");
       const source = form.elements.source.value;
+      if (importedImageDataUrl && window.Tesseract?.recognize) {
+        form.elements.aiNote.value = "OCR loeb pilti... see võib võtta mõne hetke.";
+        try {
+          const result = await Tesseract.recognize(importedImageDataUrl, "est+eng", {
+            logger: progress => {
+              if (progress.status === "recognizing text") {
+                const pct = Math.round((progress.progress || 0) * 100);
+                form.elements.aiNote.value = `OCR loeb pilti... ${pct}%`;
+              }
+            }
+          });
+          const recognizedText = (result?.data?.text || "").trim();
+          if (recognizedText) {
+            form.elements.sourceText.value = recognizedText;
+            form.elements.aiNote.value = `Pildilt ${importedImageName} loeti tekst. Kontrolli ja vajadusel paranda enne mustandi loomist.\n\n${parseImportedTextSummary(recognizedText)}`;
+            return;
+          }
+          form.elements.aiNote.value = "OCR ei leidnud pildilt piisavalt teksti. Võid teksti käsitsi sisestada või proovida selgema ekraanitõmmisega.";
+          return;
+        } catch (error) {
+          form.elements.aiNote.value = `OCR ei käivitunud (${error?.message || "tundmatu viga"}). Teksti saab käsitsi sisestada või proovida hiljem uuesti.`;
+          return;
+        }
+      }
+      if (importedImageDataUrl && !window.Tesseract?.recognize) {
+        form.elements.aiNote.value = "OCR moodul ei ole veel brauserisse laetud. Proovi hetk hiljem uuesti või sisesta tekst käsitsi.";
+        return;
+      }
+      if (form.elements.sourceText.value.trim()) {
+        form.elements.aiNote.value = `Sisestatud teksti põhjal leitavad väljad:\n\n${parseImportedTextSummary(form.elements.sourceText.value)}`;
+        return;
+      }
       const sample = `Allikas: ${source}
 Saatja: Kinema OÜ / Andre Loikmann
 Kontakt: andre.loikmann@kinema.eu, +372 53 852 495
@@ -5054,46 +5127,64 @@ Prioriteet: tavaline`;
       event.preventDefault();
       const file = imageItem.getAsFile();
       if (!file) return;
-      importedImageName = file.name || "kleebitud-ekraanitommis.png";
       const reader = new FileReader();
-      reader.onload = () => {
-        $("#importImagePreview").src = reader.result;
-        $("#importImagePreview").style.display = "block";
-        $("#imagePasteZone").querySelector("div").style.display = "none";
-        $("#importJobForm").elements.fileName.value = importedImageName;
-        analyzeImportedImage();
-      };
+      reader.onload = () => setImportImage(String(reader.result || ""), file.name || "kleebitud-ekraanitommis.png");
+      reader.readAsDataURL(file);
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => setImportImage(String(reader.result || ""), file.name || "pilt.png");
       reader.readAsDataURL(file);
     }
 
     function detectClientFromText(text) {
       const lower = text.toLowerCase();
-      return clients.find(client => lower.includes(client.name.toLowerCase())) || clients[0];
+      const explicit = text.match(/(?:klient|tellija|saaja|saatja)[:\s]+([^\n]+)/i)?.[1] || "";
+      return clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase())) || clients[0];
     }
 
     function detectAddressFromText(text, client) {
-      const object = client.items.find(item => item.type === "object" && text.toLowerCase().includes(item.detail.toLowerCase()));
+      const normalized = text.toLowerCase();
+      const object = client.items.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
       if (object) return object.detail;
-      const match = text.match(/aadress[:\s]+([^,\n]+(?:,\s*[^,\n]+)?)/i);
+      const match = text.match(/(?:aadress|objekt|asukoht|hoone)[:\s]+([^\n]+)/i);
       return match ? match[1].trim() : client.items.find(item => item.type === "object")?.detail || "";
     }
 
     function detectReferenceFromText(text) {
-      const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|nr)[:\s-]*([A-Z0-9-]{3,})/i) || text.match(/\b(S\d{6,})\b/i);
+      const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
       return match ? match[1].trim() : "";
     }
 
     function detectContactFromText(text) {
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
       const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0] || "";
-      return { email, phone };
+      const name = text.match(/(?:kontakt|kontaktisik|saatja)[:\s]+([^,\n]+)/i)?.[1]?.trim() || "";
+      return { email, phone, name };
     }
 
     function detectDescriptionFromText(text) {
-      const match = text.match(/(?:töö sisu|kirjeldus)[:\s]+(.+)/i);
+      const match = text.match(/(?:töö sisu|töö kirjeldus|kirjeldus|teade|tellimus|probleem)[:\s]+([\s\S]{8,260})/i);
       if (match) return match[1].trim();
-      const offer = text.match(/(liugväravaautomaatika[^.\n]+)/i);
+      const offer = text.match(/((?:hooldus|häire|rike|parand|vahet|kontroll|liugväravaautomaatika)[^.\n]{8,180})/i);
       return offer ? offer[1].trim() : text.slice(0, 220);
+    }
+
+    function detectDateTimeFromText(text, fallbackSlot) {
+      const dateMatch = text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+      const timeMatch = text.match(/\b([01]?\d|2[0-3])[:.](00|30|[0-5]\d)\b/);
+      let date = fallbackSlot.date;
+      if (dateMatch) {
+        const day = dateMatch[1].padStart(2, "0");
+        const month = dateMatch[2].padStart(2, "0");
+        const year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
+        date = `${year}-${month}-${day}`;
+      }
+      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : fallbackSlot.time;
+      return { date, time };
     }
 
     function createImportedJobDraft(event) {
@@ -5107,18 +5198,19 @@ Prioriteet: tavaline`;
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
       const slot = nextFreeSlot(technicians()[0] || "");
+      const detectedSchedule = detectDateTimeFromText(text, slot);
       const draft = {
-        id: nextJobId(slot.date, slot.time),
+        id: nextJobId(detectedSchedule.date, detectedSchedule.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
         buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
-        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
+        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : detectedContact.name || client.contact,
         phone: detectedContact.phone || client.phone,
-        date: slot.date,
-        time: slot.time,
-        endTime: addDurationToTime(slot.time, 2),
+        date: detectedSchedule.date,
+        time: detectedSchedule.time,
+        endTime: addDurationToTime(detectedSchedule.time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
@@ -5151,18 +5243,19 @@ Prioriteet: tavaline`;
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
       const slot = nextFreeSlot(technicians()[0] || "");
+      const detectedSchedule = detectDateTimeFromText(text, slot);
       return {
-        id: nextJobId(slot.date, slot.time),
+        id: nextJobId(detectedSchedule.date, detectedSchedule.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
         buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
-        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
+        contact: lower.includes("andre loikmann") ? "Andre Loikmann" : detectedContact.name || client.contact,
         phone: detectedContact.phone || client.phone,
-        date: slot.date,
-        time: slot.time,
-        endTime: addDurationToTime(slot.time, 2),
+        date: detectedSchedule.date,
+        time: detectedSchedule.time,
+        endTime: addDurationToTime(detectedSchedule.time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
@@ -5932,6 +6025,8 @@ Summa: 2 075,34 €`;
     $("#simulateEmailBtn").addEventListener("click", simulateIncomingEmail);
     $("#reviewEmailDraftBtn").addEventListener("click", reviewEmailDraft);
     $("#imagePasteZone").addEventListener("paste", handleImportPaste);
+    $("#importImageFile").addEventListener("change", handleImportFile);
+    $("#clearImportImageBtn").addEventListener("click", clearImportImage);
     $("#analyzeImportImageBtn").addEventListener("click", analyzeImportedImage);
     $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
     $("#aiSelectAllBtn").addEventListener("click", () => {
