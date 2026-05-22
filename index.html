@@ -5353,7 +5353,8 @@ Prioriteet: tavaline`;
     function detectMaintenanceNotice(text) {
       const normalized = String(text || "").replace(/\s+/g, " ");
       const title = normalized.match(/hooldusteatis\s+(.+?)(?:\s+Loodud:|\s+\|\s+Objekt|\s+ID[:\s]|\n|$)/i)?.[1] || "";
-      const object = normalized.match(/Objekt\s+([^|]+?)\s*\|\s*ID[:\s]*(\d+)/i);
+      const object = normalized.match(/Objekt\s+([^|]+?)\s*\|\s*ID[:\s]*(\d+)/i)
+        || normalized.match(/\b([A-ZÕÄÖÜ0-9 .\/-]{4,}LOGISTIKAKESKUS)\s*\|\s*ID[:\s]*(\d+)/i);
       return {
         title: stripOcrNoise(title),
         object: object ? stripOcrNoise(object[1]) : "",
@@ -5405,8 +5406,16 @@ Prioriteet: tavaline`;
       const lower = text.toLowerCase();
       const explicit = labeledValue(text, ["Klient", "Tellija", "Saaja", "Saatja"]);
       const notice = detectMaintenanceNotice(text);
-      const found = clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase()));
-      if (found) return found;
+      const granlund = granlundParts(text);
+      if (granlund.object && /\|\s*ID\s*:/i.test(text)) {
+        return {
+          id: `OCR-${granlund.object}`,
+          name: granlund.object,
+          contact: detectContactFromText(text).name,
+          phone: detectContactFromText(text).phone,
+          items: []
+        };
+      }
       if (notice.object) {
         return {
           id: `OCR-${notice.object}`,
@@ -5416,6 +5425,8 @@ Prioriteet: tavaline`;
           items: []
         };
       }
+      const found = clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase()));
+      if (found) return found;
       if (explicit) {
         return {
           id: `OCR-${explicit}`,
@@ -5430,12 +5441,12 @@ Prioriteet: tavaline`;
 
     function detectAddressFromText(text, client) {
       const normalized = text.toLowerCase();
-      const object = client.items?.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
-      if (object) return object.detail;
-      const granlund = granlundParts(text);
-      if (granlund.object) return granlund.object;
       const notice = detectMaintenanceNotice(text);
       if (notice.object) return notice.object;
+      const granlund = granlundParts(text);
+      if (granlund.object) return granlund.object;
+      const object = client.items?.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
+      if (object) return object.detail;
       const objectAddress = labeledValue(text, ["Objekti aadress", "Aadress", "Objekt"]);
       if (objectAddress) return stripOcrNoise(objectAddress);
       const location = labeledValue(text, ["Asukoht"]);
@@ -5456,7 +5467,7 @@ Prioriteet: tavaline`;
 
     function detectContactFromText(text) {
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-      const phone = text.match(/(?:\+372\s?)?[\d\s]{7,}/)?.[0]?.trim() || "";
+      const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0]?.trim() || "";
       const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || "";
       return { email, phone, name };
     }
