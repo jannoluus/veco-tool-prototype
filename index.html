@@ -5347,6 +5347,15 @@ Prioriteet: tavaline`;
       return String(value || "")
         .replace(/\s+/g, " ")
         .replace(/\s+\|.*$/, "")
+        .replace(/\b(?:image|screenshot|pilt|fail)[\w\s-]*\.(?:png|jpe?g|pdf|eml)\b/ig, "")
+        .replace(/\b\S+\.(?:png|jpe?g|pdf|eml)\b/ig, "")
+        .trim();
+    }
+
+    function compactImportedValue(value) {
+      return stripOcrNoise(value)
+        .replace(/\b(Töökäsu number|Töökäsu ID|Tähtaeg|Loodud|Looja|Asukoht|Teema|Seadme andmed|Seadme kategooria|Failid|Pildid|Raportid|Vaheetapid|Tööajad|Logi)\b.*$/i, "")
+        .replace(/\s+[-–—]\s*$/g, "")
         .trim();
     }
 
@@ -5385,21 +5394,23 @@ Prioriteet: tavaline`;
       const normalized = String(text || "").replace(/\s+/g, " ").trim();
       if (!/Töökäsu\s+(?:andmed|number|ID)\b/i.test(normalized) || !/(?:Asukoht|Seade|Looja|Teema)\s*:/i.test(normalized)) return {};
       const between = (label, nextLabels) => {
-        const next = nextLabels.join("|").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const match = normalized.match(new RegExp(`${label}\\s*:\\s*(.+?)(?=\\s+(?:${next})\\s*:|$)`, "i"));
-        return stripOcrNoise(match?.[1] || "");
+        const escapeRegExp = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const next = nextLabels.map(escapeRegExp).join("|");
+        const match = normalized.match(new RegExp(`${escapeRegExp(label)}\\s*:?\\s*(.+?)(?=\\s+(?:${next})\\s*:|\\s+(?:${next})\\b|$)`, "i"));
+        return compactImportedValue(match?.[1] || "");
       };
       const location = between("Asukoht", ["Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme kategooria"]);
       const locationParts = location.split("/").map(part => stripOcrNoise(part)).filter(Boolean);
+      const object = (locationParts[0] || location).replace(/\s*\(\d+\)\s*$/g, "").trim();
       return {
         number: between("Töökäsu number", ["Tähtaeg", "Seade", "Asukoht", "Töökäsu ID", "Loodud"]),
         dueDate: between("Tähtaeg", ["Seade", "Asukoht", "Töökäsu ID", "Loodud", "Looja"]),
-        asset: between("Seade", ["Asukoht", "Töökäsu ID", "Loodud", "Looja", "Teema"]),
+        asset: between("Seade", ["Asukoht", "Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme andmed", "Seadme kategooria"]),
         location,
-        object: locationParts[0] || location,
+        object,
         buildingPart: locationParts.slice(1).join(" / "),
         creator: between("Looja", ["Teema", "Seadme kategooria", "Töökäsu kinnitamine", "Pildid"]),
-        topic: between("Teema", ["Seadme andmed", "Seadme kategooria", "Failid", "Töökäsu kinnitamine"]),
+        topic: between("Teema", ["Seadme andmed", "Seadme kategooria", "Failid", "Töökäsu kinnitamine", "Pildid", "Raportid", "Vaheetapid", "Tööajad", "Logi"]),
         category: between("Seadme kategooria", ["Teema", "Töökäsu kinnitamine", "Pildid", "Raportid"])
       };
     }
@@ -5628,7 +5639,7 @@ Prioriteet: tavaline`;
     function createImportedJobDraft(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
-      const text = `${data.sourceText || ""} ${data.fileName || ""} ${importedImageName || ""}`;
+      const text = String(data.sourceText || "").trim() || `${data.fileName || ""} ${importedImageName || ""}`;
       const client = detectClientFromText(text);
       const lower = text.toLowerCase();
       const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
@@ -5673,7 +5684,7 @@ Prioriteet: tavaline`;
     }
 
     function buildDraftFromText(source, sourceText, fileName = "") {
-      const text = `${sourceText || ""} ${fileName || ""}`;
+      const text = String(sourceText || "").trim() || String(fileName || "");
       const client = detectClientFromText(text);
       const lower = text.toLowerCase();
       const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
