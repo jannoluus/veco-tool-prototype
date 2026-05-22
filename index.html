@@ -606,6 +606,14 @@
       gap: 10px;
     }
 
+    .month-weekday {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: center;
+      text-transform: uppercase;
+    }
+
     .calendar-grid.year {
       display: grid;
       grid-template-columns: repeat(4, minmax(170px, 1fr));
@@ -621,6 +629,13 @@
       display: grid;
       align-content: start;
       gap: 7px;
+    }
+
+    .month-cell.blank {
+      background: transparent;
+      border-color: transparent;
+      min-height: 0;
+      padding: 0;
     }
 
     .year-cell {
@@ -3516,12 +3531,15 @@
       const year = calendarCursor.getFullYear();
       const month = calendarCursor.getMonth();
       const monthDays = Array.from({ length: daysInMonth(year, month) }, (_, index) => dateKey(new Date(year, month, index + 1, 12)));
+      const firstDayOffset = (new Date(year, month, 1, 12).getDay() + 6) % 7;
+      const leadingBlanks = Array.from({ length: firstDayOffset }, () => `<div class="month-cell blank" aria-hidden="true"></div>`);
+      const weekdayHeads = ["E", "T", "K", "N", "R", "L", "P"].map(day => `<div class="month-weekday">${day}</div>`);
       $("#calendarTitle").textContent = `${monthNames[month]} ${year}`;
       $("#weekGrid").className = "calendar-grid month";
-      $("#weekGrid").innerHTML = monthDays.map(date => {
+      $("#weekGrid").innerHTML = weekdayHeads.join("") + leadingBlanks.join("") + monthDays.map(date => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         return `
-          <div class="month-cell">
+          <div class="month-cell" data-calendar-day="${date}">
             <div class="day-head"><strong>${Number(date.slice(-2))}</strong><span>${unavailableNames(date).length ? "Puudumisi" : ""}</span></div>
             ${dayJobs.map(job => `
               <button class="mini-job" data-job="${job.id}">
@@ -5917,6 +5935,8 @@ Summa: 2 075,34 €`;
       if (mode === "month") next.setMonth(next.getMonth() + direction);
       if (mode === "year") next.setFullYear(next.getFullYear() + direction);
       calendarCursor = next;
+      detailJobId = null;
+      setDetailCollapsed(true);
       renderAll();
     }
 
@@ -5925,6 +5945,8 @@ Summa: 2 075,34 €`;
       calendarCursor.setHours(12, 0, 0, 0);
       $("#statusFilter").value = "all";
       $("#searchField").value = "";
+      detailJobId = null;
+      setDetailCollapsed(true);
       renderAll();
     }
 
@@ -6338,6 +6360,44 @@ Summa: 2 075,34 €`;
       window.print();
     }
 
+    function loadScriptOnce(src, globalName) {
+      if (globalName && window[globalName]) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        const existing = document.querySelector(`script[src="${src}"]`);
+        if (existing) {
+          existing.addEventListener("load", resolve, { once: true });
+          existing.addEventListener("error", reject, { once: true });
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = src;
+        script.onload = resolve;
+        script.onerror = reject;
+        document.head.appendChild(script);
+      });
+    }
+
+    async function saveActPdf() {
+      const job = selectedJob();
+      if (!job) return;
+      if (job.status === "täidetud") job.status = "akt";
+      const preview = $("#actPreview");
+      if (!preview.innerHTML.trim()) preview.innerHTML = actHtml(job);
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js", "html2pdf");
+      const filename = `VECO-akt-${String(job.id || "akt").replace(/[^\w-]+/g, "_")}.pdf`;
+      await html2pdf()
+        .set({
+          margin: 8,
+          filename,
+          image: { type: "jpeg", quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+        })
+        .from(preview)
+        .save();
+      renderAll();
+    }
+
     function openActInNewWindow(printImmediately = false) {
       const job = selectedJob();
       if (!job) return;
@@ -6420,8 +6480,7 @@ Summa: 2 075,34 €`;
       `);
       popup.document.close();
       if (printImmediately) {
-        popup.addEventListener("load", () => popup.print(), { once: true });
-        setTimeout(() => popup.print(), 300);
+        saveActPdf();
       }
       renderAll();
     }
@@ -6549,7 +6608,7 @@ Summa: 2 075,34 €`;
     if ($("#openActBtn")) $("#openActBtn").addEventListener("click", openAct);
     $("#openActWindowBtn").addEventListener("click", () => openActInNewWindow(false));
     $("#printActBtn").addEventListener("click", printAct);
-    $("#saveActPdfBtn").addEventListener("click", () => openActInNewWindow(true));
+    $("#saveActPdfBtn").addEventListener("click", saveActPdf);
     $("#printActSideBtn").addEventListener("click", openAct);
     $("#markSentBtn").addEventListener("click", () => { updateStatus("saadetud"); closeModal("actModal"); });
     $("#todayBtn").addEventListener("click", resetCalendarToToday);
@@ -6557,7 +6616,11 @@ Summa: 2 075,34 €`;
     $("#nextPeriodBtn").addEventListener("click", () => moveCalendarPeriod(1));
     $("#toggleWeekendBtn").addEventListener("click", toggleWeekends);
     $("#technicianFilter").addEventListener("change", renderAll);
-    $("#calendarMode").addEventListener("change", renderAll);
+    $("#calendarMode").addEventListener("change", () => {
+      detailJobId = null;
+      setDetailCollapsed(true);
+      renderAll();
+    });
     $("#statusFilter").addEventListener("change", renderAll);
     $("#tickerSpeedSelect").addEventListener("change", () => {
       localStorage.setItem(TICKER_SPEED_KEY, $("#tickerSpeedSelect").value);
