@@ -627,7 +627,7 @@
       );
       background-size: 100% var(--calendar-hour-height);
       background-position: 0 var(--calendar-head-height);
-      overflow: hidden;
+      overflow: visible;
       display: flex;
       flex-direction: column;
     }
@@ -687,6 +687,47 @@
     .day-body .job-card.menu-open {
       overflow: visible;
       z-index: 12;
+    }
+
+    .day-body .job-card:hover,
+    .day-body .job-card:focus-visible {
+      overflow: visible;
+      z-index: 30;
+    }
+
+    .job-card[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      top: 8px;
+      left: calc(100% + 8px);
+      width: min(320px, 78vw);
+      max-width: 320px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      white-space: pre-line;
+      font-size: 13px;
+      line-height: 1.35;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity .12s ease, transform .12s ease;
+      z-index: 40;
+    }
+
+    .day:nth-last-child(-n + 2) .job-card[data-tooltip]::after {
+      left: auto;
+      right: calc(100% + 8px);
+    }
+
+    .job-card[data-tooltip]:hover::after,
+    .job-card[data-tooltip]:focus-visible::after {
+      opacity: 1;
+      transform: translateY(0);
     }
 
     .job-card:hover,
@@ -1494,7 +1535,7 @@
               <div class="mobile-card">
                 <strong>8. Liidestused</strong>
                 <span class="status ootel">N</span>
-                <span class="job-meta">EZEFSi, Works, Alldevice ja Granlund jäävad MVP-st välja. Hoiame andmeväljad valmis, aga automaatset ühendust ei ehita veel.</span>
+                <span class="job-meta">Välised keskkonnad jäävad MVP-st välja. Hoiame andmeväljad valmis, aga automaatset ühendust ei ehita veel.</span>
               </div>
               <div class="mobile-card">
                 <strong>9. Kasutajad ja õigused</strong>
@@ -1810,15 +1851,15 @@
 
       <section class="content hidden" id="ezefsView">
         <div class="panel">
-          <div class="panel-head"><h2>EZEFSi liidestuse valmidus</h2></div>
+          <div class="panel-head"><h2>Välise liidestuse valmidus</h2></div>
           <div class="detail-body">
             <div class="mobile-card">
               <strong>Välised viited töökäsul</strong>
-              <span class="job-meta">Igal töökäsul on koht tulevastele väljadele: EZEFSi klient, projekt, objekt ja tellimus. See hoiab integratsiooni hiljem eraldi kihis.</span>
+              <span class="job-meta">Igal töökäsul on koht tulevastele väljadele: klient, projekt, objekt ja tellimus. See hoiab integratsiooni hiljem eraldi kihis.</span>
             </div>
             <div class="mobile-card">
               <strong>Sünkroonimise logi</strong>
-              <span class="job-meta">Tulevases versioonis saab iga akti või töökäsu juures näha, millal see EZEFSi saadeti ning kas saatmine õnnestus.</span>
+              <span class="job-meta">Tulevases versioonis saab iga akti või töökäsu juures näha, millal see välisesse keskkonda saadeti ning kas saatmine õnnestus.</span>
             </div>
             <div class="mobile-card">
               <strong>PDF ja andmed</strong>
@@ -1829,9 +1870,9 @@
         <aside class="panel detail">
           <div class="panel-head"><h2>Näidisväljad</h2></div>
           <div class="detail-body">
-            <div class="kv"><span>ezefs_client_id</span><strong>valmis lisamiseks</strong></div>
-            <div class="kv"><span>ezefs_project_id</span><strong>valmis lisamiseks</strong></div>
-            <div class="kv"><span>ezefs_order_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>external_client_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>external_project_id</span><strong>valmis lisamiseks</strong></div>
+            <div class="kv"><span>external_order_id</span><strong>valmis lisamiseks</strong></div>
             <div class="kv"><span>sync_status</span><strong>pole saadetud</strong></div>
           </div>
         </aside>
@@ -1912,7 +1953,6 @@
             <label class="full">Materjalid<textarea name="materials"></textarea></label>
             <label class="full">Fotod / tõendusmaterjal<textarea name="photos" placeholder="nt enne: IMG_1012, pärast: IMG_1018"></textarea></label>
             <label>Kliendi kinnitaja<input class="field" name="approvedBy"></label>
-            <label>EZEFSi viide<input class="field" name="ezefsRef" placeholder="tulevane väline ID"></label>
           </div>
         </div>
         <div class="dialog-actions">
@@ -2093,7 +2133,6 @@
             <label>Telefon<input class="field" name="phone"></label>
             <label>E-post<input class="field" name="email" type="email"></label>
             <label>Arve e-post<input class="field" name="invoiceEmail" type="email"></label>
-            <label>EZEFSi kliendi ID<input class="field" name="ezefsClientId" placeholder="tulevane väline ID"></label>
             <label>Staatus<select class="select" name="active"><option value="true">Aktiivne</option><option value="false">Deaktiveeritud</option></select></label>
             <label class="full">Märkused<textarea name="notes"></textarea></label>
           </div>
@@ -2441,6 +2480,10 @@
       }[char]));
     }
 
+    function escapeAttr(value) {
+      return escapeHtml(value).replace(/\r?\n/g, "&#10;");
+    }
+
     function nextTimestamp() {
       const now = new Date();
       const h = String(now.getHours()).padStart(2, "0");
@@ -2703,6 +2746,21 @@
       return `--job-top:${top}px;--job-height:${height}px`;
     }
 
+    function jobTooltip(job) {
+      return [
+        `${job.client} (${job.id})`,
+        displayWorkWindow(job),
+        `Tehnikud: ${jobTechnicianLabel(job)}`,
+        job.referenceNo ? `Viide: ${job.referenceNo}` : "",
+        job.address ? `Objekt: ${job.address}` : "",
+        job.buildingPart ? `Hooneosa: ${job.buildingPart}` : "",
+        job.asset ? `Seade: ${job.asset}` : "",
+        job.priority ? `Prioriteet: ${job.priority}` : "",
+        job.description ? `Töö: ${job.description}` : "",
+        `Staatus: ${statusLabels[job.status] || job.status}`
+      ].filter(Boolean).join("\n");
+    }
+
     function nextBusinessDate(date) {
       const result = new Date(date);
       do {
@@ -2915,7 +2973,7 @@
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
-          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
+          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" data-tooltip="${escapeAttr(jobTooltip(job))}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
             <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
             <span class="job-technicians">${escapeHtml(jobTechnicianLabel(job))}</span>
@@ -3514,7 +3572,7 @@
         <div class="detail-title">
           <div>
             <h2>${escapeHtml(client.name)}</h2>
-            <div class="job-meta">${escapeHtml(client.regNo || "registrikood puudub")} · ${escapeHtml(client.ezefsClientId || "EZEFSi viide puudub")}</div>
+            <div class="job-meta">${escapeHtml(client.regNo || "registrikood puudub")}</div>
           </div>
           <span class="status ${client.active ? "täidetud" : "ootel"}">${client.active ? "Aktiivne" : "Deaktiveeritud"}</span>
         </div>
@@ -5390,8 +5448,7 @@ Summa: 2 075,34 €`;
           </div>
           <div>
             <strong>Akt ${escapeHtml(job.id)}</strong><br>
-            Kuupäev: ${new Date().toLocaleDateString("et-EE")}<br>
-            EZEFSi viide: ${escapeHtml(job.ezefsRef || "-")}
+            Kuupäev: ${new Date().toLocaleDateString("et-EE")}
           </div>
         </div>
         <div class="act-grid">
@@ -5669,7 +5726,16 @@ Summa: 2 075,34 €`;
     $("#projectStatusFilter").addEventListener("change", renderAll);
     $("#searchField").addEventListener("input", renderAll);
     $("#mobileTech").addEventListener("change", renderAll);
-    $$(".nav button").forEach(btn => btn.addEventListener("click", () => switchView(btn.dataset.view)));
+    $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
+      if (!btn.dataset.view) return;
+      if (btn.dataset.view === "mobile") {
+        const url = new URL(window.location.href);
+        url.searchParams.set("view", "mobile");
+        window.open(url.toString(), "_blank", "noopener");
+        return;
+      }
+      switchView(btn.dataset.view);
+    }));
     $$("[data-close]").forEach(btn => btn.addEventListener("click", () => closeModal(btn.dataset.close)));
     $$(".modal").forEach(modal => modal.addEventListener("click", event => {
       if (event.target === modal) closeModal(modal.id);
