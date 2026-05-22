@@ -305,6 +305,25 @@
       min-width: 0;
     }
 
+    .photo-choice {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 6px;
+    }
+
+    .photo-choice input[type="file"] {
+      position: absolute;
+      inline-size: 1px;
+      block-size: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .photo-choice .btn {
+      justify-content: center;
+    }
+
     .select.multi {
       height: 112px;
       padding: 8px 10px;
@@ -1021,6 +1040,21 @@
       padding: 8px;
     }
 
+    .photo-tile.image {
+      padding: 0;
+      overflow: hidden;
+      border-style: solid;
+      background: #0f1a22;
+    }
+
+    .photo-tile img {
+      width: 100%;
+      height: 100%;
+      min-height: 86px;
+      object-fit: cover;
+      display: block;
+    }
+
     .ai-score {
       display: inline-flex;
       align-items: center;
@@ -1150,7 +1184,7 @@
       background: #fff;
       color: #111;
       border: 1px solid var(--line);
-      padding: 28px;
+      padding: 22px;
       min-height: 560px;
     }
 
@@ -1159,8 +1193,8 @@
       justify-content: space-between;
       gap: 20px;
       border-bottom: 2px solid #111;
-      padding-bottom: 18px;
-      margin-bottom: 18px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
     }
 
     .act-logo {
@@ -1169,31 +1203,57 @@
       letter-spacing: 0;
     }
 
+    .act-logo img {
+      width: 112px;
+      max-height: 44px;
+      object-fit: contain;
+      display: block;
+    }
+
     .act-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px 26px;
-      margin: 18px 0;
+      gap: 6px 20px;
+      margin: 10px 0 14px;
+      padding: 10px 0;
+      border-bottom: 1px solid #d9e0e5;
     }
 
     .act-box {
       border: 1px solid #c9d2d8;
-      padding: 12px;
-      min-height: 78px;
+      padding: 10px 12px;
+      min-height: 0;
+      margin-bottom: 10px;
+      white-space: pre-wrap;
+    }
+
+    .act-grid .act-box {
+      border: 0;
+      border-bottom: 1px solid #e3e9ed;
+      padding: 4px 0 7px;
+      margin: 0;
+      display: grid;
+      grid-template-columns: 130px minmax(0, 1fr);
+      gap: 10px;
+      align-items: baseline;
     }
 
     .act-box span {
       display: block;
       color: #59646d;
       font-size: 12px;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
+    }
+
+    .act-grid .act-box span {
+      margin: 0;
     }
 
     .signature-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 28px;
-      margin-top: 56px;
+      margin-top: 34px;
     }
 
     .signature {
@@ -1953,6 +2013,13 @@
             <label class="full">Tehtud töö kirjeldus<textarea name="workDone"></textarea></label>
             <label class="full">Materjalid<textarea name="materials"></textarea></label>
             <label class="full">Fotod / tõendusmaterjal<textarea name="photos" placeholder="nt enne: IMG_1012, pärast: IMG_1018"></textarea></label>
+            <div>
+              <span>Lisa pildid</span>
+              <div class="photo-choice">
+                <label class="btn ghost"><span class="icon">▣</span> Pildista<input name="photoCameraFiles" type="file" accept="image/*" capture="environment" multiple></label>
+                <label class="btn ghost"><span class="icon">⇧</span> Kaustast<input name="photoFiles" type="file" accept="image/*" multiple></label>
+              </div>
+            </div>
             <label>Kliendi kinnitaja<input class="field" name="approvedBy"></label>
           </div>
         </div>
@@ -2019,6 +2086,13 @@
             <label class="full">Materjalid<textarea name="materials" placeholder="nt filter, kaitse, kinnitused"></textarea></label>
             <label>Transpordi aeg<input class="field" name="travelTime" placeholder="nt 0.5 h"></label>
             <label>Fotod / tõendusmaterjal<input class="field" name="photos" placeholder="nt IMG_1012, IMG_1018"></label>
+            <div>
+              <span>Lisa pildid</span>
+              <div class="photo-choice">
+                <label class="btn ghost"><span class="icon">▣</span> Pildista<input name="photoCameraFiles" type="file" accept="image/*" capture="environment" multiple></label>
+                <label class="btn ghost"><span class="icon">⇧</span> Kaustast<input name="photoFiles" type="file" accept="image/*" multiple></label>
+              </div>
+            </div>
             <label>Kliendi kinnitaja<input class="field" name="approvedBy" placeholder="nimi, kui olemas"></label>
           </div>
         </div>
@@ -2664,7 +2738,7 @@
       const nextDate = dateKey(nextBusinessDate(new Date(`${job.date}T12:00:00`)));
       const continuation = {
         ...job,
-        id: nextJobId(),
+        id: nextJobId(nextDate, "09:00"),
         referenceNo: job.referenceNo ? `${job.referenceNo}-JÄTK` : `${job.id}-JÄTK`,
         date: nextDate,
         time: "09:00",
@@ -2842,10 +2916,64 @@
       return { date: dateKey(day), time: "09:00" };
     }
 
+    function parsePhotoEntries(value) {
+      if (Array.isArray(value)) return value.map(String).map(item => item.trim()).filter(Boolean);
+      const text = String(value || "").trim();
+      if (!text) return [];
+      if (text.startsWith("[")) {
+        try {
+          const parsed = JSON.parse(text);
+          if (Array.isArray(parsed)) return parsed.map(String).map(item => item.trim()).filter(Boolean);
+        } catch (error) {
+          // Fall back to the legacy comma-separated format below.
+        }
+      }
+      return text.split(",").map(item => item.trim()).filter(Boolean);
+    }
+
+    function photoTextValue(value) {
+      return parsePhotoEntries(value).filter(item => !item.startsWith("data:image/")).join(", ");
+    }
+
+    function serializePhotoEntries(entries) {
+      const clean = entries.map(String).map(item => item.trim()).filter(Boolean);
+      if (!clean.length) return "";
+      return clean.some(item => item.startsWith("data:image/")) ? JSON.stringify(clean) : clean.join(", ");
+    }
+
+    function readPhotoFiles(fileList) {
+      const files = Array.from(fileList || []).filter(file => file && file.size > 0);
+      return Promise.all(files.map(file => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      })));
+    }
+
+    async function readSelectedPhotoFiles(form) {
+      const normalFiles = await readPhotoFiles(form.elements.photoFiles?.files);
+      const cameraFiles = await readPhotoFiles(form.elements.photoCameraFiles?.files);
+      return [...normalFiles, ...cameraFiles];
+    }
+
+    function mergePhotoEntries(existing, typed, uploaded) {
+      return serializePhotoEntries([
+        ...parsePhotoEntries(existing).filter(item => item.startsWith("data:image/")),
+        ...parsePhotoEntries(typed),
+        ...uploaded
+      ]);
+    }
+
     function photoTiles(job) {
-      const photos = String(job.photos || "").split(",").map(item => item.trim()).filter(Boolean);
+      const photos = parsePhotoEntries(job.photos);
       if (!photos.length) return `<div class="photo-tile">Fotosid pole lisatud</div>`;
-      return photos.map(photo => `<div class="photo-tile">${escapeHtml(photo)}</div>`).join("");
+      return photos.map(photo => {
+        if (photo.startsWith("data:image/") || /^https?:\/\/.+\.(png|jpe?g|webp|gif)(\?.*)?$/i.test(photo)) {
+          return `<a class="photo-tile image" href="${escapeAttr(photo)}" target="_blank" rel="noopener"><img src="${escapeAttr(photo)}" alt="Tõendusfoto"></a>`;
+        }
+        return `<div class="photo-tile">${escapeHtml(photo)}</div>`;
+      }).join("");
     }
 
     function renderTimeLog(job) {
@@ -3129,7 +3257,7 @@
       if (!source || !technicianName) return;
       const job = {
         ...source,
-        id: nextJobId(),
+        id: nextJobId(source.date, source.time),
         technician: technicianName,
         technicians: [technicianName],
         status: ["täidetud", "akt", "saadetud", "arhiveeritud"].includes(source.status) ? "planeeritud" : source.status,
@@ -4002,7 +4130,7 @@
           const duplicate = jobs.some(job => job.projectId === project.id && job.date === plannedDate && (job.asset || "") === (device.name || ""));
           if (duplicate) return;
           jobs.push({
-            id: nextJobId(),
+            id: nextJobId(plannedDate, project.time || "09:00"),
             projectId: project.id,
             client: client.name,
             referenceNo: `${project.id}-${plannedDate.replaceAll("-", "")}-${index + 1}`,
@@ -4619,21 +4747,31 @@
       form.elements.workDone.value = job.workDone || "";
       form.elements.materials.value = job.materials || "";
       form.elements.travelTime.value = job.travelTime || "";
-      form.elements.photos.value = job.photos || "";
+      form.elements.photos.value = photoTextValue(job.photos);
+      form.elements.photoFiles.value = "";
+      form.elements.photoCameraFiles.value = "";
       form.elements.approvedBy.value = job.approvedBy || "";
       $("#techFillModal").classList.add("open");
       $("#techFillModal").setAttribute("aria-hidden", "false");
     }
 
-    function saveTechFill(event) {
+    async function saveTechFill(event) {
       event.preventDefault();
       const submitter = event.submitter;
       const job = selectedJob();
-      const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+      const form = event.currentTarget;
+      const data = Object.fromEntries(new FormData(form).entries());
+      let uploadedPhotos = [];
+      try {
+        uploadedPhotos = await readSelectedPhotoFiles(form);
+      } catch (error) {
+        alert("Piltide lugemine ei õnnestunud.");
+        return;
+      }
       job.workDone = data.workDone;
       job.materials = data.materials;
       job.travelTime = data.travelTime;
-      job.photos = data.photos;
+      job.photos = mergePhotoEntries(job.photos, data.photos, uploadedPhotos);
       job.approvedBy = data.approvedBy;
       closeModal("techFillModal");
       if (submitter?.name === "complete") {
@@ -4667,29 +4805,35 @@
       renderAll();
     }
 
-    function nextJobId() {
-      const max = jobs.reduce((num, job) => {
-        const match = String(job.id || "").match(/^VK-(\d+)$/);
-        return Math.max(num, match ? Number(match[1]) : 0);
-      }, 1023);
-      return `VK-${max + 1}`;
+    function compactJobIdBase(date, time) {
+      const dateValue = String(date || dateKey(new Date()));
+      const timeValue = String(time || "09:00");
+      const day = (dateValue.match(/\d{4}-\d{2}-(\d{2})/) || [null, String(new Date().getDate()).padStart(2, "0")])[1];
+      const hour = (timeValue.match(/^(\d{2})/) || [null, "09"])[1];
+      return `${day}${hour}`;
+    }
+
+    function nextJobId(date = dateKey(new Date()), time = "09:00", usedIds = new Set(jobs.map(job => String(job.id || "")))) {
+      const base = compactJobIdBase(date, time);
+      for (let index = 1; index <= 99; index += 1) {
+        const candidate = `${base}${String(index).padStart(2, "0")}`;
+        if (!usedIds.has(candidate)) return candidate;
+      }
+      for (let index = 0; index <= 999999; index += 1) {
+        const candidate = String(index).padStart(6, "0");
+        if (!usedIds.has(candidate)) return candidate;
+      }
+      return String(Date.now()).slice(-6);
     }
 
     function normalizeLegacyJobIds() {
       const usedIds = new Set(jobs.map(job => String(job.id || "")));
-      let nextNumber = jobs.reduce((num, job) => {
-        const match = String(job.id || "").match(/^VK-(\d+)$/);
-        return Math.max(num, match ? Number(match[1]) : 0);
-      }, 1023);
       const renamed = new Map();
       jobs.forEach(job => {
-        const match = String(job.id || "").match(/^VK-(\d+)$/);
-        if (!match || Number(match[1]) >= 1000) return;
-        let nextId = "";
-        do {
-          nextNumber += 1;
-          nextId = `VK-${nextNumber}`;
-        } while (usedIds.has(nextId));
+        const legacyId = String(job.id || "");
+        if (!/^VK-\d+$/.test(legacyId)) return;
+        usedIds.delete(legacyId);
+        const nextId = nextJobId(job.date, job.time, usedIds);
         usedIds.delete(job.id);
         usedIds.add(nextId);
         renamed.set(job.id, nextId);
@@ -4716,6 +4860,9 @@
       Object.entries(job).forEach(([key, value]) => {
         if (form.elements[key]) form.elements[key].value = value;
       });
+      form.elements.photos.value = photoTextValue(job.photos);
+      form.elements.photoFiles.value = "";
+      form.elements.photoCameraFiles.value = "";
       const selectedTechs = jobTechnicians(job);
       Array.from(form.elements.technician.options).forEach(option => {
         option.selected = selectedTechs.includes(option.value) || (!id && !selectedTechs.length && option.index === 0);
@@ -4725,6 +4872,10 @@
       }
       $("#jobModal").classList.add("open");
       $("#jobModal").setAttribute("aria-hidden", "false");
+      const dialogBody = $("#jobModal .dialog-body");
+      if (dialogBody) dialogBody.scrollTop = 0;
+      const dialog = $("#jobModal .dialog");
+      if (dialog) dialog.scrollTop = 0;
     }
 
     function openObjectJobModal() {
@@ -4845,8 +4996,9 @@ Prioriteet: tavaline`;
       const device = client.items.find(item => item.type === "device");
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
+      const slot = nextFreeSlot(technicians()[0] || "");
       const draft = {
-        id: nextJobId(),
+        id: nextJobId(slot.date, slot.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
@@ -4854,9 +5006,9 @@ Prioriteet: tavaline`;
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
         phone: detectedContact.phone || client.phone,
-        date: nextFreeSlot(technicians()[0] || "").date,
-        time: nextFreeSlot(technicians()[0] || "").time,
-        endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
+        date: slot.date,
+        time: slot.time,
+        endTime: addDurationToTime(slot.time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
@@ -4888,8 +5040,9 @@ Prioriteet: tavaline`;
       const device = client.items.find(item => item.type === "device");
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
+      const slot = nextFreeSlot(technicians()[0] || "");
       return {
-        id: nextJobId(),
+        id: nextJobId(slot.date, slot.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
@@ -4897,9 +5050,9 @@ Prioriteet: tavaline`;
         asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : client.contact,
         phone: detectedContact.phone || client.phone,
-        date: nextFreeSlot(technicians()[0] || "").date,
-        time: nextFreeSlot(technicians()[0] || "").time,
-        endTime: addDurationToTime(nextFreeSlot(technicians()[0] || "").time, 2),
+        date: slot.date,
+        time: slot.time,
+        endTime: addDurationToTime(slot.time, 2),
         durationHours: "2",
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
@@ -4978,11 +5131,14 @@ Summa: 2 075,34 €`;
       }
     }
 
-    function saveJob(event) {
+    async function saveJob(event) {
       event.preventDefault();
-      const formData = new FormData(event.target);
+      const form = event.target;
+      const formData = new FormData(form);
       const data = Object.fromEntries(formData.entries());
       const selectedTechnicians = formData.getAll("technician").map(name => String(name).trim()).filter(Boolean);
+      delete data.photoFiles;
+      delete data.photoCameraFiles;
       data.technicians = selectedTechnicians;
       data.technician = selectedTechnicians.join(", ");
       if (data.durationHours) {
@@ -4994,13 +5150,21 @@ Summa: 2 075,34 €`;
       if (data.time && data.endTime && !data.durationHours) {
         data.durationHours = inferDurationHours(data.time, data.endTime);
       }
+      const existingJob = editingId ? jobs.find(item => item.id === editingId) : null;
+      let uploadedPhotos = [];
+      try {
+        uploadedPhotos = await readSelectedPhotoFiles(form);
+      } catch (error) {
+        alert("Piltide lugemine ei õnnestunud.");
+        return;
+      }
+      data.photos = mergePhotoEntries(existingJob?.photos || "", data.photos, uploadedPhotos);
       if (editingId) {
-        const job = jobs.find(item => item.id === editingId);
-        Object.assign(job, data);
-        selectedId = job.id;
+        Object.assign(existingJob, data);
+        selectedId = existingJob.id;
         detailJobId = selectedId;
       } else {
-        const job = { id: nextJobId(), ...data, timeLogs: [] };
+        const job = { id: nextJobId(data.date, data.time), ...data, timeLogs: [] };
         jobs.push(job);
         selectedId = job.id;
         detailJobId = selectedId;
@@ -5397,7 +5561,7 @@ Summa: 2 075,34 €`;
       while (created < countLimit && (!endDate || cursor <= endDate)) {
         plannedDevices.forEach(device => {
           const job = {
-            id: nextJobId(),
+            id: nextJobId(plannedDate, project.time || "09:00"),
             client: client.name,
             referenceNo: `PLAAN-${sequence}`,
             address: object.detail,
@@ -5444,11 +5608,11 @@ Summa: 2 075,34 €`;
       return `
         <div class="act-top">
           <div>
-            <div class="act-logo">VECO</div>
+            <div class="act-logo"><img src="assets/veco-logo-transparent.png" alt="VECO"></div>
             <div>Teostatud tööde akt</div>
           </div>
           <div>
-            <strong>Akt ${escapeHtml(job.id)}</strong><br>
+            <strong>Akt nr ${escapeHtml(job.id)}</strong><br>
             Kuupäev: ${new Date().toLocaleDateString("et-EE")}
           </div>
         </div>
@@ -5465,13 +5629,9 @@ Summa: 2 075,34 €`;
           <div class="act-box"><span>Staatus</span><strong>${statusLabels[job.status]}</strong></div>
         </div>
         <div class="act-box"><span>Tellitud töö</span>${escapeHtml(job.description)}</div>
-        <br>
         <div class="act-box"><span>Tehtud töö</span>${escapeHtml(job.workDone || "-")}</div>
-        <br>
         <div class="act-box"><span>Ajakulu lõigud</span>${renderTimeLog(job)}</div>
-        <br>
         <div class="act-box"><span>Fotod / tõendusmaterjal</span><div class="photo-strip">${photoTiles(job)}</div></div>
-        <br>
         <div class="act-box"><span>Kasutatud materjalid</span>${escapeHtml(job.materials || "-")}</div>
         <div class="signature-row">
           <div class="signature">VECO esindaja: ${escapeHtml(jobTechnicianLabel(job))}</div>
@@ -5533,16 +5693,20 @@ Summa: 2 075,34 €`;
               cursor: pointer;
             }
             button.primary { background: #1769aa; color: #fff; border-color: #1769aa; }
-            .act-page { max-width: 960px; margin: 22px auto; padding: 32px; background: #fff; box-shadow: 0 16px 36px rgba(20,33,44,.12); }
-            .act-top { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #172026; padding-bottom: 18px; margin-bottom: 22px; }
-            .act-logo { font-size: 32px; font-weight: 900; color: #1769aa; letter-spacing: -0.04em; }
-            .act-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
-            .act-box { border: 1px solid #b8c5ce; padding: 12px; min-height: 62px; margin-bottom: 14px; white-space: pre-wrap; }
-            .act-box span { display: block; color: #61707c; font-size: 12px; margin-bottom: 8px; }
-            .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 34px; }
+            .act-page { max-width: 960px; margin: 22px auto; padding: 26px 32px; background: #fff; box-shadow: 0 16px 36px rgba(20,33,44,.12); }
+            .act-top { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #172026; padding-bottom: 12px; margin-bottom: 14px; }
+            .act-logo img { width: 128px; max-height: 52px; object-fit: contain; display: block; }
+            .act-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin: 10px 0 14px; padding: 10px 0; border-bottom: 1px solid #d9e0e5; }
+            .act-box { border: 1px solid #b8c5ce; padding: 10px 12px; min-height: 0; margin-bottom: 10px; white-space: pre-wrap; }
+            .act-grid .act-box { border: 0; border-bottom: 1px solid #e3e9ed; padding: 4px 0 7px; margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+            .act-box span { display: block; color: #61707c; font-size: 12px; margin-bottom: 5px; }
+            .act-grid .act-box span { margin: 0; }
+            .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 26px; }
             .signature { border-top: 1px solid #172026; padding-top: 10px; min-height: 52px; }
             .photo-strip { display: flex; flex-wrap: wrap; gap: 10px; }
             .photo-tile { border: 1px dashed #8fa4b4; border-radius: 7px; padding: 12px; min-width: 110px; text-align: center; color: #61707c; }
+            .photo-tile.image { padding: 0; overflow: hidden; border-style: solid; min-width: 130px; }
+            .photo-tile img { width: 130px; height: 96px; object-fit: cover; display: block; }
             .time-log-card { border: 1px solid #dce3e8; border-radius: 7px; padding: 10px; margin-bottom: 8px; }
             @media print {
               body { background: #fff; }
@@ -5608,6 +5772,7 @@ Summa: 2 075,34 €`;
 
     fillSelects();
     loadPilotData();
+    normalizeLegacyJobIds();
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
     applyTickerSettings();
     setDetailCollapsed(true);
