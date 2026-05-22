@@ -5381,6 +5381,29 @@ Prioriteet: tavaline`;
       };
     }
 
+    function detectAllDeviceWork(text) {
+      const normalized = String(text || "").replace(/\s+/g, " ").trim();
+      if (!/Töökäsu\s+(?:andmed|number|ID)\b/i.test(normalized) || !/(?:Asukoht|Seade|Looja|Teema)\s*:/i.test(normalized)) return {};
+      const between = (label, nextLabels) => {
+        const next = nextLabels.join("|").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const match = normalized.match(new RegExp(`${label}\\s*:\\s*(.+?)(?=\\s+(?:${next})\\s*:|$)`, "i"));
+        return stripOcrNoise(match?.[1] || "");
+      };
+      const location = between("Asukoht", ["Töökäsu ID", "Loodud", "Looja", "Teema", "Seadme kategooria"]);
+      const locationParts = location.split("/").map(part => stripOcrNoise(part)).filter(Boolean);
+      return {
+        number: between("Töökäsu number", ["Tähtaeg", "Seade", "Asukoht", "Töökäsu ID", "Loodud"]),
+        dueDate: between("Tähtaeg", ["Seade", "Asukoht", "Töökäsu ID", "Loodud", "Looja"]),
+        asset: between("Seade", ["Asukoht", "Töökäsu ID", "Loodud", "Looja", "Teema"]),
+        location,
+        object: locationParts[0] || location,
+        buildingPart: locationParts.slice(1).join(" / "),
+        creator: between("Looja", ["Teema", "Seadme kategooria", "Töökäsu kinnitamine", "Pildid"]),
+        topic: between("Teema", ["Seadme andmed", "Seadme kategooria", "Failid", "Töökäsu kinnitamine"]),
+        category: between("Seadme kategooria", ["Teema", "Töökäsu kinnitamine", "Pildid", "Raportid"])
+      };
+    }
+
     function detectMaintenanceNotice(text) {
       const normalized = String(text || "").replace(/\s+/g, " ");
       const title = normalized.match(/hooldusteatis\s+(.+?)(?:\s+Loodud:|\s+\|\s+Objekt|\s+[I1]D[:\s]|\n|$)/i)?.[1] || "";
@@ -5404,6 +5427,8 @@ Prioriteet: tavaline`;
 
     function detectAssetFromText(text, client) {
       const explicit = labeledValue(text, ["Seade", "Seadme nimi"]);
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.asset) return allDevice.asset;
       if (explicit) return stripOcrNoise(explicit.replace(/\s*\(ID[:\s]*\d+\)\s*/i, ""));
       const notice = detectMaintenanceNotice(text);
       const noticeAsset = notice.title.match(/\b(km\d+|rk\d+|sv\d+|vent\d+|ttk)\b/i)?.[1];
@@ -5420,6 +5445,8 @@ Prioriteet: tavaline`;
     }
 
     function detectBuildingPartFromText(text, client) {
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.buildingPart) return allDevice.buildingPart;
       const explicit = labeledValue(text, ["Hooneosa", "Tsoon", "Asukoht"]);
       if (explicit) {
         const afterSlash = explicit.split("/").map(item => item.trim()).filter(Boolean).pop();
@@ -5444,6 +5471,16 @@ Prioriteet: tavaline`;
       const notice = detectMaintenanceNotice(text);
       const granlund = granlundParts(text);
       const exportRow = detectGranlundExport(text);
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.object) {
+        return {
+          id: `OCR-${allDevice.object}`,
+          name: allDevice.object,
+          contact: allDevice.creator,
+          phone: "",
+          items: []
+        };
+      }
       if (exportRow.object) {
         return {
           id: `OCR-${exportRow.object}`,
@@ -5487,6 +5524,8 @@ Prioriteet: tavaline`;
 
     function detectAddressFromText(text, client) {
       const normalized = text.toLowerCase();
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.location || allDevice.object) return allDevice.location || allDevice.object;
       const notice = detectMaintenanceNotice(text);
       if (notice.object) return notice.object;
       const granlund = granlundParts(text);
@@ -5504,6 +5543,8 @@ Prioriteet: tavaline`;
 
     function detectReferenceFromText(text) {
       const explicit = labeledValue(text, ["Töökäsu number", "Töökäsu ID", "Töökäsk", "Viide"]);
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.number) return allDevice.number;
       if (explicit) return stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit);
       const notice = detectMaintenanceNotice(text);
       if (notice.id) return notice.id;
@@ -5519,7 +5560,8 @@ Prioriteet: tavaline`;
     function detectContactFromText(text) {
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
       const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0]?.trim() || "";
-      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || "";
+      const allDevice = detectAllDeviceWork(text);
+      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || allDevice.creator || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || "";
       return { email, phone, name };
     }
 
@@ -5543,6 +5585,8 @@ Prioriteet: tavaline`;
       }
       const notice = detectMaintenanceNotice(text);
       if (notice.title) return notice.title;
+      const allDevice = detectAllDeviceWork(text);
+      if (allDevice.topic) return allDevice.topic;
       const exportRow = detectGranlundExport(text);
       if (exportRow.servicePart) return [exportRow.servicePart, exportRow.region].filter(Boolean).join("\n");
       const previous = labeledValue(text, ["Teema", "Tööde grupp"]);
@@ -5555,8 +5599,9 @@ Prioriteet: tavaline`;
 
     function detectDateTimeFromText(text, fallbackSlot) {
       const dueText = labeledValue(text, ["Tähtaeg", "Teostamise kuupäev", "Loodud"]);
+      const allDevice = detectAllDeviceWork(text);
       const granlundDue = text.match(/Tähtaeg\s*:\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/i);
-      const dateMatch = granlundDue || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+      const dateMatch = granlundDue || allDevice.dueDate.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
       const timeMatch = text.match(/\b([01]?\d|2[0-3])[:.](00|30|[0-5]\d)\b/);
       let date = fallbackSlot.date;
       if (dateMatch) {
