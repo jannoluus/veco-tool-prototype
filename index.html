@@ -303,6 +303,16 @@
       padding: 0 10px;
       color: var(--ink);
       min-width: 0;
+      color-scheme: light;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator,
+    input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+    input[type="month"]::-webkit-calendar-picker-indicator,
+    input[type="week"]::-webkit-calendar-picker-indicator {
+      opacity: .72;
+      cursor: pointer;
     }
 
     .photo-choice {
@@ -1189,12 +1199,25 @@
     }
 
     .act-top {
-      display: flex;
-      justify-content: space-between;
-      gap: 20px;
+      position: relative;
+      display: grid;
+      justify-items: center;
+      gap: 6px;
       border-bottom: 2px solid #111;
       padding-bottom: 12px;
       margin-bottom: 14px;
+      text-align: center;
+    }
+
+    .act-heading {
+      font-weight: 600;
+    }
+
+    .act-meta {
+      position: absolute;
+      right: 0;
+      top: 0;
+      text-align: right;
     }
 
     .act-logo {
@@ -1204,8 +1227,9 @@
     }
 
     .act-logo img {
-      width: 112px;
-      max-height: 44px;
+      width: 74px;
+      height: 74px;
+      border-radius: 999px;
       object-fit: contain;
       display: block;
     }
@@ -1224,7 +1248,6 @@
       padding: 10px 12px;
       min-height: 0;
       margin-bottom: 10px;
-      white-space: pre-wrap;
     }
 
     .act-grid .act-box {
@@ -1247,6 +1270,43 @@
 
     .act-grid .act-box span {
       margin: 0;
+    }
+
+    .act-text {
+      white-space: normal;
+    }
+
+    .act-box .time-log-compact {
+      display: grid;
+      gap: 3px;
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .act-photo-page {
+      break-before: page;
+      page-break-before: always;
+      margin-top: 22px;
+    }
+
+    .act-photo-page h3 {
+      margin: 0 0 12px;
+    }
+
+    .act-photo-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .act-photo-grid .photo-tile.image,
+    .act-photo-grid .photo-tile.image img {
+      width: 100%;
+      height: 150px;
+    }
+
+    .act-photo-grid .photo-tile.image img {
+      object-fit: cover;
     }
 
     .signature-row {
@@ -1365,6 +1425,23 @@
       background: #172129;
       color: var(--ink);
       border-color: #34414a;
+    }
+
+    body.theme-dark .field,
+    body.theme-dark .select,
+    body.theme-dark textarea,
+    body.theme-dark input,
+    body.theme-dark select {
+      color-scheme: dark;
+    }
+
+    body.theme-dark input[type="date"]::-webkit-calendar-picker-indicator,
+    body.theme-dark input[type="time"]::-webkit-calendar-picker-indicator,
+    body.theme-dark input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+    body.theme-dark input[type="month"]::-webkit-calendar-picker-indicator,
+    body.theme-dark input[type="week"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(1.8);
+      opacity: .9;
     }
 
     body.theme-dark .btn {
@@ -1755,6 +1832,7 @@
               <input class="field" id="actsDateFilter" type="date" aria-label="Akti kuupäeva filter">
               <input class="field" id="actsBuildingPartFilter" placeholder="Hooneosa" aria-label="Hooneosa filter">
               <input class="field" id="actsAddressFilter" placeholder="Aadress" aria-label="Aadressi filter">
+              <button class="btn ghost" id="showArchivedActsBtn" type="button"><span class="icon">▧</span> Arhiveeritud aktid</button>
               <button class="btn ghost" id="clearActsFiltersBtn"><span class="icon">×</span> Tühjenda</button>
             </div>
           </div>
@@ -2469,6 +2547,7 @@
     let activeJobMenuId = null;
     let calendarHourHeight = 40;
     let selectedAiJobIds = new Set();
+    let showArchivedActs = false;
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2557,6 +2636,10 @@
 
     function escapeAttr(value) {
       return escapeHtml(value).replace(/\r?\n/g, "&#10;");
+    }
+
+    function formatMultiline(value) {
+      return escapeHtml(value || "-").replace(/\r?\n/g, "<br>");
     }
 
     function nextTimestamp() {
@@ -2976,9 +3059,30 @@
       }).join("");
     }
 
-    function renderTimeLog(job) {
+    function actPhotoSection(job) {
+      const photos = parsePhotoEntries(job.photos);
+      if (!photos.length) return "";
+      return `
+        <section class="act-photo-page">
+          <h3>Fotod / tõendusmaterjal</h3>
+          <div class="act-photo-grid">${photoTiles(job)}</div>
+        </section>
+      `;
+    }
+
+    function renderTimeLog(job, compact = false) {
       const logs = job.timeLogs || [];
+      if (compact && !logs.length) return `<div class="act-text">-</div>`;
       if (!logs.length) return `<div class="mobile-card">Ajakulu lõike ei ole veel fikseeritud.</div>`;
+      if (compact) {
+        return `
+          <div class="time-log-compact">
+            ${logs.map((log, index) => `
+              <div><strong>Lõik ${index + 1}: ${escapeHtml(formatMinutes(minutesBetween(log.start, log.end)))}</strong> · ${escapeHtml(formatDateTime(log.start))} - ${escapeHtml(log.end ? formatDateTime(log.end) : "käib")}</div>
+            `).join("")}
+          </div>
+        `;
+      }
       return `
         <div class="timeline">
           ${logs.map((log, index) => `
@@ -3511,9 +3615,15 @@
       const date = $("#actsDateFilter").value;
       const buildingPart = $("#actsBuildingPartFilter").value.trim().toLowerCase();
       const address = $("#actsAddressFilter").value.trim().toLowerCase();
+      const archivedBtn = $("#showArchivedActsBtn");
+      archivedBtn.classList.toggle("primary", showArchivedActs);
+      archivedBtn.classList.toggle("ghost", !showArchivedActs);
+      archivedBtn.innerHTML = showArchivedActs
+        ? `<span class="icon">▧</span> Peida arhiveeritud`
+        : `<span class="icon">▧</span> Arhiveeritud aktid`;
       const visibleActs = jobs.filter(job => {
         if (!["täidetud", "akt", "saadetud", "arhiveeritud"].includes(job.status)) return false;
-        if (job.status === "arhiveeritud" && !date && tech === "all" && !buildingPart && !address) return false;
+        if (job.status === "arhiveeritud" && !showArchivedActs) return false;
         if (!jobHasTechnician(job, tech)) return false;
         if (date && job.date !== date) return false;
         if (buildingPart && !String(job.buildingPart || "").toLowerCase().includes(buildingPart)) return false;
@@ -5607,11 +5717,11 @@ Summa: 2 075,34 €`;
     function actHtml(job) {
       return `
         <div class="act-top">
-          <div>
-            <div class="act-logo"><img src="assets/veco-logo-transparent.png" alt="VECO"></div>
+          <div class="act-logo"><img src="assets/veco-round-logo.jpg" alt="VECO"></div>
+          <div class="act-heading">
             <div>Teostatud tööde akt</div>
           </div>
-          <div>
+          <div class="act-meta">
             <strong>Akt nr ${escapeHtml(job.id)}</strong><br>
             Kuupäev: ${new Date().toLocaleDateString("et-EE")}
           </div>
@@ -5628,15 +5738,15 @@ Summa: 2 075,34 €`;
           <div class="act-box"><span>Transpordi aeg</span><strong>${escapeHtml(job.travelTime || "-")}</strong></div>
           <div class="act-box"><span>Staatus</span><strong>${statusLabels[job.status]}</strong></div>
         </div>
-        <div class="act-box"><span>Tellitud töö</span>${escapeHtml(job.description)}</div>
-        <div class="act-box"><span>Tehtud töö</span>${escapeHtml(job.workDone || "-")}</div>
-        <div class="act-box"><span>Ajakulu lõigud</span>${renderTimeLog(job)}</div>
-        <div class="act-box"><span>Fotod / tõendusmaterjal</span><div class="photo-strip">${photoTiles(job)}</div></div>
-        <div class="act-box"><span>Kasutatud materjalid</span>${escapeHtml(job.materials || "-")}</div>
+        <div class="act-box"><span>Tellitud töö</span><div class="act-text">${formatMultiline(job.description)}</div></div>
+        <div class="act-box"><span>Tehtud töö</span><div class="act-text">${formatMultiline(job.workDone || "-")}</div></div>
+        <div class="act-box"><span>Ajakulu lõigud</span>${renderTimeLog(job, true)}</div>
+        <div class="act-box"><span>Kasutatud materjalid</span><div class="act-text">${formatMultiline(job.materials || "-")}</div></div>
         <div class="signature-row">
           <div class="signature">VECO esindaja: ${escapeHtml(jobTechnicianLabel(job))}</div>
           <div class="signature">Kliendi esindaja: ${escapeHtml(job.approvedBy || "-")}</div>
         </div>
+        ${actPhotoSection(job)}
       `;
     }
 
@@ -5694,20 +5804,29 @@ Summa: 2 075,34 €`;
             }
             button.primary { background: #1769aa; color: #fff; border-color: #1769aa; }
             .act-page { max-width: 960px; margin: 22px auto; padding: 26px 32px; background: #fff; box-shadow: 0 16px 36px rgba(20,33,44,.12); }
-            .act-top { display: flex; justify-content: space-between; gap: 24px; border-bottom: 2px solid #172026; padding-bottom: 12px; margin-bottom: 14px; }
-            .act-logo img { width: 128px; max-height: 52px; object-fit: contain; display: block; }
+            .act-top { position: relative; display: grid; justify-items: center; gap: 6px; border-bottom: 2px solid #172026; padding-bottom: 12px; margin-bottom: 14px; text-align: center; }
+            .act-heading { font-weight: 600; }
+            .act-meta { position: absolute; right: 0; top: 0; text-align: right; }
+            .act-logo img { width: 78px; height: 78px; border-radius: 999px; object-fit: contain; display: block; }
             .act-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 20px; margin: 10px 0 14px; padding: 10px 0; border-bottom: 1px solid #d9e0e5; }
-            .act-box { border: 1px solid #b8c5ce; padding: 10px 12px; min-height: 0; margin-bottom: 10px; white-space: pre-wrap; }
+            .act-box { border: 1px solid #b8c5ce; padding: 10px 12px; min-height: 0; margin-bottom: 10px; }
             .act-grid .act-box { border: 0; border-bottom: 1px solid #e3e9ed; padding: 4px 0 7px; margin: 0; display: grid; grid-template-columns: 130px minmax(0, 1fr); gap: 10px; align-items: baseline; }
             .act-box span { display: block; color: #61707c; font-size: 12px; margin-bottom: 5px; }
             .act-grid .act-box span { margin: 0; }
+            .act-text { white-space: normal; }
+            .act-photo-page { break-before: page; page-break-before: always; margin-top: 22px; }
+            .act-photo-page h3 { margin: 0 0 12px; }
+            .act-photo-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
             .signature-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 26px; }
             .signature { border-top: 1px solid #172026; padding-top: 10px; min-height: 52px; }
             .photo-strip { display: flex; flex-wrap: wrap; gap: 10px; }
             .photo-tile { border: 1px dashed #8fa4b4; border-radius: 7px; padding: 12px; min-width: 110px; text-align: center; color: #61707c; }
             .photo-tile.image { padding: 0; overflow: hidden; border-style: solid; min-width: 130px; }
             .photo-tile img { width: 130px; height: 96px; object-fit: cover; display: block; }
+            .act-photo-grid .photo-tile.image, .act-photo-grid .photo-tile.image img { width: 100%; height: 150px; }
+            .act-photo-grid .photo-tile.image img { object-fit: cover; }
             .time-log-card { border: 1px solid #dce3e8; border-radius: 7px; padding: 10px; margin-bottom: 8px; }
+            .time-log-compact { display: grid; gap: 3px; font-size: 13px; line-height: 1.35; }
             @media print {
               body { background: #fff; }
               .act-window-toolbar { display: none; }
@@ -5876,11 +5995,16 @@ Summa: 2 075,34 €`;
     $("#actsDateFilter").addEventListener("change", renderAll);
     $("#actsBuildingPartFilter").addEventListener("input", renderAll);
     $("#actsAddressFilter").addEventListener("input", renderAll);
+    $("#showArchivedActsBtn").addEventListener("click", () => {
+      showArchivedActs = !showArchivedActs;
+      renderAll();
+    });
     $("#clearActsFiltersBtn").addEventListener("click", () => {
       $("#actsTechFilter").value = "all";
       $("#actsDateFilter").value = "";
       $("#actsBuildingPartFilter").value = "";
       $("#actsAddressFilter").value = "";
+      showArchivedActs = false;
       renderAll();
     });
     $("#peopleStatusFilter").addEventListener("change", renderAll);
