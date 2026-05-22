@@ -2581,6 +2581,7 @@
     calendarCursor.setHours(12, 0, 0, 0);
     let detailJobId = null;
     let importedImageName = "";
+    let importedFileNames = [];
     let importedImageDataUrl = "";
     let emailAgentDraftId = null;
     const STORAGE_KEY = "vecoPilotDataV1";
@@ -5088,6 +5089,7 @@
 
     function openImportJobModal() {
       $("#importJobForm").reset();
+      importedFileNames = [];
       importedImageName = "";
       importedImageDataUrl = "";
       $("#importImagePreview").style.display = "none";
@@ -5098,7 +5100,21 @@
       setTimeout(() => $("#imagePasteZone").focus(), 0);
     }
 
+    function syncImportedFileNameField() {
+      importedImageName = importedFileNames.join(", ");
+      const fileNameInput = $("#importJobForm")?.elements.fileName;
+      if (fileNameInput) fileNameInput.value = importedImageName;
+    }
+
+    function addImportedFileName(name) {
+      const clean = String(name || "").trim();
+      if (!clean) return;
+      if (!importedFileNames.includes(clean)) importedFileNames.push(clean);
+      syncImportedFileNameField();
+    }
+
     function clearImportImage() {
+      importedFileNames = [];
       importedImageName = "";
       importedImageDataUrl = "";
       const form = $("#importJobForm");
@@ -5113,12 +5129,11 @@
     }
 
     function setImportImage(dataUrl, name = "kleebitud-ekraanitommis.png", autoAnalyze = true) {
-      importedImageName = name || "kleebitud-ekraanitommis.png";
+      addImportedFileName(name || "kleebitud-ekraanitommis.png");
       importedImageDataUrl = dataUrl || "";
       $("#importImagePreview").src = importedImageDataUrl;
       $("#importImagePreview").style.display = "block";
       $("#imagePasteZone").querySelector("div").style.display = "none";
-      $("#importJobForm").elements.fileName.value = importedImageName;
       if (autoAnalyze) analyzeImportedImage();
     }
 
@@ -5227,8 +5242,7 @@
       const files = Array.from(event.target.files || []);
       if (!files.length) return;
       const form = $("#importJobForm");
-      importedImageName = files.map(file => file.name).join(", ");
-      form.elements.fileName.value = importedImageName;
+      files.forEach(file => addImportedFileName(file.name));
       form.elements.aiNote.value = `Loen ${files.length} faili...`;
       const chunks = [];
       for (let index = 0; index < files.length; index += 1) {
@@ -5350,11 +5364,29 @@ Prioriteet: tavaline`;
       return { title, object, servicePart };
     }
 
+    function detectGranlundExport(text) {
+      const normalized = String(text || "").replace(/\s+/g, " ").trim();
+      if (!/Granlund Manager/i.test(normalized) && !/Tööpakett\s+Töö\s+Teeninduspiirkond/i.test(normalized)) return {};
+      const objectMatch = normalized.match(/\b(\d{2}\.\d{2}\.\d{4})\s+(.+?)\s+Granlund Manager/i);
+      const serviceMatches = [...normalized.matchAll(/\b(\d{3}(?:\.\d+)?\s+.+?\s+TH)\s+(?=(?:Vesi|Küte|Vent|Jahutus|Tuleohutus|Tarindid)[^0-9]*-\s*V\s*ECO)/gi)];
+      let service = serviceMatches.find(match => match[1].includes("."))?.[1] || serviceMatches[0]?.[1] || "";
+      service = service.replace(/^.*\b(?=\d{3}\.\d+)/, "").replace(/PLAT\s+E/ig, "PLATE");
+      const region = normalized.match(/\b(Vesi|Küte|Vent|Jahutus|Tuleohutus|Tarindid)[^0-9]*-\s*V\s*ECO/i)?.[0] || "";
+      const object = objectMatch ? objectMatch[2].replace(/LOGISTIKAKE\s+SKUS/ig, "LOGISTIKAKESKUS") : "";
+      return {
+        object: stripOcrNoise(object),
+        dueDate: objectMatch ? objectMatch[1] : "",
+        servicePart: stripOcrNoise(service),
+        region: stripOcrNoise(region)
+      };
+    }
+
     function detectMaintenanceNotice(text) {
       const normalized = String(text || "").replace(/\s+/g, " ");
-      const title = normalized.match(/hooldusteatis\s+(.+?)(?:\s+Loodud:|\s+\|\s+Objekt|\s+ID[:\s]|\n|$)/i)?.[1] || "";
-      const object = normalized.match(/Objekt\s+([^|]+?)\s*\|\s*ID[:\s]*(\d+)/i)
-        || normalized.match(/\b([A-ZÕÄÖÜ0-9 .\/-]{4,}LOGISTIKAKESKUS)\s*\|\s*ID[:\s]*(\d+)/i);
+      const title = normalized.match(/hooldusteatis\s+(.+?)(?:\s+Loodud:|\s+\|\s+Objekt|\s+[I1]D[:\s]|\n|$)/i)?.[1] || "";
+      const idPattern = "[I1]D";
+      const object = normalized.match(new RegExp(`Objekt\\s+([^|]+?)\\s*(?:\\|\\s*)?${idPattern}\\s*:\\s*(\\d+)`, "i"))
+        || normalized.match(new RegExp(`\\b([A-ZÕÄÖÜ0-9 .\\/-]{4,}LOGISTIKAKESKUS)\\s*(?:\\|\\s*)?${idPattern}\\s*:\\s*(\\d+)`, "i"));
       return {
         title: stripOcrNoise(title),
         object: object ? stripOcrNoise(object[1]) : "",
@@ -5380,6 +5412,8 @@ Prioriteet: tavaline`;
       if (activityTitle) return stripOcrNoise(activityTitle);
       const related = detectRelatedObjectsFromText(text);
       if (related.length) return related.join(", ");
+      const exportRow = detectGranlundExport(text);
+      if (exportRow.servicePart) return exportRow.servicePart;
       const lower = text.toLowerCase();
       const device = client.items?.find(item => item.type === "device" && lower.includes(item.name.toLowerCase()));
       return device?.name || "";
@@ -5394,6 +5428,8 @@ Prioriteet: tavaline`;
       }
       const granlund = granlundParts(text);
       if (granlund.servicePart) return granlund.servicePart;
+      const exportRow = detectGranlundExport(text);
+      if (exportRow.servicePart) return exportRow.servicePart;
       const notice = detectMaintenanceNotice(text);
       if (/kontuuri?1/i.test(notice.title)) return "Kontuur 1";
       const activityArea = String(text || "").match(/(?:^|\n)\s*[A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+\s*-\s*([^\n]+)/i)?.[1];
@@ -5407,7 +5443,17 @@ Prioriteet: tavaline`;
       const explicit = labeledValue(text, ["Klient", "Tellija", "Saaja", "Saatja"]);
       const notice = detectMaintenanceNotice(text);
       const granlund = granlundParts(text);
-      if (granlund.object && /\|\s*ID\s*:/i.test(text)) {
+      const exportRow = detectGranlundExport(text);
+      if (exportRow.object) {
+        return {
+          id: `OCR-${exportRow.object}`,
+          name: exportRow.object,
+          contact: detectContactFromText(text).name,
+          phone: detectContactFromText(text).phone,
+          items: []
+        };
+      }
+      if (granlund.object && /\|\s*[I1]D\s*:/i.test(text)) {
         return {
           id: `OCR-${granlund.object}`,
           name: granlund.object,
@@ -5445,6 +5491,8 @@ Prioriteet: tavaline`;
       if (notice.object) return notice.object;
       const granlund = granlundParts(text);
       if (granlund.object) return granlund.object;
+      const exportRow = detectGranlundExport(text);
+      if (exportRow.object) return exportRow.object;
       const object = client.items?.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
       if (object) return object.detail;
       const objectAddress = labeledValue(text, ["Objekti aadress", "Aadress", "Objekt"]);
@@ -5459,8 +5507,11 @@ Prioriteet: tavaline`;
       if (explicit) return stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit);
       const notice = detectMaintenanceNotice(text);
       if (notice.id) return notice.id;
-      const granlundId = text.match(/\bID\s*:\s*(\d{3,})/i)?.[1];
+      const granlundId = text.match(/\b[I1]D\s*:\s*(\d{3,})/i)?.[1];
       if (granlundId) return granlundId;
+      const exportRow = detectGranlundExport(text);
+      const exportCode = exportRow.servicePart.match(/\b\d{3}(?:\.\d+)?\b/)?.[0];
+      if (exportCode) return exportCode;
       const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
       return match ? match[1].trim() : "";
     }
@@ -5492,6 +5543,8 @@ Prioriteet: tavaline`;
       }
       const notice = detectMaintenanceNotice(text);
       if (notice.title) return notice.title;
+      const exportRow = detectGranlundExport(text);
+      if (exportRow.servicePart) return [exportRow.servicePart, exportRow.region].filter(Boolean).join("\n");
       const previous = labeledValue(text, ["Teema", "Tööde grupp"]);
       if (previous) return previous;
       const match = text.match(/(?:töö sisu|töö kirjeldus|kirjeldus|teade|tellimus|probleem)[:\s]+([\s\S]{8,260})/i);
