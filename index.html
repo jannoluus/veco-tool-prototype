@@ -55,6 +55,8 @@
 
     .app.technician-standalone {
       grid-template-columns: minmax(0, 1fr);
+      max-width: 100vw;
+      overflow-x: hidden;
     }
 
     .app.technician-standalone .sidebar,
@@ -62,6 +64,28 @@
     .app.technician-standalone #importJobBtn,
     .app.technician-standalone #technicianFilter {
       display: none;
+    }
+
+    .app.technician-standalone main,
+    .app.technician-standalone .content,
+    .app.technician-standalone .panel,
+    .app.technician-standalone .detail-body,
+    .app.technician-standalone .job-card,
+    .app.technician-standalone .mobile-card {
+      min-width: 0;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+    }
+
+    .app.technician-standalone .content {
+      grid-template-columns: minmax(0, 1fr);
+      width: 100%;
+      overflow-x: hidden;
+    }
+
+    .app.technician-standalone .topbar {
+      max-width: 100vw;
+      overflow-x: hidden;
     }
 
     .sidebar {
@@ -1510,6 +1534,11 @@
     }
 
     @media (max-width: 760px) {
+      html,
+      body {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
       .topbar {
         align-items: stretch;
         flex-direction: column;
@@ -1558,6 +1587,22 @@
       }
       .person-actions {
         grid-template-columns: 1fr;
+      }
+      .app.technician-standalone .topbar {
+        padding: 10px;
+      }
+      .app.technician-standalone .toolbar {
+        grid-template-columns: 1fr;
+      }
+      .app.technician-standalone .content {
+        padding: 10px;
+      }
+      .app.technician-standalone .panel {
+        overflow: hidden;
+      }
+      .app.technician-standalone .job-time {
+        gap: 8px;
+        align-items: start;
       }
       .act-preview {
         padding: 18px;
@@ -2128,17 +2173,17 @@
             </select></label>
             <label>Fail / pilt<input class="field" name="fileName" placeholder="nt works_kutse_4458.png"></label>
             <div class="full">
-              <label>Kleebi pilt siia</label>
+              <label>Kleebi pilt siia või lisa failid</label>
               <div class="paste-zone" id="imagePasteZone" tabindex="0">
                 <div>
-                  Vajuta siia ja kleebi pilt Ctrl+V-ga.<br>
-                  Sobib Works, AllDevice, Granlund või e-kirja ekraanitõmmis.
+                  Vajuta siia ja kleebi pilt Ctrl+V-ga või lisa failid alt.<br>
+                  Sobib pilt, PDF, EML, TXT ning Works/AllDevice/Granlund ekraanitõmmis.
                 </div>
                 <img class="image-preview" id="importImagePreview" alt="Kleebitud pildi eelvaade">
               </div>
               <div class="photo-choice">
-                <label class="btn ghost"><span class="icon">⇧</span> Vali pilt failist<input id="importImageFile" type="file" accept="image/*"></label>
-                <button class="btn ghost" type="button" id="clearImportImageBtn"><span class="icon">×</span> Eemalda pilt</button>
+                <label class="btn ghost"><span class="icon">⇧</span> Lisa failid<input id="importSourceFiles" type="file" accept="image/*,.pdf,.eml,.txt,.csv,.html,.htm,text/plain,message/rfc822,application/pdf" multiple></label>
+                <button class="btn ghost" type="button" id="clearImportImageBtn"><span class="icon">×</span> Tühjenda</button>
               </div>
             </div>
             <label class="full">AI/OCR tuvastatud tekst<textarea name="sourceText" placeholder="Pärast pildi kleepimist täidab süsteem siia tuvastatud info. Võid seda käsitsi parandada."></textarea></label>
@@ -2374,6 +2419,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs" type="module"></script>
   <script>
     let people = [
       { id: "U-01", name: "Aleksei", role: "Tehnik", phone: "+372 5551 1001", email: "aleksei@veco.ee", region: "Tallinn", skills: "HVAC, automaatika", active: true },
@@ -2554,6 +2600,7 @@
     let calendarHourHeight = 40;
     let selectedAiJobIds = new Set();
     let showArchivedActs = false;
+    let mobileFocusedJobId = null;
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -3542,12 +3589,14 @@
 
     function renderMobile() {
       const tech = $("#mobileTech").value || technicians()[0];
-      const today = dateKey(new Date());
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel"];
-      const todayJobs = jobs.filter(job => jobHasTechnician(job, tech) && job.date === today && activeStatuses.includes(job.status));
-      const otherJobs = jobs.filter(job => jobHasTechnician(job, tech) && job.date !== today && activeStatuses.includes(job.status));
-      const techJobs = todayJobs.length ? todayJobs : otherJobs;
-      $("#mobileJobs").innerHTML = techJobs.map(job => `
+      const techJobs = jobs
+        .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status))
+        .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      if (mobileFocusedJobId && !techJobs.some(job => job.id === mobileFocusedJobId)) mobileFocusedJobId = null;
+      const focusedJob = mobileFocusedJobId ? techJobs.find(job => job.id === mobileFocusedJobId) : null;
+      const listedJobs = focusedJob ? [focusedJob] : techJobs;
+      $("#mobileJobs").innerHTML = listedJobs.map(job => `
         <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
           <span class="job-time"><span>${escapeHtml(job.date)} ${escapeHtml(job.time)}</span><span>${escapeHtml(job.id)}</span></span>
           <span class="job-title">${escapeHtml(job.client)}</span>
@@ -3558,12 +3607,13 @@
         </button>
       `).join("") || `<div class="detail-body"><div class="mobile-card">Sellel tehnikul ei ole tänaseid ega aktiivseid töid.</div></div>`;
 
-      const job = techJobs.find(item => item.id === selectedId) || techJobs[0];
+      const job = focusedJob || techJobs.find(item => item.id === selectedId) || techJobs[0];
 
       $$("#mobileJobs [data-mobile-job]").forEach(card => {
         card.addEventListener("click", () => {
           selectedId = card.dataset.mobileJob;
           detailJobId = selectedId;
+          mobileFocusedJobId = selectedId;
           setDetailCollapsed(false);
           renderAll();
         });
@@ -3585,7 +3635,10 @@
       selectedId = job.id;
       $("#quickFill").innerHTML = `
         <div class="mobile-card">
-          <strong>${escapeHtml(job.client)}</strong>
+          <div class="job-time">
+            <strong>${escapeHtml(job.client)}</strong>
+            ${mobileFocusedJobId ? `<button class="btn ghost" id="closeMobileSelectionBtn" type="button"><span class="icon">×</span> Sulge valik</button>` : ""}
+          </div>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
           <span class="job-meta">${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))} · ${escapeHtml(statusLabels[job.status])}</span>
           <span class="job-meta">${escapeHtml(job.address)}</span>
@@ -3614,6 +3667,12 @@
       $("#mobileCompleteBtn").addEventListener("click", completeSelectedJob);
       $("#mobileActBtn").addEventListener("click", openAct);
       $("#mobileDeleteBtn").addEventListener("click", deleteSelectedJob);
+      if ($("#closeMobileSelectionBtn")) {
+        $("#closeMobileSelectionBtn").addEventListener("click", () => {
+          mobileFocusedJobId = null;
+          renderAll();
+        });
+      }
     }
 
     function renderActs() {
@@ -4845,6 +4904,7 @@
       const ok = window.confirm(`Kas lõpetada töökäsk ${job.id}?\n\nKinnitamisel fikseeritakse lõppaeg ja töökäsk liigub aktide vaatesse.`);
       if (!ok) return;
       updateStatus("täidetud");
+      if (mobileFocusedJobId === job.id) mobileFocusedJobId = null;
       detailJobId = null;
       setDetailCollapsed(true);
     }
@@ -4905,6 +4965,7 @@
       if (!ok) return false;
       jobs = jobs.filter(item => item.id !== job.id);
       selectedId = jobs[0]?.id || "";
+      if (mobileFocusedJobId === job.id) mobileFocusedJobId = null;
       detailJobId = null;
       setDetailCollapsed(true);
       renderAll();
@@ -5044,6 +5105,8 @@
       form.elements.fileName.value = "";
       form.elements.sourceText.value = "";
       form.elements.aiNote.value = "Ootan pilti või teksti.";
+      const fileInput = $("#importSourceFiles");
+      if (fileInput) fileInput.value = "";
       $("#importImagePreview").style.display = "none";
       $("#importImagePreview").removeAttribute("src");
       $("#imagePasteZone").querySelector("div").style.display = "block";
@@ -5059,12 +5122,110 @@
       if (autoAnalyze) analyzeImportedImage();
     }
 
+    function readFileAsDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function readFileAsText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(reader.error);
+        reader.readAsText(file);
+      });
+    }
+
+    async function recognizeImageText(dataUrl, label = "pilt") {
+      if (!window.Tesseract?.recognize) return "";
+      const result = await Tesseract.recognize(dataUrl, "est+eng", {
+        logger: progress => {
+          if (progress.status === "recognizing text") {
+            const pct = Math.round((progress.progress || 0) * 100);
+            const note = $("#importJobForm")?.elements.aiNote;
+            if (note) note.value = `OCR loeb faili ${label}... ${pct}%`;
+          }
+        }
+      });
+      return (result?.data?.text || "").trim();
+    }
+
+    async function extractPdfText(file) {
+      const note = $("#importJobForm")?.elements.aiNote;
+      if (note) note.value = `Loen PDF-faili ${file.name}...`;
+      const pdfjs = window.pdfjsLib || await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.mjs");
+      if (pdfjs.GlobalWorkerOptions) {
+        pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.mjs";
+      }
+      const data = await file.arrayBuffer();
+      const pdf = await pdfjs.getDocument({ data }).promise;
+      const pages = [];
+      for (let pageNo = 1; pageNo <= pdf.numPages; pageNo += 1) {
+        const page = await pdf.getPage(pageNo);
+        const content = await page.getTextContent();
+        pages.push(content.items.map(item => item.str || "").join(" "));
+      }
+      return pages.join("\n");
+    }
+
+    async function extractImportFileText(file, index) {
+      const type = file.type || "";
+      const name = file.name || `fail-${index + 1}`;
+      if (type.startsWith("image/")) {
+        const dataUrl = await readFileAsDataUrl(file);
+        if (!importedImageDataUrl) setImportImage(dataUrl, name, false);
+        if (!window.Tesseract?.recognize) return "";
+        return recognizeImageText(dataUrl, name);
+      }
+      if (type === "application/pdf" || /\.pdf$/i.test(name)) {
+        return extractPdfText(file);
+      }
+      if (
+        type.startsWith("text/") ||
+        type === "message/rfc822" ||
+        /\.(eml|txt|csv|html?|log)$/i.test(name)
+      ) {
+        return readFileAsText(file);
+      }
+      return "";
+    }
+
+    async function handleImportFiles(event) {
+      const files = Array.from(event.target.files || []);
+      if (!files.length) return;
+      const form = $("#importJobForm");
+      importedImageName = files.map(file => file.name).join(", ");
+      form.elements.fileName.value = importedImageName;
+      form.elements.aiNote.value = `Loen ${files.length} faili...`;
+      const chunks = [];
+      for (let index = 0; index < files.length; index += 1) {
+        const file = files[index];
+        try {
+          const text = await extractImportFileText(file, index);
+          if (text.trim()) chunks.push(`[Fail: ${file.name}]\n${text.trim()}`);
+          else chunks.push(`[Fail: ${file.name}]\nTeksti ei õnnestunud automaatselt tuvastada.`);
+        } catch (error) {
+          chunks.push(`[Fail: ${file.name}]\nFaili lugemine ebaõnnestus: ${error?.message || "tundmatu viga"}`);
+        }
+      }
+      const existing = form.elements.sourceText.value.trim();
+      form.elements.sourceText.value = [existing, chunks.join("\n\n")].filter(Boolean).join("\n\n");
+      form.elements.aiNote.value = `Failid loetud. Kontrolli tuvastatud teksti ja loo mustand.\n\n${parseImportedTextSummary(form.elements.sourceText.value)}`;
+    }
+
     function parseImportedTextSummary(text) {
       const client = detectClientFromText(text);
       return [
         `Klient: ${client?.name || "tuvastamata"}`,
         `Objekt: ${detectAddressFromText(text, client || clients[0]) || "tuvastamata"}`,
         `Viide: ${detectReferenceFromText(text) || "puudub"}`,
+        `Hooneosa: ${detectBuildingPartFromText(text, client || clients[0]) || "määramata"}`,
+        `Seadmed: ${detectAssetFromText(text, client || clients[0]) || "sidumata"}`,
+        `Korduvus: ${detectRecurrenceFromText(text)}`,
         `Kontakt: ${detectContactFromText(text).phone || detectContactFromText(text).email || "puudub"}`,
         `Töö: ${detectDescriptionFromText(text).slice(0, 120) || "tuvastamata"}`
       ].join("\n");
@@ -5132,41 +5293,135 @@ Prioriteet: tavaline`;
       reader.readAsDataURL(file);
     }
 
-    function handleImportFile(event) {
-      const file = event.target.files?.[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => setImportImage(String(reader.result || ""), file.name || "pilt.png");
-      reader.readAsDataURL(file);
+    function labeledValue(text, labels) {
+      const escaped = labels.map(label => label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+      const match = text.match(new RegExp(`(?:^|\\n)\\s*(?:${escaped})\\s*:\\s*([^\\n]+)`, "i"))
+        || text.match(new RegExp(`\\b(?:${escaped})\\s*:\\s*([^\\n]+)`, "i"));
+      return match ? match[1].trim() : "";
+    }
+
+    function stripOcrNoise(value) {
+      return String(value || "")
+        .replace(/\s+/g, " ")
+        .replace(/\s+\|.*$/, "")
+        .trim();
+    }
+
+    function detectGranlundTitle(text) {
+      const lines = String(text || "").split(/\n/).map(line => stripOcrNoise(line)).filter(Boolean);
+      return lines.find(line => /\b[A-ZÄÖÜÕ]{2,}\d{2,}\b/.test(line) && line.includes(" - ")) || "";
+    }
+
+    function granlundParts(text) {
+      const title = detectGranlundTitle(text);
+      if (!title) return {};
+      const [codeAndObject, ...rest] = title.split(" - ");
+      const servicePart = rest.join(" - ").trim();
+      const object = stripOcrNoise(codeAndObject.replace(/\b[A-ZÄÖÜÕ]{2,}\d{2,}\b/, ""));
+      return { title, object, servicePart };
+    }
+
+    function detectRelatedObjectsFromText(text) {
+      const block = String(text || "").match(/Tööga seotud objektid\s*([\s\S]+?)(?:\n\s*(?:Töökirjeldused|Tegevused|Tähtaeg|Teeninduspiirkond)\b|$)/i)?.[1] || "";
+      return block
+        .split(/\n/)
+        .map(line => stripOcrNoise(line).replace(/\s+\d{2}\.\d{2}\.\d{4}\s*$/, ""))
+        .filter(line => line && !/^Seadmed\b/i.test(line) && !/^Loodud\b/i.test(line));
+    }
+
+    function detectAssetFromText(text, client) {
+      const explicit = labeledValue(text, ["Seade", "Seadme nimi"]);
+      if (explicit) return stripOcrNoise(explicit.replace(/\s*\(ID[:\s]*\d+\)\s*/i, ""));
+      const activityTitle = String(text || "").match(/(?:^|\n)\s*([A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+)\s*-/i)?.[1];
+      if (activityTitle) return stripOcrNoise(activityTitle);
+      const related = detectRelatedObjectsFromText(text);
+      if (related.length) return related.join(", ");
+      const lower = text.toLowerCase();
+      const device = client.items?.find(item => item.type === "device" && lower.includes(item.name.toLowerCase()));
+      return device?.name || "";
+    }
+
+    function detectBuildingPartFromText(text, client) {
+      const explicit = labeledValue(text, ["Hooneosa", "Tsoon", "Asukoht"]);
+      if (explicit) {
+        const afterSlash = explicit.split("/").map(item => item.trim()).filter(Boolean).pop();
+        if (afterSlash && afterSlash.length < explicit.length) return afterSlash;
+        return stripOcrNoise(explicit);
+      }
+      const granlund = granlundParts(text);
+      if (granlund.servicePart) return granlund.servicePart;
+      const activityArea = String(text || "").match(/(?:^|\n)\s*[A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+\s*-\s*([^\n]+)/i)?.[1];
+      if (activityArea) return stripOcrNoise(activityArea);
+      const device = client.items?.find(item => item.type === "device");
+      return device?.detail || "";
     }
 
     function detectClientFromText(text) {
       const lower = text.toLowerCase();
-      const explicit = text.match(/(?:klient|tellija|saaja|saatja)[:\s]+([^\n]+)/i)?.[1] || "";
-      return clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase())) || clients[0];
+      const explicit = labeledValue(text, ["Klient", "Tellija", "Saaja", "Saatja"]);
+      const found = clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase()));
+      if (found) return found;
+      if (explicit) {
+        return {
+          id: `OCR-${explicit}`,
+          name: stripOcrNoise(explicit),
+          contact: labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt"]) || "",
+          phone: detectContactFromText(text).phone,
+          items: []
+        };
+      }
+      return clients[0];
     }
 
     function detectAddressFromText(text, client) {
       const normalized = text.toLowerCase();
-      const object = client.items.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
+      const object = client.items?.find(item => item.type === "object" && item.detail && normalized.includes(item.detail.toLowerCase()));
       if (object) return object.detail;
-      const match = text.match(/(?:aadress|objekt|asukoht|hoone)[:\s]+([^\n]+)/i);
-      return match ? match[1].trim() : client.items.find(item => item.type === "object")?.detail || "";
+      const granlund = granlundParts(text);
+      if (granlund.object) return granlund.object;
+      const objectAddress = labeledValue(text, ["Objekti aadress", "Aadress", "Objekt"]);
+      if (objectAddress) return stripOcrNoise(objectAddress);
+      const location = labeledValue(text, ["Asukoht"]);
+      if (location) return stripOcrNoise(location.replace(/^\d+\s+/, ""));
+      return client.items?.find(item => item.type === "object")?.detail || "";
     }
 
     function detectReferenceFromText(text) {
+      const explicit = labeledValue(text, ["Töökäsu number", "Töökäsu ID", "Töökäsk", "Viide"]);
+      if (explicit) return stripOcrNoise(explicit).match(/[A-ZÕÄÖÜ0-9-]{3,}/i)?.[0] || stripOcrNoise(explicit);
+      const granlundId = text.match(/\bID\s*:\s*(\d{3,})/i)?.[1];
+      if (granlundId) return granlundId;
       const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
       return match ? match[1].trim() : "";
     }
 
     function detectContactFromText(text) {
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
-      const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0] || "";
-      const name = text.match(/(?:kontakt|kontaktisik|saatja)[:\s]+([^,\n]+)/i)?.[1]?.trim() || "";
+      const phone = text.match(/(?:\+372\s?)?[\d\s]{7,}/)?.[0]?.trim() || "";
+      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]);
       return { email, phone, name };
     }
 
     function detectDescriptionFromText(text) {
+      const workDescriptions = text.match(/Töökirjeldused\s*([\s\S]+?)(?:\n\s*(?:Tööga seotud objektid|Manused|Kommentaarid|Teeninduspiirkond)\b|$)/i)?.[1]?.trim();
+      if (workDescriptions) {
+        return workDescriptions
+          .split(/\n/)
+          .map(line => line.trim())
+          .filter(line => line && !/^(Kood|Kirjeldus)$/i.test(line))
+          .join("\n");
+      }
+      const activities = text.match(/Tegevused\s*:?\s*([\s\S]+?)(?:\n\s*(?:Seadme andmed|Tööde ajalugu|Manused|Kommentaarid)\b|$)/i)?.[1]?.trim();
+      if (activities) {
+        return activities
+          .split(/\n/)
+          .map(line => line.trim())
+          .filter(Boolean)
+          .map(line => line.replace(/^(\d{2})\s+/, "$1. "))
+          .join("\n");
+      }
+      const previous = labeledValue(text, ["Teema", "Tööde grupp"]);
+      if (previous) return previous;
       const match = text.match(/(?:töö sisu|töö kirjeldus|kirjeldus|teade|tellimus|probleem)[:\s]+([\s\S]{8,260})/i);
       if (match) return match[1].trim();
       const offer = text.match(/((?:hooldus|häire|rike|parand|vahet|kontroll|liugväravaautomaatika)[^.\n]{8,180})/i);
@@ -5174,7 +5429,9 @@ Prioriteet: tavaline`;
     }
 
     function detectDateTimeFromText(text, fallbackSlot) {
-      const dateMatch = text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+      const dueText = labeledValue(text, ["Tähtaeg", "Teostamise kuupäev", "Loodud"]);
+      const granlundDue = text.match(/Tähtaeg\s*:\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/i);
+      const dateMatch = granlundDue || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
       const timeMatch = text.match(/\b([01]?\d|2[0-3])[:.](00|30|[0-5]\d)\b/);
       let date = fallbackSlot.date;
       if (dateMatch) {
@@ -5187,6 +5444,17 @@ Prioriteet: tavaline`;
       return { date, time };
     }
 
+    function detectRecurrenceFromText(text) {
+      const lower = String(text || "").toLowerCase();
+      const frequency = labeledValue(text, ["Sagedus"]);
+      const source = `${frequency} ${lower}`;
+      if (/valitud kuud|märts|juuni|sept|dets|kvart/.test(source)) return "Kvartaalne";
+      if (/iga kuu|igaku/.test(source)) return "Igakuine";
+      if (/iga nädal|iganäd/.test(source)) return "Iganädalane";
+      if (/iga aasta|aasta/.test(source)) return "Aastane";
+      return "Ühekordne";
+    }
+
     function createImportedJobDraft(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
@@ -5194,18 +5462,18 @@ Prioriteet: tavaline`;
       const client = detectClientFromText(text);
       const lower = text.toLowerCase();
       const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
-      const device = client.items.find(item => item.type === "device");
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
       const slot = nextFreeSlot(technicians()[0] || "");
       const detectedSchedule = detectDateTimeFromText(text, slot);
+      const asset = lower.includes("liugvärava") ? "Liugväravaautomaatika" : detectAssetFromText(text, client);
       const draft = {
         id: nextJobId(detectedSchedule.date, detectedSchedule.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
-        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
-        asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
+        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : detectBuildingPartFromText(text, client),
+        asset,
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : detectedContact.name || client.contact,
         phone: detectedContact.phone || client.phone,
         date: detectedSchedule.date,
@@ -5215,7 +5483,7 @@ Prioriteet: tavaline`;
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
         priority,
-        recurrence: "Ühekordne",
+        recurrence: detectRecurrenceFromText(text),
         status: "uus",
         description: detectedDescription || `${data.source} ekraanitõmmisest loodud töökäsu mustand.`,
         workDone: "",
@@ -5239,18 +5507,18 @@ Prioriteet: tavaline`;
       const client = detectClientFromText(text);
       const lower = text.toLowerCase();
       const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
-      const device = client.items.find(item => item.type === "device");
       const detectedContact = detectContactFromText(text);
       const detectedDescription = detectDescriptionFromText(text);
       const slot = nextFreeSlot(technicians()[0] || "");
       const detectedSchedule = detectDateTimeFromText(text, slot);
+      const asset = lower.includes("liugvärava") ? "Liugväravaautomaatika" : detectAssetFromText(text, client);
       return {
         id: nextJobId(detectedSchedule.date, detectedSchedule.time),
         client: lower.includes("kinema") ? "Kinema OÜ" : client.name,
         referenceNo: detectReferenceFromText(text),
         address: detectAddressFromText(text, client),
-        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : device?.detail || "",
-        asset: lower.includes("liugvärava") ? "Liugväravaautomaatika" : device?.name || "",
+        buildingPart: lower.includes("liugvärava") ? "Väravaautomaatika" : detectBuildingPartFromText(text, client),
+        asset,
         contact: lower.includes("andre loikmann") ? "Andre Loikmann" : detectedContact.name || client.contact,
         phone: detectedContact.phone || client.phone,
         date: detectedSchedule.date,
@@ -5260,7 +5528,7 @@ Prioriteet: tavaline`;
         technician: technicians()[0] || "",
         technicians: [technicians()[0] || ""].filter(Boolean),
         priority,
-        recurrence: "Ühekordne",
+        recurrence: detectRecurrenceFromText(text),
         status: "uus",
         description: detectedDescription || `${source} kirjast loodud töökäsu mustand.`,
         workDone: "",
@@ -6025,7 +6293,7 @@ Summa: 2 075,34 €`;
     $("#simulateEmailBtn").addEventListener("click", simulateIncomingEmail);
     $("#reviewEmailDraftBtn").addEventListener("click", reviewEmailDraft);
     $("#imagePasteZone").addEventListener("paste", handleImportPaste);
-    $("#importImageFile").addEventListener("change", handleImportFile);
+    $("#importSourceFiles").addEventListener("change", handleImportFiles);
     $("#clearImportImageBtn").addEventListener("click", clearImportImage);
     $("#analyzeImportImageBtn").addEventListener("click", analyzeImportedImage);
     $("#autoScheduleBtn").addEventListener("click", autoScheduleJobs);
@@ -6110,7 +6378,10 @@ Summa: 2 075,34 €`;
     $("#objectStatusFilter").addEventListener("change", renderAll);
     $("#projectStatusFilter").addEventListener("change", renderAll);
     $("#searchField").addEventListener("input", renderAll);
-    $("#mobileTech").addEventListener("change", renderAll);
+    $("#mobileTech").addEventListener("change", () => {
+      mobileFocusedJobId = null;
+      renderAll();
+    });
     $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
       if (!btn.dataset.view) return;
       if (btn.dataset.view === "mobile") {
