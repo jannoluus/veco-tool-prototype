@@ -3308,6 +3308,15 @@
       return Math.round(((minutes - 7 * 60) / 60) * calendarHourHeight);
     }
 
+    function calendarTimeFromPointer(day, event) {
+      const body = day.querySelector(".day-body");
+      if (!body) return "";
+      const rect = body.getBoundingClientRect();
+      const relativeY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
+      const minutesFromStart = Math.round((relativeY / calendarHourHeight) * 2) * 30;
+      return minutesToTime(Math.max(7 * 60, Math.min(23 * 60, 7 * 60 + minutesFromStart)));
+    }
+
     function selectedJobRangeMarkers(endMinutes) {
       const job = jobs.find(item => item.id === selectedId);
       if (!job) return "";
@@ -3567,11 +3576,11 @@
       $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
       const allMobileTechsSelected = mobileTechs.length === technicians().length;
-      $("#mobileTechSummary").textContent = allMobileTechsSelected ? "KÃµik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
+      $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
       $("#mobileTechChecks").innerHTML = `
         <label class="select-all">
           <input type="checkbox" value="__all" ${allMobileTechsSelected ? "checked" : ""}>
-          <span>Vali kÃµik</span>
+          <span>Vali kõik</span>
         </label>
       ${technicians().map(name => `
         <label>
@@ -3734,6 +3743,13 @@
           if (event.target.closest("[data-job]") || event.target.closest("button")) return;
           activeJobMenuId = null;
           openJobModal(null, day.dataset.calendarDay);
+          const clickedTime = calendarTimeFromPointer(day, event);
+          const form = $("#jobForm");
+          if (clickedTime && form?.elements?.time) {
+            form.elements.time.value = clickedTime;
+            form.elements.endTime.value = addDurationToTime(clickedTime, form.elements.durationHours.value || 2);
+            syncJobTimeFields("start");
+          }
         });
       });
     }
@@ -3759,13 +3775,8 @@
       });
 
       function previewDropTime(day, event) {
-        const body = day.querySelector(".day-body");
-        if (!body) return "09:00";
-        const rect = body.getBoundingClientRect();
-        const relativeY = Math.max(0, Math.min(rect.height, event.clientY - rect.top));
-        const minutesFromStart = Math.round((relativeY / calendarHourHeight) * 2) * 30;
-        const minutes = Math.max(7 * 60, Math.min(23 * 60, 7 * 60 + minutesFromStart));
-        const time = minutesToTime(minutes);
+        const time = calendarTimeFromPointer(day, event) || "09:00";
+        const minutes = timeToMinutes(time);
         day.dataset.previewTime = time;
         day.style.setProperty("--preview-top", `${42 + axisTopForMinutes(minutes)}px`);
         day.classList.add("drag-time-preview");
