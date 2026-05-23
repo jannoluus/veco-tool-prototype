@@ -363,6 +363,74 @@
       padding: 8px 10px;
     }
 
+    .check-select {
+      position: relative;
+      min-width: 170px;
+    }
+
+    .check-select > summary {
+      list-style: none;
+      height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 0 10px;
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      color-scheme: light;
+    }
+
+    .check-select > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .check-select > summary::after {
+      content: "⌄";
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .check-select[open] > summary {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 2px rgba(23,105,170,.12);
+    }
+
+    .check-select-menu {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 6px);
+      z-index: 30;
+      min-width: 220px;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      padding: 8px;
+      display: grid;
+      gap: 4px;
+    }
+
+    .check-select-menu label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 32px;
+      padding: 5px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .check-select-menu label:hover {
+      background: #edf4fa;
+    }
+
     .calendar {
       padding: 12px;
       position: relative;
@@ -1465,6 +1533,11 @@
       padding: 22px;
       border: 0;
       box-sizing: border-box;
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 0;
+      pointer-events: none;
     }
 
     .pdf-export .act-top,
@@ -1518,6 +1591,8 @@
     body.theme-dark .dialog-actions,
     body.theme-dark .field,
     body.theme-dark .select,
+    body.theme-dark .check-select > summary,
+    body.theme-dark .check-select-menu,
     body.theme-dark textarea,
     body.theme-dark .job-card,
     body.theme-dark .job-action-menu,
@@ -1530,6 +1605,10 @@
     body.theme-dark .act-box {
       background: #172129;
       color: var(--ink);
+    }
+
+    body.theme-dark .check-select-menu label:hover {
+      background: #22313b;
     }
 
     body.theme-dark .day,
@@ -2034,8 +2113,10 @@
           <div class="panel-head">
             <h2>Tehniku mobiilivaade</h2>
             <div class="filters">
-              <select class="select" id="mobileTech"></select>
-              <button class="btn primary" id="newMobileJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+              <details class="check-select" id="mobileTechPicker">
+                <summary id="mobileTechSummary">Tehnikud</summary>
+                <div class="check-select-menu" id="mobileTechChecks"></div>
+              </details>
             </div>
           </div>
           <div class="detail-body" id="mobileJobs"></div>
@@ -2784,6 +2865,7 @@
     let selectedAiJobIds = new Set();
     let showArchivedActs = false;
     let mobileFocusedJobId = null;
+    let mobileSelectedTechs = [];
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2818,6 +2900,12 @@
     const $$ = (selector) => Array.from(document.querySelectorAll(selector));
     const selectedJob = () => jobs.find(job => job.id === selectedId) || jobs[0];
     const technicians = () => people.filter(person => person.active && ["Tehnik", "Admin", "Juht"].includes(person.role)).map(person => person.name);
+    const selectedMobileTechnicians = () => {
+      const available = technicians();
+      mobileSelectedTechs = mobileSelectedTechs.filter(name => available.includes(name));
+      if (!mobileSelectedTechs.length && available.length) mobileSelectedTechs = [available[0]];
+      return mobileSelectedTechs;
+    };
     const personName = (id) => (people.find(person => person.id === id) || {}).name || "Tundmatu";
     const selectedClient = () => clients.find(client => client.id === selectedClientId) || clients[0];
     const objectKey = (clientId, address) => `${clientId}::${address}`;
@@ -3441,14 +3529,19 @@
       const techOptions = technicians().map(name => `<option value="${name}">${name}</option>`).join("");
       const timeOptions = buildTimeOptions();
       const selectedTech = $("#technicianFilter").value || "all";
-      const selectedMobileTech = $("#mobileTech").value || technicians()[0] || "";
       const selectedActsTech = $("#actsTechFilter").value || "all";
+      const mobileTechs = selectedMobileTechnicians();
       $("#technicianFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
       $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
-      $("#mobileTech").innerHTML = techOptions;
-      $("#mobileTech").value = technicians().includes(selectedMobileTech) ? selectedMobileTech : technicians()[0] || "";
+      $("#mobileTechSummary").textContent = mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`;
+      $("#mobileTechChecks").innerHTML = technicians().map(name => `
+        <label>
+          <input type="checkbox" value="${escapeHtml(name)}" ${mobileTechs.includes(name) ? "checked" : ""}>
+          <span>${escapeHtml(name)}</span>
+        </label>
+      `).join("");
       document.querySelector("#jobForm [name='technician']").innerHTML = techOptions;
       document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
       document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
@@ -3969,10 +4062,18 @@
     }
 
     function renderMobile() {
-      const tech = $("#mobileTech").value || technicians()[0];
+      const selectedTechs = selectedMobileTechnicians();
+      $$("#mobileTechChecks input[type='checkbox']").forEach(input => {
+        input.addEventListener("change", () => {
+          const next = $$("#mobileTechChecks input[type='checkbox']:checked").map(item => item.value);
+          mobileSelectedTechs = next.length ? next : [input.value];
+          mobileFocusedJobId = null;
+          renderAll();
+        });
+      });
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel"];
       const techJobs = jobs
-        .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status))
+        .filter(job => selectedTechs.some(tech => jobHasTechnician(job, tech)) && activeStatuses.includes(job.status))
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
       if (mobileFocusedJobId && !techJobs.some(job => job.id === mobileFocusedJobId)) mobileFocusedJobId = null;
       const focusedJob = mobileFocusedJobId ? techJobs.find(job => job.id === mobileFocusedJobId) : null;
@@ -3986,7 +4087,7 @@
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
           <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
         </button>
-      `).join("") || `<div class="detail-body"><div class="mobile-card">Sellel tehnikul ei ole tänaseid ega aktiivseid töid.</div></div>`;
+      `).join("") || `<div class="detail-body"><div class="mobile-card">Valitud tehnikutel ei ole tänaseid ega aktiivseid töid.</div></div>`;
 
       const job = focusedJob || techJobs.find(item => item.id === selectedId) || techJobs[0];
 
@@ -5454,7 +5555,8 @@
     }
 
     function openTechnicianJobModal() {
-      const tech = $("#mobileTech").value || technicians()[0] || "";
+      const selectedTechs = selectedMobileTechnicians();
+      const tech = selectedTechs[0] || technicians()[0] || "";
       const slot = nextFreeSlot(tech);
       openJobModal(null, slot.date);
       const form = $("#jobForm");
@@ -5463,7 +5565,7 @@
       form.elements.status.value = "uus";
       form.elements.description.value = form.elements.description.value || "Tehniku poolt lisatud töökäsk.";
       Array.from(form.elements.technician.options).forEach(option => {
-        option.selected = option.value === tech;
+        option.selected = selectedTechs.includes(option.value);
       });
       syncJobTimeFields("start");
     }
@@ -6735,29 +6837,44 @@ Summa: 2 075,34 €`;
       });
     }
 
+    function waitForImages(root) {
+      const images = Array.from(root.querySelectorAll("img"));
+      return Promise.all(images.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise(resolve => {
+          img.addEventListener("load", resolve, { once: true });
+          img.addEventListener("error", resolve, { once: true });
+        });
+      }));
+    }
+
     async function saveActPdf() {
       const job = selectedJob();
       if (!job) return;
       if (job.status === "täidetud") job.status = "akt";
-      const preview = $("#actPreview");
-      if (!preview.innerHTML.trim()) preview.innerHTML = actHtml(job);
       await loadScriptOnce("https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js", "html2pdf");
       const filename = `VECO-akt-${String(job.id || "akt").replace(/[^\w-]+/g, "_")}.pdf`;
       const exportNode = document.createElement("div");
       exportNode.className = "act-preview pdf-export";
       exportNode.innerHTML = actHtml(job);
-      exportNode.style.position = "fixed";
-      exportNode.style.left = "-10000px";
-      exportNode.style.top = "0";
       document.body.appendChild(exportNode);
       try {
+        await waitForImages(exportNode);
         await html2pdf()
           .set({
-            margin: 8,
+            margin: 0,
             filename,
             image: { type: "jpeg", quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: "#ffffff",
+              windowWidth: 794,
+              scrollX: 0,
+              scrollY: 0
+            },
+            jsPDF: { unit: "px", format: [794, 1123], orientation: "portrait" },
+            pagebreak: { mode: ["css", "legacy"] }
           })
           .from(exportNode)
           .save();
@@ -6907,7 +7024,13 @@ Summa: 2 075,34 €`;
     $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
     $("#themeToggleBtn").addEventListener("click", toggleTheme);
     $("#moreNavBtn").addEventListener("click", toggleMoreNav);
-    $("#newJobBtn").addEventListener("click", () => openJobModal());
+    $("#newJobBtn").addEventListener("click", () => {
+      if (!$("#mobileView").classList.contains("hidden")) {
+        openTechnicianJobModal();
+      } else {
+        openJobModal();
+      }
+    });
     $("#newPersonBtn").addEventListener("click", () => openPersonModal());
     $("#newEventBtn").addEventListener("click", () => openEventModal());
     $("#newVacationEventBtn").addEventListener("click", () => openEventModal());
@@ -6923,7 +7046,6 @@ Summa: 2 075,34 €`;
       openClientPlanModal(object?.key || "");
     });
     $("#generateProjectJobsBtn").addEventListener("click", () => generateProjectJobs(selectedProjectId));
-    $("#newMobileJobBtn").addEventListener("click", openTechnicianJobModal);
     $("#importJobBtn").addEventListener("click", openImportJobModal);
     $("#databaseBtn").addEventListener("click", openDatabaseModal);
     $("#databaseForm").addEventListener("submit", saveDatabaseSettings);
@@ -7029,10 +7151,6 @@ Summa: 2 075,34 €`;
     $("#objectStatusFilter").addEventListener("change", renderAll);
     $("#projectStatusFilter").addEventListener("change", renderAll);
     $("#searchField").addEventListener("input", renderAll);
-    $("#mobileTech").addEventListener("change", () => {
-      mobileFocusedJobId = null;
-      renderAll();
-    });
     $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
       if (!btn.dataset.view) return;
       if (btn.dataset.view === "mobile") {
