@@ -6848,38 +6848,182 @@ Summa: 2 075,34 €`;
       }));
     }
 
+    function plainText(value) {
+      return String(value || "-").replace(/\r/g, "").trim() || "-";
+    }
+
+    function timeLogPlainText(job) {
+      const logs = job.timeLogs || [];
+      if (!logs.length) return "-";
+      return logs.map((log, index) =>
+        `Lõik ${index + 1}: ${formatMinutes(minutesBetween(log.start, log.end))} | ${formatDateTime(log.start)} - ${log.end ? formatDateTime(log.end) : "käib"}`
+      ).join("\n");
+    }
+
+    function imageDataUrl(src) {
+      return new Promise(resolve => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          try {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            canvas.getContext("2d").drawImage(img, 0, 0);
+            resolve(canvas.toDataURL("image/jpeg", 0.92));
+          } catch (error) {
+            resolve("");
+          }
+        };
+        img.onerror = () => resolve("");
+        img.src = src;
+      });
+    }
+
     async function saveActPdf() {
       const job = selectedJob();
       if (!job) return;
       if (job.status === "täidetud") job.status = "akt";
-      await loadScriptOnce("https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js", "html2pdf");
+
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js", "jspdf");
+      const JsPdf = window.jspdf?.jsPDF;
+      if (!JsPdf) {
+        alert("PDF moodulit ei saanud laadida. Avan akti uues aknas.");
+        openActInNewWindow(false);
+        return;
+      }
+
       const filename = `VECO-akt-${String(job.id || "akt").replace(/[^\w-]+/g, "_")}.pdf`;
-      const exportNode = document.createElement("div");
-      exportNode.className = "act-preview pdf-export";
-      exportNode.innerHTML = actHtml(job);
-      document.body.appendChild(exportNode);
+      const doc = new JsPdf({ unit: "mm", format: "a4", orientation: "portrait" });
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const margin = 14;
+      const right = pageWidth - margin;
+      let y = 15;
+
+      const ensureSpace = (height = 12) => {
+        if (y + height <= pageHeight - 18) return;
+        doc.addPage();
+        y = 15;
+      };
+
+      const writeWrapped = (text, x, maxWidth, lineHeight = 5) => {
+        const lines = doc.splitTextToSize(plainText(text), maxWidth);
+        doc.text(lines, x, y);
+        y += Math.max(lineHeight, lines.length * lineHeight);
+      };
+
+      const drawInfoRow = (leftLabel, leftValue, rightLabel, rightValue) => {
+        ensureSpace(10);
+        const mid = 110;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.setTextColor(90, 104, 116);
+        doc.text(leftLabel, margin, y);
+        doc.text(rightLabel, mid, y);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(doc.splitTextToSize(plainText(leftValue), 55), margin + 24, y);
+        doc.text(doc.splitTextToSize(plainText(rightValue), 55), mid + 26, y);
+        doc.setDrawColor(220, 226, 231);
+        doc.line(margin, y + 3, 98, y + 3);
+        doc.line(mid, y + 3, right, y + 3);
+        y += 8;
+      };
+
+      const drawSection = (title, text) => {
+        ensureSpace(20);
+        const boxY = y;
+        doc.setDrawColor(185, 198, 208);
+        doc.rect(margin, boxY, right - margin, 14);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(90, 104, 116);
+        doc.text(title, margin + 3, boxY + 5);
+        doc.setFontSize(10);
+        doc.setTextColor(17, 24, 29);
+        y = boxY + 10;
+        writeWrapped(text, margin + 3, right - margin - 6, 5);
+        const nextY = Math.max(y + 3, boxY + 17);
+        if (nextY > boxY + 14) {
+          doc.setDrawColor(185, 198, 208);
+          doc.rect(margin, boxY, right - margin, nextY - boxY - 2);
+        }
+        y = nextY;
+      };
+
       try {
-        await waitForImages(exportNode);
-        await html2pdf()
-          .set({
-            margin: 0,
-            filename,
-            image: { type: "jpeg", quality: 0.98 },
-            html2canvas: {
-              scale: 2,
-              useCORS: true,
-              backgroundColor: "#ffffff",
-              windowWidth: 794,
-              scrollX: 0,
-              scrollY: 0
-            },
-            jsPDF: { unit: "px", format: [794, 1123], orientation: "portrait" },
-            pagebreak: { mode: ["css", "legacy"] }
-          })
-          .from(exportNode)
-          .save();
-      } finally {
-        exportNode.remove();
+        const logo = await imageDataUrl("assets/veco-round-logo.jpg");
+        if (logo) doc.addImage(logo, "JPEG", 92, y, 25, 25);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Akt nr ${plainText(job.id)}`, right, y + 5, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.text(`Kuupäev: ${new Date().toLocaleDateString("et-EE")}`, right, y + 11, { align: "right" });
+        y += 31;
+        doc.setFont("helvetica", "bold");
+        doc.text("Teostatud tööde akt", pageWidth / 2, y, { align: "center" });
+        y += 8;
+        doc.setDrawColor(20);
+        doc.line(margin, y, right, y);
+        y += 10;
+
+        drawInfoRow("Klient", job.client, "Kliendi/projekti viide", job.referenceNo || "-");
+        drawInfoRow("Objekt", job.address, "Hooneosa", job.buildingPart || "-");
+        drawInfoRow("Seade", job.asset || "-", "Kontakt", `${job.contact || ""} ${job.phone || ""}`.trim() || "-");
+        drawInfoRow("Tehnikud", jobTechnicianLabel(job), "Töö aeg", displayActWorkTime(job));
+        drawInfoRow("Transpordi aeg", job.travelTime || "-", "Staatus", statusLabels[job.status] || job.status || "-");
+        y += 4;
+
+        drawSection("Tellitud töö", job.description || "-");
+        drawSection("Tehtud töö", job.workDone || "-");
+        drawSection("Ajakulu lõigud", timeLogPlainText(job));
+        drawSection("Kasutatud materjalid", job.materials || "-");
+
+        ensureSpace(25);
+        y += 8;
+        doc.setDrawColor(20);
+        doc.line(margin, y, 98, y);
+        doc.line(110, y, right, y);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        doc.setTextColor(0, 0, 0);
+        doc.text(`VECO esindaja: ${plainText(jobTechnicianLabel(job))}`, margin, y + 6);
+        doc.text(`Kliendi esindaja: ${plainText(job.approvedBy || "-")}`, 110, y + 6);
+
+        const photos = evidencePhotoEntries(job.photos);
+        if (photos.length) {
+          doc.addPage();
+          y = 15;
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(13);
+          doc.text("Fotod / tõendusmaterjal", margin, y);
+          y += 10;
+          for (const photo of photos) {
+            ensureSpace(18);
+            if (String(photo).startsWith("data:image/")) {
+              try {
+                doc.addImage(photo, "JPEG", margin, y, 50, 36);
+                y += 42;
+              } catch (error) {
+                doc.setFont("helvetica", "normal");
+                writeWrapped("Foto lisatud", margin, right - margin);
+              }
+            } else {
+              doc.setFont("helvetica", "normal");
+              writeWrapped(`allikas: ${photo}`, margin, right - margin);
+            }
+          }
+        }
+
+        doc.save(filename);
+      } catch (error) {
+        alert("PDF salvestamine ei õnnestunud. Avan akti uues aknas.");
+        openActInNewWindow(false);
       }
       renderAll();
     }
