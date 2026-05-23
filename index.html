@@ -742,8 +742,8 @@
 
     .day-body .job-card {
       position: absolute;
-      left: 9px;
-      right: 9px;
+      left: var(--job-left, 9px);
+      width: var(--job-width, calc(100% - 18px));
       top: var(--job-top, 8px);
       height: var(--job-height, 92px);
       margin: 0;
@@ -803,6 +803,97 @@
     .job-card.selected {
       border-color: var(--blue);
       box-shadow: 0 0 0 3px rgba(23,105,170,.14);
+    }
+
+    .job-card.has-conflict {
+      border-color: #d97706;
+      box-shadow: 0 0 0 3px rgba(217,119,6,.16);
+    }
+
+    .conflict-badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: #fff3d6;
+      color: #8a4b00;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .team-board {
+      display: grid;
+      gap: 14px;
+    }
+
+    .team-row {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+      overflow: hidden;
+    }
+
+    .team-row-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #eef3f5;
+      font-weight: 800;
+    }
+
+    .team-days {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(110px, 1fr));
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .team-days.with-weekend {
+      grid-template-columns: repeat(7, minmax(100px, 1fr));
+    }
+
+    .team-day {
+      min-height: 170px;
+      padding: 9px;
+      background: var(--panel);
+      display: grid;
+      align-content: start;
+      gap: 8px;
+    }
+
+    .team-day-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .team-job {
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fff;
+      padding: 8px;
+      text-align: left;
+      display: grid;
+      gap: 4px;
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .team-job:hover,
+    .team-job.selected {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 3px rgba(23,105,170,.12);
+    }
+
+    .team-job.has-conflict {
+      border-color: #d97706;
+      background: #fffaf0;
     }
 
     .job-technicians {
@@ -1361,6 +1452,51 @@
       font-size: 13px;
     }
 
+    .pdf-export,
+    body.theme-dark .pdf-export,
+    body.theme-dark .pdf-export .act-box {
+      background: #fff !important;
+      color: #111 !important;
+    }
+
+    .pdf-export {
+      width: 794px;
+      min-height: 1123px;
+      padding: 22px;
+      border: 0;
+      box-sizing: border-box;
+    }
+
+    .pdf-export .act-top,
+    body.theme-dark .pdf-export .act-top {
+      border-bottom-color: #111 !important;
+    }
+
+    .pdf-export .act-box,
+    body.theme-dark .pdf-export .act-box {
+      border-color: #c9d2d8 !important;
+    }
+
+    .pdf-export .act-grid,
+    body.theme-dark .pdf-export .act-grid {
+      border-bottom-color: #d9e0e5 !important;
+    }
+
+    .pdf-export .act-grid .act-box,
+    body.theme-dark .pdf-export .act-grid .act-box {
+      border-color: #e3e9ed !important;
+    }
+
+    .pdf-export .act-box span,
+    body.theme-dark .pdf-export .act-box span {
+      color: #59646d !important;
+    }
+
+    .pdf-export .signature,
+    body.theme-dark .pdf-export .signature {
+      border-top-color: #111 !important;
+    }
+
     .hidden { display: none !important; }
 
     body.theme-dark {
@@ -1386,6 +1522,7 @@
     body.theme-dark .job-card,
     body.theme-dark .job-action-menu,
     body.theme-dark .mini-job,
+    body.theme-dark .team-job,
     body.theme-dark .mobile-card,
     body.theme-dark .person-card,
     body.theme-dark .event-row,
@@ -1396,6 +1533,8 @@
     }
 
     body.theme-dark .day,
+    body.theme-dark .team-row,
+    body.theme-dark .team-day,
     body.theme-dark .month-cell,
     body.theme-dark .year-cell,
     body.theme-dark .object-mini-day,
@@ -1405,6 +1544,10 @@
     }
 
     body.theme-dark .day-head {
+      background: #1f2b34;
+    }
+
+    body.theme-dark .team-row-head {
       background: #1f2b34;
     }
 
@@ -1648,6 +1791,7 @@
       <nav class="nav" aria-label="Põhivaated">
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
+        <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
         <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
@@ -1829,6 +1973,29 @@
             </div>
           </div>
           <div class="detail-body" id="detailBody"></div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="teamView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2 id="teamTitle">Tiimivaade</h2>
+            <div class="filters">
+              <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn primary" id="teamTodayBtn"><span class="icon">⌖</span> Täna</button>
+              <button class="btn nav-soft" id="teamNextBtn">Järgmine <span class="icon">›</span></button>
+              <button class="btn ghost" id="teamToggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="team-board" id="teamGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Tiimi hoiatused</h2>
+          </div>
+          <div class="detail-body" id="teamWarnings"></div>
         </aside>
       </section>
 
@@ -2926,6 +3093,84 @@
       return String(Math.max(0.5, Math.round((minutes / 60) * 2) / 2));
     }
 
+    function jobStartMinutes(job) {
+      return timeToMinutes(job.time || "09:00");
+    }
+
+    function jobDurationMinutes(job) {
+      return Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+    }
+
+    function jobEndMinutes(job) {
+      return jobStartMinutes(job) + jobDurationMinutes(job);
+    }
+
+    function rangesOverlap(a, b) {
+      return jobStartMinutes(a) < jobEndMinutes(b) && jobStartMinutes(b) < jobEndMinutes(a);
+    }
+
+    function sharedTechnicians(a, b) {
+      const bTechs = new Set(jobTechnicians(b));
+      return jobTechnicians(a).filter(name => bTechs.has(name));
+    }
+
+    function conflictJobsFor(job, ignoreId = job.id) {
+      if (!job || !job.date) return [];
+      return jobs.filter(other => {
+        if (!other || other.id === ignoreId || other.date !== job.date) return false;
+        if (["arhiveeritud"].includes(other.status)) return false;
+        return sharedTechnicians(job, other).length > 0 && rangesOverlap(job, other);
+      });
+    }
+
+    function conflictSummary(job, conflicts) {
+      const rows = conflicts.map(other => {
+        const techs = sharedTechnicians(job, other).join(", ");
+        return `${displayWorkWindow(other)} ${other.client} (${techs})`;
+      });
+      return `Sellel ajal on tehnikul juba töö ees:\n\n${rows.join("\n")}\n\nKas salvestame ikkagi?`;
+    }
+
+    function confirmJobConflicts(job, ignoreId = job.id) {
+      const conflicts = conflictJobsFor(job, ignoreId);
+      return !conflicts.length || window.confirm(conflictSummary(job, conflicts));
+    }
+
+    function overlapLayoutForJobs(dayJobs) {
+      const sorted = [...dayJobs].sort((a, b) => jobStartMinutes(a) - jobStartMinutes(b) || jobEndMinutes(a) - jobEndMinutes(b));
+      const groups = [];
+      sorted.forEach(job => {
+        let group = groups.find(item => jobStartMinutes(job) < item.end && jobEndMinutes(job) > item.start);
+        if (!group) {
+          group = { start: jobStartMinutes(job), end: jobEndMinutes(job), jobs: [] };
+          groups.push(group);
+        }
+        group.jobs.push(job);
+        group.start = Math.min(group.start, jobStartMinutes(job));
+        group.end = Math.max(group.end, jobEndMinutes(job));
+      });
+      const layout = new Map();
+      groups.forEach(group => {
+        const columns = [];
+        group.jobs
+          .sort((a, b) => jobStartMinutes(a) - jobStartMinutes(b) || jobEndMinutes(a) - jobEndMinutes(b))
+          .forEach(job => {
+            let columnIndex = columns.findIndex(column => jobEndMinutes(column[column.length - 1]) <= jobStartMinutes(job));
+            if (columnIndex < 0) {
+              columnIndex = columns.length;
+              columns.push([]);
+            }
+            columns[columnIndex].push(job);
+            layout.set(job.id, { column: columnIndex, columns: 1 });
+          });
+        group.jobs.forEach(job => {
+          const current = layout.get(job.id);
+          layout.set(job.id, { column: current.column, columns: columns.length });
+        });
+      });
+      return layout;
+    }
+
     function displayWorkWindow(job) {
       const end = job.endTime || addDurationToTime(job.time, job.durationHours);
       if (job.time && end) return `${job.time}-${end}`;
@@ -2973,15 +3218,20 @@
       `;
     }
 
-    function calendarCardStyle(job) {
+    function calendarCardStyle(job, layout = { column: 0, columns: 1 }) {
       const dayStart = 7 * 60;
       const dayEnd = calendarEndMinutes(jobs.filter(item => item.date === job.date));
-      const start = Math.min(Math.max(timeToMinutes(job.time || "09:00"), dayStart), dayEnd);
-      const duration = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+      const start = Math.min(Math.max(jobStartMinutes(job), dayStart), dayEnd);
+      const duration = jobDurationMinutes(job);
       const visibleDuration = Math.min(duration, dayEnd - start);
       const top = Math.round(((start - dayStart) / 60) * calendarHourHeight);
       const height = Math.max(96, Math.round((visibleDuration / 60) * calendarHourHeight) - 4);
-      return `--job-top:${top}px;--job-height:${height}px`;
+      const columns = Math.max(1, layout.columns || 1);
+      const column = Math.max(0, layout.column || 0);
+      const widthPercent = 100 / columns;
+      const left = columns === 1 ? "9px" : `calc(9px + ${column * widthPercent}%)`;
+      const width = columns === 1 ? "calc(100% - 18px)" : `calc(${widthPercent}% - 13px)`;
+      return `--job-top:${top}px;--job-height:${height}px;--job-left:${left};--job-width:${width}`;
     }
 
     function jobTooltip(job) {
@@ -3291,16 +3541,18 @@
       }${selectedJobRangeMarkers(endMinutes)}</div>`;
       $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
+        const overlapLayout = overlapLayoutForJobs(dayJobs);
         const weekday = new Date(`${date}T12:00:00`).getDay();
         const isWeekend = [0, 6].includes(weekday);
         const holiday = holidayName(date);
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
         const cards = dayJobs.map(job => `
-          <div class="job-card ${job.id === selectedId ? "selected" : ""}" data-job="${job.id}" data-tooltip="${escapeAttr(jobTooltip(job))}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job)}">
+          <div class="job-card ${job.id === selectedId ? "selected" : ""} ${conflictJobsFor(job).length ? "has-conflict" : ""}" data-job="${job.id}" data-tooltip="${escapeAttr(jobTooltip(job))}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job, overlapLayout.get(job.id))}">
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
             <span class="job-window">${escapeHtml(displayWorkWindow(job))}</span>
             <span class="job-technicians">${escapeHtml(jobTechnicianLabel(job))}</span>
+            ${conflictJobsFor(job).length ? `<span class="conflict-badge">Kattuvus</span>` : ""}
             ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
             <span class="job-meta">${escapeHtml(job.address)}</span>
             ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
@@ -3435,12 +3687,23 @@
     function moveCalendarJob(jobId, targetDate, targetTime = "") {
       const job = jobs.find(item => item.id === jobId);
       if (!job || !targetDate) return;
+      const previous = {
+        date: job.date,
+        time: job.time,
+        endTime: job.endTime,
+        durationHours: job.durationHours
+      };
       job.date = targetDate;
       if (targetTime) {
         job.time = targetTime;
         if (job.durationHours) job.endTime = addDurationToTime(job.time, job.durationHours);
       }
       resolveWorkdayOverflow(job);
+      if (!confirmJobConflicts(job)) {
+        Object.assign(job, previous);
+        renderAll();
+        return;
+      }
       selectedId = job.id;
       detailJobId = job.id;
       setDetailCollapsed(false);
@@ -3464,6 +3727,7 @@
         photos: "",
         approvedBy: ""
       };
+      if (!confirmJobConflicts(job, job.id)) return;
       jobs.push(job);
       selectedId = job.id;
       detailJobId = job.id;
@@ -3475,11 +3739,17 @@
     function resizeJobDuration(jobId, deltaMinutes) {
       const job = jobs.find(item => item.id === jobId);
       if (!job) return;
+      const previous = { durationHours: job.durationHours, endTime: job.endTime };
       const currentMinutes = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
       const nextMinutes = Math.max(30, Math.min(12 * 60, currentMinutes + deltaMinutes));
       job.durationHours = String(nextMinutes / 60);
       job.endTime = addDurationToTime(job.time || "09:00", job.durationHours);
       resolveWorkdayOverflow(job);
+      if (!confirmJobConflicts(job)) {
+        Object.assign(job, previous);
+        renderAll();
+        return;
+      }
       selectedId = job.id;
       detailJobId = job.id;
       setDetailCollapsed(false);
@@ -3499,6 +3769,7 @@
           if (!job) return;
           const startY = event.clientY;
           const startMinutes = Math.max(30, Number(job.durationHours || inferDurationHours(job.time, job.endTime) || 2) * 60);
+          const previous = { durationHours: job.durationHours, endTime: job.endTime };
           handle.setPointerCapture(event.pointerId);
 
           const onMove = moveEvent => {
@@ -3518,6 +3789,7 @@
             window.removeEventListener("pointermove", onMove);
             window.removeEventListener("pointerup", onUp);
             resolveWorkdayOverflow(job);
+            if (!confirmJobConflicts(job)) Object.assign(job, previous);
             renderAll();
           };
 
@@ -3626,6 +3898,74 @@
       select.disabled = !job || targets.length === 0;
       button.disabled = !job || targets.length === 0;
       button.title = targets.length ? "Kopeeri valitud tehnikule" : "Kõik tehnikud on juba lisatud";
+    }
+
+    function renderTeam() {
+      const weekStart = startOfWeek(calendarCursor);
+      const weekLength = showWeekends ? 7 : 5;
+      const dayLabels = ["E", "T", "K", "N", "R", "L", "P"];
+      const weekDays = Array.from({ length: weekLength }, (_, index) => {
+        const date = addDays(weekStart, index);
+        return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
+      });
+      const weekEnd = addDays(weekStart, weekLength - 1);
+      $("#teamTitle").textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      $("#teamToggleWeekendBtn").innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
+      const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel", "täidetud", "akt"];
+      $("#teamGrid").innerHTML = technicians().map(tech => {
+        const techJobs = jobs
+          .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status) && weekDays.some(day => day.date === job.date))
+          .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+        return `
+          <div class="team-row">
+            <div class="team-row-head"><span>${escapeHtml(tech)}</span><span>${techJobs.length} tööd</span></div>
+            <div class="team-days ${showWeekends ? "with-weekend" : ""}">
+              ${weekDays.map(day => {
+                const dayJobs = techJobs.filter(job => job.date === day.date);
+                return `
+                  <div class="team-day">
+                    <div class="team-day-head"><span>${day.day}</span><span>${day.label}</span></div>
+                    ${dayJobs.map(job => {
+                      const conflicts = conflictJobsFor(job).filter(other => jobHasTechnician(other, tech));
+                      return `
+                        <button class="team-job ${job.id === selectedId ? "selected" : ""} ${conflicts.length ? "has-conflict" : ""}" data-team-job="${job.id}">
+                          <strong>${escapeHtml(displayWorkWindow(job))} · ${escapeHtml(job.client)}</strong>
+                          <span class="job-meta">${escapeHtml(job.address || "")}</span>
+                          <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
+                          ${conflicts.length ? `<span class="conflict-badge">Kattub ${conflicts.length} tööga</span>` : ""}
+                        </button>
+                      `;
+                    }).join("") || `<span class="job-meta">Töid ei ole</span>`}
+                  </div>
+                `;
+              }).join("")}
+            </div>
+          </div>
+        `;
+      }).join("") || `<div class="mobile-card">Aktiivseid tehnikuid ei ole lisatud.</div>`;
+
+      const conflicts = jobs
+        .filter(job => weekDays.some(day => day.date === job.date))
+        .flatMap(job => conflictJobsFor(job).map(other => ({ job, other, key: [job.id, other.id].sort().join("::") })));
+      const uniqueConflicts = [...new Map(conflicts.map(item => [item.key, item])).values()];
+      $("#teamWarnings").innerHTML = uniqueConflicts.length
+        ? uniqueConflicts.map(({ job, other }) => `
+          <button class="mobile-card" data-team-job="${job.id}">
+            <strong>${escapeHtml(sharedTechnicians(job, other).join(", "))}</strong>
+            <span class="job-meta">${escapeHtml(formatDateEt(job.date))} · ${escapeHtml(displayWorkWindow(job))} ${escapeHtml(job.client)}</span>
+            <span class="job-meta">${escapeHtml(displayWorkWindow(other))} ${escapeHtml(other.client)}</span>
+          </button>
+        `).join("")
+        : `<div class="mobile-card">Selles nädalas sama tehniku kattuvaid töid ei ole.</div>`;
+
+      $$("[data-team-job]").forEach(card => {
+        card.addEventListener("click", () => {
+          selectedId = card.dataset.teamJob;
+          detailJobId = selectedId;
+          setDetailCollapsed(false);
+          renderAll();
+        });
+      });
     }
 
     function renderMobile() {
@@ -4902,6 +5242,7 @@
       fillSelects();
       renderCalendar();
       renderDetail();
+      renderTeam();
       renderMobile();
       renderActs();
       renderPeople();
@@ -5863,11 +6204,14 @@ Summa: 2 075,34 €`;
       }
       data.photos = mergePhotoEntries(existingJob?.photos || "", data.photos, uploadedPhotos);
       if (editingId) {
+        const previewJob = { ...existingJob, ...data };
+        if (!confirmJobConflicts(previewJob, existingJob.id)) return;
         Object.assign(existingJob, data);
         selectedId = existingJob.id;
         detailJobId = selectedId;
       } else {
         const job = { id: nextJobId(data.date, data.time), ...data, timeLogs: [] };
+        if (!confirmJobConflicts(job, job.id)) return;
         jobs.push(job);
         selectedId = job.id;
         detailJobId = selectedId;
@@ -6385,16 +6729,27 @@ Summa: 2 075,34 €`;
       if (!preview.innerHTML.trim()) preview.innerHTML = actHtml(job);
       await loadScriptOnce("https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js", "html2pdf");
       const filename = `VECO-akt-${String(job.id || "akt").replace(/[^\w-]+/g, "_")}.pdf`;
-      await html2pdf()
-        .set({
-          margin: 8,
-          filename,
-          image: { type: "jpeg", quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-          jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-        })
-        .from(preview)
-        .save();
+      const exportNode = document.createElement("div");
+      exportNode.className = "act-preview pdf-export";
+      exportNode.innerHTML = actHtml(job);
+      exportNode.style.position = "fixed";
+      exportNode.style.left = "-10000px";
+      exportNode.style.top = "0";
+      document.body.appendChild(exportNode);
+      try {
+        await html2pdf()
+          .set({
+            margin: 8,
+            filename,
+            image: { type: "jpeg", quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
+          })
+          .from(exportNode)
+          .save();
+      } finally {
+        exportNode.remove();
+      }
       renderAll();
     }
 
@@ -6485,7 +6840,7 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    const viewNames = ["pilot", "calendar", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"];
+    const viewNames = ["pilot", "calendar", "team", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"];
 
     function currentUrlView() {
       const view = new URLSearchParams(window.location.search).get("view");
@@ -6519,7 +6874,7 @@ Summa: 2 075,34 €`;
     }
 
     function setDetailCollapsed(collapsed) {
-      const views = ["#pilotView", "#calendarView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#projectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
+      const views = ["#pilotView", "#calendarView", "#teamView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#projectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
     }
 
@@ -6615,6 +6970,10 @@ Summa: 2 075,34 €`;
     $("#prevPeriodBtn").addEventListener("click", () => moveCalendarPeriod(-1));
     $("#nextPeriodBtn").addEventListener("click", () => moveCalendarPeriod(1));
     $("#toggleWeekendBtn").addEventListener("click", toggleWeekends);
+    $("#teamPrevBtn").addEventListener("click", () => moveCalendarPeriod(-1));
+    $("#teamTodayBtn").addEventListener("click", resetCalendarToToday);
+    $("#teamNextBtn").addEventListener("click", () => moveCalendarPeriod(1));
+    $("#teamToggleWeekendBtn").addEventListener("click", toggleWeekends);
     $("#technicianFilter").addEventListener("change", renderAll);
     $("#calendarMode").addEventListener("change", () => {
       detailJobId = null;
