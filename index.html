@@ -7020,13 +7020,25 @@ Summa: 2 075,34 €`;
           }
         }
 
-        doc.save(filename);
+        const blob = doc.output("blob");
+        if (!blob || blob.size < 1000) {
+          throw new Error("PDF blob is empty");
+        }
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30000);
       } catch (error) {
         alert("PDF salvestamine ei õnnestunud. Avan akti uues aknas.");
         openActInNewWindow(false);
       }
       renderAll();
     }
+    window.saveActPdf = saveActPdf;
 
     function openActInNewWindow(printImmediately = false) {
       const job = selectedJob();
@@ -7102,7 +7114,7 @@ Summa: 2 075,34 €`;
         <body>
           <div class="act-window-toolbar">
             <button onclick="window.print()">Prindi</button>
-            <button class="primary" onclick="window.print()">Salvesta PDF</button>
+            <button class="primary" onclick="window.opener && window.opener.saveActPdf ? window.opener.saveActPdf() : window.print()">Salvesta PDF</button>
           </div>
           <main class="act-page">${actHtml(job)}</main>
         </body>
