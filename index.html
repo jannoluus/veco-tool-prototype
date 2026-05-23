@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="et">
 <head>
   <meta charset="utf-8">
@@ -947,6 +947,21 @@
       gap: 8px;
     }
 
+    .team-day.weekend-day,
+    .team-day.public-holiday {
+      background: #fff5f5;
+      border-left: 1px solid #f2c7c3;
+      border-right: 1px solid #f2c7c3;
+    }
+
+    .team-day.pre-holiday {
+      background:
+        linear-gradient(to bottom, transparent 0 50%, rgba(255,245,245,.92) 50% 100%),
+        var(--panel);
+      border-left: 1px solid #f2d6d3;
+      border-right: 1px solid #f2d6d3;
+    }
+
     .team-day-head {
       display: flex;
       justify-content: space-between;
@@ -977,6 +992,28 @@
     .team-job.has-conflict {
       border-color: #d97706;
       background: #fffaf0;
+    }
+
+    .team-absence {
+      border: 1px dashed #d48b85;
+      border-radius: 7px;
+      background: #fff8f7;
+      color: #9b2d26;
+      padding: 7px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .oncall-badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: #eaf4ff;
+      color: var(--blue);
+      font-size: 11px;
+      font-weight: 900;
     }
 
     .job-technicians {
@@ -1653,6 +1690,32 @@
       background: #1f2b34;
     }
 
+    body.theme-dark .team-day.weekend-day,
+    body.theme-dark .team-day.public-holiday {
+      background: #2b1719;
+      border-left-color: #6f3633;
+      border-right-color: #6f3633;
+    }
+
+    body.theme-dark .team-day.pre-holiday {
+      background:
+        linear-gradient(to bottom, transparent 0 50%, rgba(43,23,25,.92) 50% 100%),
+        var(--panel);
+      border-left-color: #5a3736;
+      border-right-color: #5a3736;
+    }
+
+    body.theme-dark .team-absence {
+      background: #2b1719;
+      border-color: #8d4741;
+      color: #ffb4ad;
+    }
+
+    body.theme-dark .oncall-badge {
+      background: #14324d;
+      color: #9fd0ff;
+    }
+
     body.theme-dark .day.public-holiday {
       background: #2b1719;
       border-color: #6f3633;
@@ -2083,6 +2146,10 @@
               <button class="btn primary" id="teamTodayBtn"><span class="icon">⌖</span> Täna</button>
               <button class="btn nav-soft" id="teamNextBtn">Järgmine <span class="icon">›</span></button>
               <button class="btn ghost" id="teamToggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
+              <details class="check-select" id="teamTechPicker">
+                <summary id="teamTechSummary">Kõik tehnikud</summary>
+                <div class="check-select-menu" id="teamTechChecks"></div>
+              </details>
             </div>
           </div>
           <div class="detail-body">
@@ -2713,6 +2780,12 @@
       { id: "EV-01", personId: "U-02", type: "Puhkus", start: "2026-05-18", end: "2026-05-22", note: "Kevadine puhkus" },
       { id: "EV-02", personId: "U-03", type: "Koolitus", start: "2026-05-15", end: "2026-05-15", note: "Automaatika täiendkoolitus" }
     ];
+    let onCallShifts = [
+      { id: "OC-01", personId: "U-01", start: "2026-05-11", end: "2026-05-17", note: "Telefonivalve" },
+      { id: "OC-02", personId: "U-02", start: "2026-05-18", end: "2026-05-24", note: "Telefonivalve" },
+      { id: "OC-03", personId: "U-03", start: "2026-05-25", end: "2026-05-31", note: "Telefonivalve" },
+      { id: "OC-04", personId: "U-01", start: "2026-06-01", end: "2026-06-07", note: "Telefonivalve" }
+    ];
     let projects = [
       {
         id: "PRJ-01",
@@ -2885,6 +2958,7 @@
     let showArchivedActs = false;
     let mobileFocusedJobId = null;
     let mobileSelectedTechs = [];
+    let teamSelectedTechs = [];
     let showWeekends = localStorage.getItem(WEEKEND_KEY) === "true";
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
@@ -2898,6 +2972,7 @@
     const demoData = {
       people: JSON.parse(JSON.stringify(people)),
       peopleEvents: JSON.parse(JSON.stringify(peopleEvents)),
+      onCallShifts: JSON.parse(JSON.stringify(onCallShifts)),
       projects: JSON.parse(JSON.stringify(projects)),
       clients: JSON.parse(JSON.stringify(clients)),
       jobs: JSON.parse(JSON.stringify(jobs))
@@ -2924,6 +2999,12 @@
       mobileSelectedTechs = mobileSelectedTechs.filter(name => available.includes(name));
       if (!mobileSelectedTechs.length && available.length) mobileSelectedTechs = available.slice();
       return mobileSelectedTechs;
+    };
+    const selectedTeamTechnicians = () => {
+      const available = technicians().slice().sort((a, b) => a.localeCompare(b, "et"));
+      teamSelectedTechs = teamSelectedTechs.filter(name => available.includes(name));
+      if (!teamSelectedTechs.length && available.length) teamSelectedTechs = available.slice();
+      return teamSelectedTechs;
     };
     const personName = (id) => (people.find(person => person.id === id) || {}).name || "Tundmatu";
     const selectedClient = () => clients.find(client => client.id === selectedClientId) || clients[0];
@@ -3113,6 +3194,22 @@
       return people
         .filter(person => peopleEvents.some(event => event.personId === person.id && event.start <= date && event.end >= date))
         .map(person => person.name);
+    }
+
+    function onCallForDate(date) {
+      return onCallShifts
+        .filter(shift => shift.start <= date && shift.end >= date)
+        .map(shift => ({ ...shift, person: people.find(person => person.id === shift.personId) }))
+        .filter(shift => shift.person);
+    }
+
+    function onCallLabelForRange(start, end) {
+      const rangeStart = dateKey(start);
+      const rangeEnd = dateKey(end);
+      const names = [...new Set(onCallShifts
+        .filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart)
+        .map(shift => personName(shift.personId)))];
+      return names.length ? `Valve: ${names.join(", ")}` : "Valve puudub";
     }
 
     function priorityScore(job) {
@@ -3571,6 +3668,8 @@
       const selectedTech = $("#technicianFilter").value || "all";
       const selectedActsTech = $("#actsTechFilter").value || "all";
       const mobileTechs = selectedMobileTechnicians();
+      const teamTechs = selectedTeamTechnicians();
+      const sortedTechs = technicians().slice().sort((a, b) => a.localeCompare(b, "et"));
       $("#technicianFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
       $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
@@ -3585,6 +3684,19 @@
       ${technicians().map(name => `
         <label>
           <input type="checkbox" value="${escapeHtml(name)}" ${mobileTechs.includes(name) ? "checked" : ""}>
+          <span>${escapeHtml(name)}</span>
+        </label>
+      `).join("")}`;
+      const allTeamTechsSelected = teamTechs.length === sortedTechs.length;
+      $("#teamTechSummary").textContent = allTeamTechsSelected ? "Kõik tehnikud" : (teamTechs.length === 1 ? teamTechs[0] : `${teamTechs.length} tehnikut`);
+      $("#teamTechChecks").innerHTML = `
+        <label class="select-all">
+          <input type="checkbox" value="__all" ${allTeamTechsSelected ? "checked" : ""}>
+          <span>Vali kõik</span>
+        </label>
+      ${sortedTechs.map(name => `
+        <label>
+          <input type="checkbox" value="${escapeHtml(name)}" ${teamTechs.includes(name) ? "checked" : ""}>
           <span>${escapeHtml(name)}</span>
         </label>
       `).join("")}`;
@@ -3667,7 +3779,7 @@
         return [dateKey(date), dayLabels[index], formatShortDate(date)];
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const endMinutes = calendarEndMinutes(visibleWeekJobs);
@@ -3686,6 +3798,7 @@
         const holiday = holidayName(date);
         const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(date) : "";
         const isToday = date === dateKey(new Date());
+        const onCallNames = onCallForDate(date).map(shift => shift.person.name);
         const cards = dayJobs.map(job => `
           <div class="job-card ${job.id === selectedId ? "selected" : ""} ${conflictJobsFor(job).length ? "has-conflict" : ""}" data-job="${job.id}" data-tooltip="${escapeAttr(jobTooltip(job))}" role="button" tabindex="0" draggable="true" style="${calendarCardStyle(job, overlapLayout.get(job.id))}">
             <span class="job-time"><span>${escapeHtml(job.client)}</span><span>${escapeHtml(job.id)}</span></span>
@@ -3706,6 +3819,7 @@
             ${holiday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">${escapeHtml(holiday)}</div>` : ""}
             ${preHoliday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">Pühale eelnev poolik päev</div>` : ""}
             ${unavailableNames(date).length ? `<div class="job-meta" style="padding:8px 10px;">Puudub: ${escapeHtml(unavailableNames(date).join(", "))}</div>` : ""}
+            ${onCallNames.length ? `<div class="job-meta" style="padding:8px 10px;"><span class="oncall-badge">Valve: ${escapeHtml(onCallNames.join(", "))}</span></div>` : ""}
             <div class="day-body">${cards || `<div class="day-empty">Töid ei ole</div>`}</div>
           </div>
         `;
@@ -4050,22 +4164,36 @@
         return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      $("#teamTitle").textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      $("#teamTitle").textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       $("#teamToggleWeekendBtn").innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel", "täidetud", "akt"];
-      $("#teamGrid").innerHTML = technicians().map(tech => {
+      const visibleTechs = selectedTeamTechnicians();
+      $("#teamGrid").innerHTML = visibleTechs.map(tech => {
         const techJobs = jobs
           .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status) && weekDays.some(day => day.date === job.date))
           .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+        const techPerson = people.find(item => item.name === tech);
+        const techOnCall = techPerson ? onCallShifts.some(shift => shift.personId === techPerson.id && shift.start <= dateKey(weekEnd) && shift.end >= dateKey(weekStart)) : false;
         return `
           <div class="team-row">
-            <div class="team-row-head"><span>${escapeHtml(tech)}</span><span>${techJobs.length} tööd</span></div>
+            <div class="team-row-head"><span>${escapeHtml(tech)} ${techOnCall ? `<span class="oncall-badge">Valves</span>` : ""}</span><span>${techJobs.length} tööd</span></div>
             <div class="team-days ${showWeekends ? "with-weekend" : ""}">
               ${weekDays.map(day => {
                 const dayJobs = techJobs.filter(job => job.date === day.date);
+                const weekday = new Date(`${day.date}T12:00:00`).getDay();
+                const isWeekend = [0, 6].includes(weekday);
+                const holiday = holidayName(day.date);
+                const preHoliday = !holiday && !isWeekend ? nextDayHolidayName(day.date) : "";
+                const person = people.find(item => item.name === tech);
+                const absences = person ? peopleEvents.filter(event => event.personId === person.id && event.start <= day.date && event.end >= day.date) : [];
+                const dayOnCall = person ? onCallShifts.find(shift => shift.personId === person.id && shift.start <= day.date && shift.end >= day.date) : null;
                 return `
-                  <div class="team-day">
+                  <div class="team-day ${holiday ? "public-holiday" : ""} ${preHoliday ? "pre-holiday" : ""} ${isWeekend ? "weekend-day" : ""}">
                     <div class="team-day-head"><span>${day.day}</span><span>${day.label}</span></div>
+                    ${holiday ? `<div class="job-meta" style="color:var(--red);font-weight:800;">${escapeHtml(holiday)}</div>` : ""}
+                    ${preHoliday ? `<div class="job-meta" style="color:var(--red);font-weight:800;">Pühale eelnev poolik päev</div>` : ""}
+                    ${dayOnCall ? `<span class="oncall-badge">Valve</span>` : ""}
+                    ${absences.map(event => `<div class="team-absence">${escapeHtml(event.type)}${event.note ? ` · ${escapeHtml(event.note)}` : ""}</div>`).join("")}
                     ${dayJobs.map(job => {
                       const conflicts = conflictJobsFor(job).filter(other => jobHasTechnician(other, tech));
                       return `
@@ -4086,7 +4214,7 @@
       }).join("") || `<div class="mobile-card">Aktiivseid tehnikuid ei ole lisatud.</div>`;
 
       const conflicts = jobs
-        .filter(job => weekDays.some(day => day.date === job.date))
+        .filter(job => weekDays.some(day => day.date === job.date) && visibleTechs.some(tech => jobHasTechnician(job, tech)))
         .flatMap(job => conflictJobsFor(job).map(other => ({ job, other, key: [job.id, other.id].sort().join("::") })));
       const uniqueConflicts = [...new Map(conflicts.map(item => [item.key, item])).values()];
       $("#teamWarnings").innerHTML = uniqueConflicts.length
@@ -4104,6 +4232,20 @@
           selectedId = card.dataset.teamJob;
           detailJobId = selectedId;
           setDetailCollapsed(false);
+          renderAll();
+        });
+      });
+      $$("#teamTechChecks input[type='checkbox']").forEach(input => {
+        input.addEventListener("change", () => {
+          const available = technicians().slice().sort((a, b) => a.localeCompare(b, "et"));
+          if (input.value === "__all") {
+            teamSelectedTechs = input.checked ? available.slice() : available.slice(0, 1);
+          } else {
+            const checked = $$("#teamTechChecks input[type='checkbox']:checked")
+              .map(item => item.value)
+              .filter(value => value !== "__all");
+            teamSelectedTechs = checked.length ? checked : [input.value];
+          }
           renderAll();
         });
       });
@@ -5023,11 +5165,14 @@
           items.push({ kind: "Saadavus", title: `${name} puudub`, body: `${job.id} tuleks ümber planeerida.` });
         });
       });
+      onCallForDate(dateKey(new Date())).forEach(shift => {
+        items.push({ kind: "Valve", title: `${shift.person.name} on täna valves`, body: `${formatDateEt(shift.start)} - ${formatDateEt(shift.end)}` });
+      });
       return items;
     }
 
     function renderStats() {
-      $("#todayCount").textContent = jobs.filter(job => job.date === "2026-05-14").length;
+      $("#todayCount").textContent = jobs.filter(job => job.date === dateKey(new Date())).length;
       $("#doneCount").textContent = jobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
       renderDatabaseStatus();
     }
@@ -5115,12 +5260,13 @@
     }
 
     function pilotPayload() {
-      return { people, peopleEvents, projects, clients, jobs };
+      return { people, peopleEvents, onCallShifts, projects, clients, jobs };
     }
 
     function applyPilotPayload(data) {
       people = data.people || people;
       peopleEvents = data.peopleEvents || peopleEvents;
+      onCallShifts = data.onCallShifts || onCallShifts;
       projects = data.projects || projects;
       clients = data.clients || clients;
       jobs = data.jobs || jobs;
@@ -5349,7 +5495,7 @@
 
     function exportPilotData() {
       savePilotData();
-      const payload = JSON.stringify({ exportedAt: new Date().toISOString(), people, peopleEvents, clients, jobs }, null, 2);
+      const payload = JSON.stringify({ exportedAt: new Date().toISOString(), ...pilotPayload() }, null, 2);
       const blob = new Blob([payload], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -5366,10 +5512,7 @@
       reader.onload = () => {
         try {
           const data = JSON.parse(reader.result);
-          people = data.people || people;
-          peopleEvents = data.peopleEvents || peopleEvents;
-          clients = data.clients || clients;
-          jobs = data.jobs || jobs;
+          applyPilotPayload(data);
           savePilotData();
           renderAll();
         } catch (error) {
@@ -5384,6 +5527,7 @@
       if (!window.confirm("Kas taastada demo algandmed? Brauserisse salvestatud muudatused asendatakse.")) return;
       people = JSON.parse(JSON.stringify(demoData.people));
       peopleEvents = JSON.parse(JSON.stringify(demoData.peopleEvents));
+      onCallShifts = JSON.parse(JSON.stringify(demoData.onCallShifts));
       projects = JSON.parse(JSON.stringify(demoData.projects));
       clients = JSON.parse(JSON.stringify(demoData.clients));
       jobs = JSON.parse(JSON.stringify(demoData.jobs));
@@ -6326,11 +6470,15 @@ Summa: 2 075,34 €`;
       return true;
     }
 
-    function closeMobileTechPicker() {
-      const picker = $("#mobileTechPicker");
-      if (!picker?.open) return false;
-      picker.open = false;
-      return true;
+    function closeTechPickers() {
+      let closed = false;
+      ["#mobileTechPicker", "#teamTechPicker"].forEach(selector => {
+        const picker = $(selector);
+        if (!picker?.open) return;
+        picker.open = false;
+        closed = true;
+      });
+      return closed;
     }
 
     function syncJobTimeFields(source) {
@@ -7379,8 +7527,8 @@ Summa: 2 075,34 €`;
       if (event.target === modal) closeModal(modal.id);
     }));
     document.addEventListener("click", event => {
-      if ($("#mobileTechPicker")?.open && !event.target.closest("#mobileTechPicker")) {
-        closeMobileTechPicker();
+      if (!event.target.closest("#mobileTechPicker") && !event.target.closest("#teamTechPicker")) {
+        closeTechPickers();
       }
       if (!activeJobMenuId) return;
       if (event.target.closest("[data-job-menu]") || event.target.closest("[data-job]")) return;
@@ -7393,7 +7541,7 @@ Summa: 2 075,34 €`;
         event.preventDefault();
         return;
       }
-      if (closeMobileTechPicker()) {
+      if (closeTechPickers()) {
         event.preventDefault();
         return;
       }
@@ -7408,3 +7556,4 @@ Summa: 2 075,34 €`;
   </script>
 </body>
 </html>
+
