@@ -439,6 +439,13 @@
       background: #edf4fa;
     }
 
+    .check-select-menu label.select-all {
+      border-bottom: 1px solid var(--line);
+      border-radius: 6px 6px 0 0;
+      margin-bottom: 4px;
+      padding-bottom: 8px;
+    }
+
     .calendar {
       padding: 12px;
       position: relative;
@@ -2915,7 +2922,7 @@
     const selectedMobileTechnicians = () => {
       const available = technicians();
       mobileSelectedTechs = mobileSelectedTechs.filter(name => available.includes(name));
-      if (!mobileSelectedTechs.length && available.length) mobileSelectedTechs = [available[0]];
+      if (!mobileSelectedTechs.length && available.length) mobileSelectedTechs = available.slice();
       return mobileSelectedTechs;
     };
     const personName = (id) => (people.find(person => person.id === id) || {}).name || "Tundmatu";
@@ -3353,7 +3360,7 @@
       const result = new Date(date);
       do {
         result.setDate(result.getDate() + 1);
-      } while ([0, 6].includes(result.getDay()));
+      } while ([0, 6].includes(result.getDay()) || holidayName(dateKey(result)));
       return result;
     }
 
@@ -3399,32 +3406,44 @@
       return publicHolidayMap(new Date(`${date}T12:00:00`).getFullYear())[date] || "";
     }
 
+    function isBusinessDate(date) {
+      const key = dateKey(date);
+      return ![0, 6].includes(date.getDay()) && !holidayName(key);
+    }
+
     function nextDayHolidayName(date) {
       const next = dateKey(addDays(new Date(`${date}T12:00:00`), 1));
       return holidayName(next);
     }
 
-    function nextFreeSlot(technician = technicians()[0] || "") {
-      const slots = ["09:00", "11:00", "13:00", "15:00"];
-      let day = new Date();
-      day.setHours(12, 0, 0, 0);
+    function defaultScheduleSlot() {
       const now = new Date();
-      let candidates = slots;
-      if (now.getHours() >= 15) {
+      let day = new Date(now);
+      day.setHours(12, 0, 0, 0);
+      let hour = now.getMinutes() === 0 ? now.getHours() : now.getHours() + 1;
+      if (hour < 7) hour = 7;
+      if (!isBusinessDate(day) || hour >= 17) {
         day = nextBusinessDate(day);
-      } else if (dateKey(day) === dateKey(now)) {
-        candidates = slots.filter(slot => timeToMinutes(slot) > now.getHours() * 60 + now.getMinutes());
-        if (!candidates.length) {
-          day = nextBusinessDate(day);
-          candidates = slots;
-        }
+        hour = 9;
       }
+      return { date: dateKey(day), time: `${String(hour).padStart(2, "0")}:00` };
+    }
+
+    function hourlySlotsFrom(startTime = "09:00") {
+      const startHour = Math.max(7, Math.min(16, Math.floor(timeToMinutes(startTime) / 60)));
+      return Array.from({ length: 17 - startHour }, (_, index) => `${String(startHour + index).padStart(2, "0")}:00`);
+    }
+
+    function nextFreeSlot(technician = technicians()[0] || "") {
+      const preferred = defaultScheduleSlot();
+      let day = new Date(`${preferred.date}T12:00:00`);
+      let candidates = hourlySlotsFrom(preferred.time);
       for (let i = 0; i < 10; i += 1) {
         const date = dateKey(day);
         const free = candidates.find(slot => !jobs.some(job => job.date === date && job.time === slot && jobHasTechnician(job, technician)));
         if (free) return { date, time: free };
         day = nextBusinessDate(day);
-        candidates = slots;
+        candidates = hourlySlotsFrom("09:00");
       }
       return { date: dateKey(day), time: "09:00" };
     }
@@ -3547,13 +3566,19 @@
       $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
       $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
-      $("#mobileTechSummary").textContent = mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`;
-      $("#mobileTechChecks").innerHTML = technicians().map(name => `
+      const allMobileTechsSelected = mobileTechs.length === technicians().length;
+      $("#mobileTechSummary").textContent = allMobileTechsSelected ? "KÃµik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
+      $("#mobileTechChecks").innerHTML = `
+        <label class="select-all">
+          <input type="checkbox" value="__all" ${allMobileTechsSelected ? "checked" : ""}>
+          <span>Vali kÃµik</span>
+        </label>
+      ${technicians().map(name => `
         <label>
           <input type="checkbox" value="${escapeHtml(name)}" ${mobileTechs.includes(name) ? "checked" : ""}>
           <span>${escapeHtml(name)}</span>
         </label>
-      `).join("");
+      `).join("")}`;
       document.querySelector("#jobForm [name='technician']").innerHTML = techOptions;
       document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
       document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
@@ -4077,8 +4102,15 @@
       const selectedTechs = selectedMobileTechnicians();
       $$("#mobileTechChecks input[type='checkbox']").forEach(input => {
         input.addEventListener("change", () => {
-          const next = $$("#mobileTechChecks input[type='checkbox']:checked").map(item => item.value);
-          mobileSelectedTechs = next.length ? next : [input.value];
+          const available = technicians();
+          if (input.value === "__all") {
+            mobileSelectedTechs = input.checked ? available.slice() : available.slice(0, 1);
+          } else {
+            const checked = $$("#mobileTechChecks input[type='checkbox']:checked")
+              .map(item => item.value)
+              .filter(value => value !== "__all");
+            mobileSelectedTechs = checked.length ? checked : [input.value];
+          }
           mobileFocusedJobId = null;
           renderAll();
         });
@@ -6283,6 +6315,13 @@ Summa: 2 075,34 €`;
       return true;
     }
 
+    function closeMobileTechPicker() {
+      const picker = $("#mobileTechPicker");
+      if (!picker?.open) return false;
+      picker.open = false;
+      return true;
+    }
+
     function syncJobTimeFields(source) {
       const form = $("#jobForm");
       const start = form.elements.time.value;
@@ -7329,6 +7368,9 @@ Summa: 2 075,34 €`;
       if (event.target === modal) closeModal(modal.id);
     }));
     document.addEventListener("click", event => {
+      if ($("#mobileTechPicker")?.open && !event.target.closest("#mobileTechPicker")) {
+        closeMobileTechPicker();
+      }
       if (!activeJobMenuId) return;
       if (event.target.closest("[data-job-menu]") || event.target.closest("[data-job]")) return;
       activeJobMenuId = null;
@@ -7337,6 +7379,10 @@ Summa: 2 075,34 €`;
     document.addEventListener("keydown", event => {
       if (event.key !== "Escape") return;
       if (closeTopModal()) {
+        event.preventDefault();
+        return;
+      }
+      if (closeMobileTechPicker()) {
         event.preventDefault();
         return;
       }
