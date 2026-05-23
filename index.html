@@ -2375,7 +2375,7 @@
         <div class="dialog-actions">
           <button class="btn" type="button" id="analyzeImportImageBtn"><span class="icon">✦</span> Analüüsi pilt</button>
           <button class="btn ghost" type="button" data-close="importJobModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✦</span> Loo mustand</button>
+          <button class="btn primary" type="button" id="createImportDraftBtn"><span class="icon">✦</span> Loo mustand</button>
         </div>
       </form>
     </div>
@@ -6004,7 +6004,7 @@ Prioriteet: tavaline`;
       const dueText = labeledValue(text, ["Tähtaeg", "Teostamise kuupäev", "Loodud"]);
       const allDevice = detectAllDeviceWork(text);
       const granlundDue = text.match(/Tähtaeg\s*:\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/i);
-      const dateMatch = granlundDue || allDevice.dueDate.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
+      const dateMatch = granlundDue || (allDevice.dueDate || "").match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
       const timeMatch = text.match(/\b([01]?\d|2[0-3])[:.](00|30|[0-5]\d)\b/);
       let date = fallbackSlot.date;
       if (dateMatch) {
@@ -6029,10 +6029,13 @@ Prioriteet: tavaline`;
     }
 
     function createImportedJobDraft(event) {
-      event.preventDefault();
-      const data = Object.fromEntries(new FormData(event.target).entries());
+      event?.preventDefault?.();
+      const form = $("#importJobForm");
+      const data = Object.fromEntries(new FormData(form).entries());
+      const note = form.elements.aiNote;
+      try {
       const text = String(data.sourceText || "").trim() || `${data.fileName || ""} ${importedImageName || ""}`;
-      const client = detectClientFromText(text);
+      const client = detectClientFromText(text) || clients[0] || { name: "Tuvastamata klient", contact: "", phone: "", items: [] };
       const lower = text.toLowerCase();
       const priority = lower.includes("kiire") || lower.includes("kõrge") || lower.includes("prioriteet") ? "Kõrge" : "Tavaline";
       const detectedContact = detectContactFromText(text);
@@ -6073,6 +6076,9 @@ Prioriteet: tavaline`;
       detailJobId = selectedId;
       closeModal("importJobModal");
       openJobModal(draft.id);
+      } catch (error) {
+        note.value = `Mustandi loomine ei õnnestunud: ${error?.message || "tundmatu viga"}\n\nKontrolli tuvastatud teksti või proovi pilt uuesti lisada.`;
+      }
     }
 
     function buildDraftFromText(source, sourceText, fileName = "") {
@@ -6951,6 +6957,7 @@ Summa: 2 075,34 €`;
     $("#jobForm").elements.endTime.addEventListener("change", () => syncJobTimeFields("end"));
     $("#techFillForm").addEventListener("submit", saveTechFill);
     $("#importJobForm").addEventListener("submit", createImportedJobDraft);
+    $("#createImportDraftBtn").addEventListener("click", createImportedJobDraft);
     $("#personForm").addEventListener("submit", savePerson);
     $("#eventForm").addEventListener("submit", saveEvent);
     $("#clientForm").addEventListener("submit", saveClient);
