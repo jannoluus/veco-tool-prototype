@@ -5744,6 +5744,14 @@ Prioriteet: tavaline`;
     function normalizeImportedLocation(value) {
       return compactImportedValue(value)
         .replace(/\b(TELLISKIVI\s+60)8\b/ig, "$1A8")
+        .replace(/\bPO[I1Õ]KM[ÄA]E\s+(\d+)\s+[|I1]\b/ig, "Põikmäe $1")
+        .replace(/\bPO[I1Õ]KM[ÄA]E\s+(\d+)\b/ig, "Põikmäe $1")
+        .trim();
+    }
+
+    function normalizeImportedObjectName(value) {
+      return normalizeImportedLocation(value)
+        .replace(/\s+[|I1]\s*$/i, "")
         .trim();
     }
 
@@ -5815,7 +5823,7 @@ Prioriteet: tavaline`;
         || normalized.match(new RegExp(`\\b([A-ZÕÄÖÜ0-9 .\\/-]{4,}LOGISTIKAKESKUS)\\s*(?:\\|\\s*)?${idPattern}\\s*:\\s*(\\d+)`, "i"));
       return {
         title: stripOcrNoise(title),
-        object: object ? stripOcrNoise(object[1]) : "",
+        object: object ? normalizeImportedObjectName(object[1]) : "",
         id: object ? object[2] : ""
       };
     }
