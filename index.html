@@ -3518,14 +3518,20 @@
       const rangeEnd = dateKey(end);
       const names = [...new Set(onCallShifts
         .filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart)
-        .map(shift => personName(shift.personId)))];
+        .map(shift => people.find(person => person.id === shift.personId)?.name)
+        .filter(Boolean))];
       return names.length ? `Valve: ${names.join(", ")}` : "Valve puudub";
     }
 
     function onCallShiftForRange(start, end) {
       const rangeStart = dateKey(start);
       const rangeEnd = dateKey(end);
-      const matches = onCallShifts.filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart);
+      const activePersonIds = new Set(people.filter(person => person.active).map(person => person.id));
+      const matches = onCallShifts.filter(shift =>
+        shift.start <= rangeEnd &&
+        shift.end >= rangeStart &&
+        activePersonIds.has(shift.personId)
+      );
       return matches.find(shift => shift.start === rangeStart && shift.end === rangeEnd) || matches[matches.length - 1] || null;
     }
 
