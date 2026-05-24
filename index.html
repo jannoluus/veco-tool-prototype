@@ -103,6 +103,10 @@
       display: block;
     }
 
+    .app.team-view #technicianFilter {
+      display: none;
+    }
+
     .sidebar {
       background: var(--sidebar-bg);
       color: var(--sidebar-ink);
@@ -2052,8 +2056,8 @@
       </button>
       <nav class="nav" aria-label="Põhivaated">
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
-        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
+        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
         <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
@@ -7596,6 +7600,7 @@ Summa: 2 075,34 €`;
     function switchView(name, updateUrl = true) {
       const targetView = viewNames.includes(name) ? name : "calendar";
       $("#appShell").classList.toggle("technician-standalone", targetView === "mobile");
+      $("#appShell").classList.toggle("team-view", targetView === "team");
       viewNames.forEach(view => {
         $(`#${view}View`).classList.toggle("hidden", view !== targetView);
       });
