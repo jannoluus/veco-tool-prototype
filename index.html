@@ -339,8 +339,33 @@
       flex-wrap: wrap;
     }
 
+    #calendarView > .panel > .panel-head,
+    #teamView > .panel > .panel-head {
+      display: grid;
+      grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
+      align-items: start;
+      column-gap: 24px;
+    }
+
+    #calendarView > .panel > .panel-head .panel-title-inline,
+    #teamView > .panel > .panel-head .panel-title-inline {
+      align-content: start;
+      max-width: 560px;
+    }
+
+    #calendarView > .panel > .panel-head .filters,
+    #teamView > .panel > .panel-head .filters {
+      justify-content: flex-start;
+    }
+
+    #calendarTitle,
+    #teamTitle {
+      max-width: 100%;
+    }
+
     .oncall-inline-select {
-      min-width: 170px;
+      width: 280px;
+      max-width: 100%;
       height: 36px;
       font-weight: 700;
     }
@@ -1394,6 +1419,10 @@
     #onCallView .person-actions .btn {
       justify-content: center;
       min-width: 0;
+      padding-inline: 10px;
+      white-space: normal;
+      line-height: 1.2;
+      min-height: 38px;
     }
 
     .ai-select-row {
@@ -1561,6 +1590,47 @@
     .week-picker-summary {
       color: var(--ink);
       font-weight: 800;
+    }
+
+    .rotation-list {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8fafc;
+    }
+
+    .rotation-row {
+      display: grid;
+      grid-template-columns: 24px minmax(120px, 1fr) 86px;
+      align-items: center;
+      gap: 10px;
+      min-height: 38px;
+    }
+
+    .rotation-row strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .rotation-summary {
+      grid-column: 1 / -1;
+      color: var(--muted);
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .rotation-summary strong,
+    .rotation-summary span {
+      display: block;
+    }
+
+    .rotation-summary strong {
+      color: var(--ink);
+      margin-bottom: 4px;
     }
 
     textarea {
@@ -1860,7 +1930,8 @@
     }
 
     body.theme-dark .week-picker,
-    body.theme-dark .week-picker-day {
+    body.theme-dark .week-picker-day,
+    body.theme-dark .rotation-list {
       background: #111b22;
       border-color: var(--line);
       color: var(--ink);
@@ -2434,6 +2505,7 @@
               <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
                 <option value="all">Kõik tehnikud</option>
               </select>
+              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Loo rotatsioon</button>
             </div>
           </div>
           <div class="detail-body">
@@ -2951,6 +3023,35 @@
           <button class="btn danger hidden" id="deleteOnCallFromModalBtn" type="button"><span class="icon">×</span> Kustuta</button>
           <button class="btn ghost" type="button" data-close="onCallModal">Tühista</button>
           <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="onCallRotationModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
+      <div class="dialog-head">
+        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
+        <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="onCallRotationForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Aasta<input class="field" name="weekYear" type="number" min="2020" max="2100" required></label>
+            <label>Algusnädal nr<input class="field" name="weekNo" type="number" min="1" max="53" required></label>
+            <label>Nädalate arv<input class="field" name="weeks" type="number" min="1" max="52" value="8" required></label>
+            <label>Märkus<input class="field" name="note" value="Telefonivalve" placeholder="nt telefonivalve"></label>
+            <div class="week-picker">
+              <div class="week-picker-summary" id="onCallRotationWeekSummary">Algusnädal</div>
+              <div class="week-picker-days" id="onCallRotationWeekDays"></div>
+            </div>
+            <div class="rotation-list" id="onCallRotationPeople"></div>
+            <div class="rotation-summary" id="onCallRotationSummary"></div>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo rotatsioon</button>
         </div>
       </form>
     </div>
@@ -5081,8 +5182,8 @@
             <div class="kv"><span>Praegune valve</span><strong>${current ? `${escapeHtml(current.start)} kuni ${escapeHtml(current.end)}` : "puudub"}</strong></div>
             <div class="kv"><span>Järgmine valve</span><strong>${next ? `${escapeHtml(next.start)} kuni ${escapeHtml(next.end)}` : "planeerimata"}</strong></div>
             <div class="person-actions">
-              ${current ? `<button class="btn" data-edit-oncall="${current.id}"><span class="icon">✎</span> Muuda praegust</button>` : ""}
-              ${next ? `<button class="btn" data-edit-oncall="${next.id}"><span class="icon">✎</span> Muuda järgmist</button>` : ""}
+              ${current ? `<button class="btn" data-edit-oncall="${current.id}" title="Muuda praegust valvet"><span class="icon">✎</span> Praegune</button>` : ""}
+              ${next ? `<button class="btn" data-edit-oncall="${next.id}" title="Muuda järgmist valvet"><span class="icon">✎</span> Järgmine</button>` : ""}
               <button class="btn" data-new-oncall-person="${person.id}"><span class="icon">＋</span> Lisa valve</button>
             </div>
           </div>
@@ -7509,6 +7610,121 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
+    function openOnCallRotationModal() {
+      const form = $("#onCallRotationForm");
+      form.reset();
+      const base = startOfWeek(calendarCursor);
+      form.elements.weekYear.value = isoWeekYear(base);
+      form.elements.weekNo.value = weekNumber(base);
+      form.elements.weeks.value = 8;
+      form.elements.note.value = "Telefonivalve";
+      renderOnCallRotationPeople();
+      updateOnCallRotationPreview();
+      $("#onCallRotationModal").classList.add("open");
+      $("#onCallRotationModal").setAttribute("aria-hidden", "false");
+    }
+
+    function renderOnCallRotationPeople() {
+      const activePeople = people
+        .filter(person => person.active)
+        .sort((a, b) => a.name.localeCompare(b.name, "et"));
+      $("#onCallRotationPeople").innerHTML = activePeople.length ? activePeople.map((person, index) => `
+        <div class="rotation-row">
+          <input type="checkbox" data-rotation-person="${escapeAttr(person.id)}" checked aria-label="${escapeAttr(person.name)} kaasatud">
+          <div>
+            <strong>${escapeHtml(person.name)}</strong>
+            <span class="job-meta">${escapeHtml(person.role || "Tehnik")} · ${escapeHtml(person.region || "-")}</span>
+          </div>
+          <input class="field" type="number" min="1" value="${index + 1}" data-rotation-order="${escapeAttr(person.id)}" aria-label="${escapeAttr(person.name)} järjekord">
+        </div>
+      `).join("") : `<div class="mobile-card">Aktiivseid tehnikuid ei ole.</div>`;
+      $$("#onCallRotationPeople input").forEach(input => {
+        input.addEventListener("input", updateOnCallRotationPreview);
+        input.addEventListener("change", updateOnCallRotationPreview);
+      });
+    }
+
+    function selectedOnCallRotationPeople() {
+      return $$("#onCallRotationPeople [data-rotation-person]")
+        .filter(input => input.checked)
+        .map(input => {
+          const id = input.dataset.rotationPerson;
+          const person = people.find(item => item.id === id);
+          const orderInput = document.querySelector(`[data-rotation-order="${id}"]`);
+          if (!person) return null;
+          return {
+            id,
+            name: person.name,
+            order: Number(orderInput?.value) || 999
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, "et"));
+    }
+
+    function updateOnCallRotationPreview() {
+      const form = $("#onCallRotationForm");
+      if (!form) return;
+      const year = Number(form.elements.weekYear.value) || isoWeekYear(calendarCursor);
+      const week = Math.max(1, Math.min(53, Number(form.elements.weekNo.value) || weekNumber(calendarCursor)));
+      const weeks = Math.max(1, Math.min(52, Number(form.elements.weeks.value) || 1));
+      form.elements.weekYear.value = year;
+      form.elements.weekNo.value = week;
+      form.elements.weeks.value = weeks;
+      const start = startOfIsoWeek(year, week);
+      const end = addDays(start, 6);
+      $("#onCallRotationWeekSummary").textContent = `Algus: nädal ${week} · ${formatWeekRange(start, end)} · ${year}`;
+      const labels = ["E", "T", "K", "N", "R", "L", "P"];
+      $("#onCallRotationWeekDays").innerHTML = labels.map((label, index) => {
+        const day = addDays(start, index);
+        return `<div class="week-picker-day"><strong>${label}</strong><span>${escapeHtml(formatShortDate(day))}</span></div>`;
+      }).join("");
+      const selected = selectedOnCallRotationPeople();
+      const chain = selected.length ? `${selected.map(person => person.name).join(" > ")} > ${selected[0].name}` : "Vali vähemalt üks tehnik";
+      const lastEnd = addDays(start, weeks * 7 - 1);
+      $("#onCallRotationSummary").innerHTML = `
+        <strong>Rotatsioon</strong>
+        <span>${escapeHtml(chain)}</span>
+        <span>${weeks} nädalat · ${escapeHtml(formatWeekRange(start, lastEnd))}</span>
+      `;
+    }
+
+    function saveOnCallRotation(event) {
+      event.preventDefault();
+      const form = event.target;
+      const selected = selectedOnCallRotationPeople();
+      if (!selected.length) {
+        alert("Vali rotatsiooni vähemalt üks tehnik.");
+        return;
+      }
+      const year = Number(form.elements.weekYear.value) || isoWeekYear(calendarCursor);
+      const week = Math.max(1, Math.min(53, Number(form.elements.weekNo.value) || weekNumber(calendarCursor)));
+      const weeks = Math.max(1, Math.min(52, Number(form.elements.weeks.value) || 1));
+      const start = startOfIsoWeek(year, week);
+      const end = addDays(start, weeks * 7 - 1);
+      const rangeStart = dateKey(start);
+      const rangeEnd = dateKey(end);
+      const overlapping = onCallShifts.filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart);
+      if (overlapping.length) {
+        const ok = window.confirm(`Valitud perioodis on juba ${overlapping.length} valvekirjet.\n\nKas asendada need uue rotatsiooniga?`);
+        if (!ok) return;
+        onCallShifts = onCallShifts.filter(shift => !(shift.start <= rangeEnd && shift.end >= rangeStart));
+      }
+      const note = form.elements.note.value.trim() || "Telefonivalve";
+      for (let index = 0; index < weeks; index += 1) {
+        const weekStart = addDays(start, index * 7);
+        onCallShifts.push({
+          id: nextOnCallId(),
+          personId: selected[index % selected.length].id,
+          start: dateKey(weekStart),
+          end: dateKey(addDays(weekStart, 6)),
+          note
+        });
+      }
+      closeModal("onCallRotationModal");
+      renderAll();
+    }
+
     function openClientModal(id = null) {
       editingClientId = id;
       const form = $("#clientForm");
@@ -8191,6 +8407,7 @@ Summa: 2 075,34 €`;
     $("#newEventBtn").addEventListener("click", () => openEventModal());
     $("#newVacationEventBtn").addEventListener("click", () => openEventModal());
     $("#newOnCallBtn").addEventListener("click", () => openOnCallModal());
+    $("#newOnCallRotationBtn").addEventListener("click", openOnCallRotationModal);
     $("#newClientBtn").addEventListener("click", () => openClientModal());
     $("#newClientItemBtn").addEventListener("click", openClientItemModal);
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
@@ -8248,6 +8465,7 @@ Summa: 2 075,34 €`;
     $("#personForm").addEventListener("submit", savePerson);
     $("#eventForm").addEventListener("submit", saveEvent);
     $("#onCallForm").addEventListener("submit", saveOnCall);
+    $("#onCallRotationForm").addEventListener("submit", saveOnCallRotation);
     $("#onCallForm").elements.rangeMode.addEventListener("change", () => {
       updateOnCallRangeMode();
       updateOnCallWeekFields();
@@ -8262,6 +8480,9 @@ Summa: 2 075,34 €`;
       updateOnCallWeekFields();
     });
     $("#deleteOnCallFromModalBtn").addEventListener("click", () => deleteOnCall());
+    $("#onCallRotationForm").elements.weekYear.addEventListener("input", updateOnCallRotationPreview);
+    $("#onCallRotationForm").elements.weekNo.addEventListener("input", updateOnCallRotationPreview);
+    $("#onCallRotationForm").elements.weeks.addEventListener("input", updateOnCallRotationPreview);
     $("#clientForm").addEventListener("submit", saveClient);
     $("#clientItemForm").addEventListener("submit", saveClientItem);
     $("#clientItemForm").elements.type.addEventListener("change", updateClientItemFormMode);
