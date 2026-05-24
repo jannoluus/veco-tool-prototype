@@ -4318,6 +4318,7 @@
     }
 
     function renderMobile() {
+      $("#mobileTechPicker").classList.remove("hidden");
       const selectedTechs = selectedMobileTechnicians();
       $$("#mobileTechChecks input[type='checkbox']").forEach(input => {
         input.addEventListener("change", () => {
