@@ -691,6 +691,19 @@
       background: #4e6f87;
     }
 
+    .time-axis .current-time-marker {
+      right: auto;
+      left: 0;
+      top: calc(var(--calendar-head-height) + var(--current-time-top, 0px) - 10px);
+      padding: 3px 6px;
+      border-radius: 999px;
+      background: var(--blue);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      z-index: 3;
+    }
+
     .calendar-grid.month {
       display: grid;
       grid-template-columns: repeat(7, minmax(110px, 1fr));
@@ -796,6 +809,30 @@
       position: relative;
       flex: 1 1 auto;
       min-height: var(--calendar-body-height, 480px);
+    }
+
+    .current-time-line {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: var(--current-time-top, 0px);
+      height: 2px;
+      background: var(--blue);
+      z-index: 6;
+      pointer-events: none;
+      box-shadow: 0 0 0 1px rgba(23,105,170,.12);
+    }
+
+    .current-time-line::before {
+      content: "";
+      position: absolute;
+      left: -5px;
+      top: -4px;
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      background: var(--blue);
+      box-shadow: 0 0 0 2px rgba(23,105,170,.18);
     }
 
     .day-empty {
@@ -2184,6 +2221,8 @@
               <select class="ticker-select" id="newsSourceSelect" aria-label="Uudiste allikas">
                 <option value="err">ERR</option>
                 <option value="err-news">ERR uudised</option>
+                <option value="google-ee">Google News EE</option>
+                <option value="uudishimu">Stuudio Uudishimu</option>
                 <option value="off">Ainult tööd</option>
               </select>
             </div>
@@ -3028,6 +3067,8 @@
     const newsSources = {
       err: { label: "ERR", url: "https://www.err.ee/rss" },
       "err-news": { label: "ERR uudised", url: "https://www.err.ee/rss" },
+      "google-ee": { label: "Google News EE", url: "https://news.google.com/rss?hl=et-EE&gl=EE&ceid=EE:et", type: "rss" },
+      uudishimu: { label: "Stuudio Uudishimu", url: "https://www.stuudio.ee/uudishimu/", type: "html" },
       off: { label: "Ainult tööd", url: "" }
     };
 
@@ -3471,6 +3512,26 @@
       return Math.round(((minutes - 7 * 60) / 60) * calendarHourHeight);
     }
 
+    function currentTimeMinutes() {
+      const now = new Date();
+      return now.getHours() * 60 + now.getMinutes();
+    }
+
+    function currentTimeAxisMarker(weekDays, endMinutes) {
+      const today = dateKey(new Date());
+      if (!weekDays.some(([date]) => date === today)) return "";
+      const minutes = currentTimeMinutes();
+      if (minutes < 7 * 60 || minutes > endMinutes) return "";
+      return `<span class="current-time-marker" style="--current-time-top:${axisTopForMinutes(minutes)}px">${escapeHtml(minutesToTime(minutes))}</span>`;
+    }
+
+    function currentTimeLine(date, endMinutes) {
+      if (date !== dateKey(new Date())) return "";
+      const minutes = currentTimeMinutes();
+      if (minutes < 7 * 60 || minutes > endMinutes) return "";
+      return `<div class="current-time-line" style="--current-time-top:${axisTopForMinutes(minutes)}px" aria-hidden="true"></div>`;
+    }
+
     function calendarTimeFromPointer(day, event) {
       const body = day.querySelector(".day-body");
       if (!body) return "";
@@ -3848,14 +3909,17 @@
       $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
-      const endMinutes = calendarEndMinutes(visibleWeekJobs);
+      const todayVisible = weekDays.some(([date]) => date === dateKey(new Date()));
+      const baseEndMinutes = calendarEndMinutes(visibleWeekJobs);
+      const nowMinutes = currentTimeMinutes();
+      const endMinutes = todayVisible && nowMinutes > baseEndMinutes ? Math.min(23 * 60, Math.ceil((nowMinutes + 60) / 60) * 60) : baseEndMinutes;
       const hourHeight = fitCalendarHourHeight(endMinutes);
       const bodyHeight = Math.round(((endMinutes - 7 * 60) / 60) * hourHeight);
       $("#weekGrid").style.setProperty("--calendar-hour-height", `${hourHeight}px`);
       $("#weekGrid").style.setProperty("--calendar-body-height", `${bodyHeight}px`);
       const timeAxis = `<div class="time-axis" aria-hidden="true">${
         Array.from({ length: Math.floor((endMinutes - 7 * 60) / 60) + 1 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
-      }${selectedJobRangeMarkers(endMinutes)}</div>`;
+      }${selectedJobRangeMarkers(endMinutes)}${currentTimeAxisMarker(weekDays, endMinutes)}</div>`;
       $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const overlapLayout = overlapLayoutForJobs(dayJobs);
@@ -3886,7 +3950,7 @@
             ${preHoliday ? `<div class="job-meta" style="padding:8px 10px;color:var(--red);font-weight:700;">Pühale eelnev poolik päev</div>` : ""}
             ${unavailableNames(date).length ? `<div class="job-meta" style="padding:8px 10px;">Puudub: ${escapeHtml(unavailableNames(date).join(", "))}</div>` : ""}
             ${onCallNames.length ? `<div class="job-meta" style="padding:8px 10px;"><span class="oncall-badge">Valve: ${escapeHtml(onCallNames.join(", "))}</span></div>` : ""}
-            <div class="day-body">${cards || `<div class="day-empty">Töid ei ole</div>`}</div>
+            <div class="day-body">${currentTimeLine(date, endMinutes)}${cards || `<div class="day-empty">Töid ei ole</div>`}</div>
           </div>
         `;
       }).join("");
@@ -5331,14 +5395,28 @@
         const feedUrl = encodeURIComponent(source.url);
         const response = await fetch(`https://api.allorigins.win/raw?url=${feedUrl}`, { cache: "no-store" });
         if (!response.ok) throw new Error("RSS ei vastanud");
-        const xml = await response.text();
-        const doc = new DOMParser().parseFromString(xml, "text/xml");
-        const title = doc.querySelector("item title")?.textContent?.trim();
+        const text = await response.text();
+        const doc = new DOMParser().parseFromString(text, source.type === "html" ? "text/html" : "text/xml");
+        const title = source.type === "html"
+          ? extractHtmlNewsTitle(doc)
+          : doc.querySelector("item title")?.textContent?.trim();
         if (title) latestNewsHeadline = title;
       } catch (error) {
         latestNewsHeadline = "Internetiuudist ei saanud hetkel laadida.";
       }
       renderNewsTicker();
+    }
+
+    function extractHtmlNewsTitle(doc) {
+      const candidates = [
+        ...Array.from(doc.querySelectorAll("article h1, article h2, article h3, main h1, main h2, main h3")),
+        ...Array.from(doc.querySelectorAll("a"))
+      ];
+      const blocked = /cookie|privaats|menu|avaleht|kontakt|login|logi|facebook|instagram/i;
+      const title = candidates
+        .map(node => node.textContent?.replace(/\s+/g, " ").trim() || "")
+        .find(text => text.length >= 24 && text.length <= 180 && !blocked.test(text));
+      return title || "";
     }
 
     function applyTickerSettings() {
@@ -7684,6 +7762,9 @@ Summa: 2 075,34 €`;
     window.addEventListener("resize", () => {
       if ($("#calendarView").classList.contains("active")) renderCalendar();
     });
+    window.setInterval(() => {
+      if ($("#calendarView").classList.contains("active") && $("#calendarMode").value === "week") renderCalendar();
+    }, 60000);
   </script>
 </body>
 </html>
