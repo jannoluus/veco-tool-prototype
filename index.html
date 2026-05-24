@@ -92,7 +92,15 @@
 
     .app.technician-standalone .topbar {
       max-width: 100vw;
-      overflow-x: hidden;
+      overflow: visible;
+    }
+
+    .mobile-top-filter {
+      display: none;
+    }
+
+    .app.technician-standalone .mobile-top-filter {
+      display: block;
     }
 
     .sidebar {
@@ -1218,6 +1226,21 @@
       gap: 8px;
     }
 
+    .mobile-section-label {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .job-card.is-overdue {
+      border-color: #d97706;
+      background: #fff8ec;
+      box-shadow: 0 0 0 3px rgba(217,119,6,.10);
+    }
+
     .mobile-actions .btn.is-running {
       background: #1769aa;
       border-color: #1769aa;
@@ -1685,6 +1708,12 @@
       background: #22313b;
     }
 
+    body.theme-dark .job-card.is-overdue {
+      background: #271c12;
+      border-color: #d97706;
+      box-shadow: 0 0 0 3px rgba(217,119,6,.18);
+    }
+
     body.theme-dark .day,
     body.theme-dark .team-row,
     body.theme-dark .team-day,
@@ -2014,6 +2043,10 @@
           <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
           <input id="importDataFile" type="file" accept="application/json" class="hidden">
           <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+          <details class="check-select mobile-top-filter" id="mobileTechPicker">
+            <summary id="mobileTechSummary">Kõik tehnikud</summary>
+            <div class="check-select-menu" id="mobileTechChecks"></div>
+          </details>
           <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
         </div>
       </header>
@@ -2226,12 +2259,6 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Tehniku mobiilivaade</h2>
-            <div class="filters">
-              <details class="check-select" id="mobileTechPicker">
-                <summary id="mobileTechSummary">Tehnikud</summary>
-                <div class="check-select-menu" id="mobileTechChecks"></div>
-              </details>
-            </div>
           </div>
           <div class="detail-body" id="mobileJobs"></div>
         </div>
@@ -3170,6 +3197,10 @@
 
     function totalWorkMinutes(job) {
       return (job.timeLogs || []).reduce((sum, log) => sum + minutesBetween(log.start, log.end), 0);
+    }
+
+    function jobHasStarted(job) {
+      return (job.timeLogs || []).some(log => log.start);
     }
 
     function formatMinutes(minutes) {
@@ -4300,11 +4331,18 @@
       const techJobs = jobs
         .filter(job => selectedTechs.some(tech => jobHasTechnician(job, tech)) && activeStatuses.includes(job.status))
         .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
+      const todayKey = dateKey(new Date());
+      const pastUnstartedJobs = techJobs.filter(job =>
+        job.date < todayKey
+        && ["uus", "planeeritud"].includes(job.status)
+        && !jobHasStarted(job)
+      );
+      const pastUnstartedIds = new Set(pastUnstartedJobs.map(job => job.id));
+      const currentJobs = techJobs.filter(job => !pastUnstartedIds.has(job.id));
       if (mobileFocusedJobId && !techJobs.some(job => job.id === mobileFocusedJobId)) mobileFocusedJobId = null;
       const focusedJob = mobileFocusedJobId ? techJobs.find(job => job.id === mobileFocusedJobId) : null;
-      const listedJobs = focusedJob ? [focusedJob] : techJobs;
-      $("#mobileJobs").innerHTML = listedJobs.map(job => `
-        <button class="job-card ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
+      const mobileJobCard = (job, extraClass = "") => `
+        <button class="job-card ${extraClass} ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
           <span class="job-time"><span>${escapeHtml(job.date)} ${escapeHtml(job.time)}</span><span>${escapeHtml(job.id)}</span></span>
           <span class="job-title">${escapeHtml(job.client)}</span>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
@@ -4312,7 +4350,19 @@
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
           <span class="status ${statusClass(job.status)}">${statusLabels[job.status]}</span>
         </button>
-      `).join("") || `<div class="detail-body"><div class="mobile-card">Valitud tehnikutel ei ole tänaseid ega aktiivseid töid.</div></div>`;
+      `;
+      $("#mobileJobs").innerHTML = focusedJob
+        ? mobileJobCard(focusedJob, pastUnstartedIds.has(focusedJob.id) ? "is-overdue" : "")
+        : [
+            pastUnstartedJobs.length ? `
+              <div class="mobile-section-label">Varasemad alustamata tööd</div>
+              ${pastUnstartedJobs.map(job => mobileJobCard(job, "is-overdue")).join("")}
+            ` : "",
+            currentJobs.length ? `
+              <div class="mobile-section-label">Tänased ja aktiivsed tööd</div>
+              ${currentJobs.map(job => mobileJobCard(job)).join("")}
+            ` : ""
+          ].join("") || `<div class="detail-body"><div class="mobile-card">Valitud tehnikutel ei ole tänaseid, aktiivseid ega varasemaid alustamata töid.</div></div>`;
 
       const job = focusedJob || techJobs.find(item => item.id === selectedId) || techJobs[0];
 
@@ -6598,6 +6648,7 @@ Summa: 2 075,34 €`;
       }
       closeModal("jobModal");
       renderAll();
+      if (supabaseClient) await pushPilotDataToDatabase(false);
     }
 
     function prioritizeJob(id) {
