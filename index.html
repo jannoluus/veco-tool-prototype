@@ -977,11 +977,44 @@
     .team-row-head {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       gap: 12px;
       padding: 11px 12px;
       border-bottom: 1px solid var(--line);
       background: #eef3f5;
       font-weight: 800;
+    }
+
+    .team-load {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .load-meter {
+      width: 86px;
+      height: 7px;
+      border-radius: 999px;
+      background: rgba(91,111,127,.22);
+      overflow: hidden;
+    }
+
+    .load-meter span {
+      display: block;
+      width: var(--load-pct, 0%);
+      height: 100%;
+      border-radius: inherit;
+      background: var(--blue);
+    }
+
+    .load-meter.over span {
+      background: #d97706;
     }
 
     .team-days {
@@ -2062,6 +2095,7 @@
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
         <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
+        <button data-view="oncall"><span class="icon">☎</span> Valvegraafik</button>
         <button id="moreNavBtn" type="button" aria-expanded="false"><span class="icon">⋯</span> Veel</button>
         <div class="nav-more" id="moreNav" hidden>
           <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
@@ -2302,6 +2336,31 @@
           </div>
           <div class="detail-body">
             <div class="timeline" id="vacationTimeline"></div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="content hidden" id="oncallView">
+        <div class="panel">
+          <div class="panel-head">
+            <h2>Valvegraafik</h2>
+            <div class="filters">
+              <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+            </div>
+          </div>
+          <div class="detail-body">
+            <div class="people-grid" id="onCallGrid"></div>
+          </div>
+        </div>
+        <aside class="panel detail">
+          <div class="panel-head">
+            <h2>Valved</h2>
+            <button class="btn primary" id="newOnCallBtn"><span class="icon">＋</span> Lisa valve</button>
+          </div>
+          <div class="detail-body">
+            <div class="timeline" id="onCallTimeline"></div>
           </div>
         </aside>
       </section>
@@ -2775,6 +2834,30 @@
     </div>
   </div>
 
+  <div class="modal" id="onCallModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallModalTitle">
+      <div class="dialog-head">
+        <h2 id="onCallModalTitle">Lisa valve</h2>
+        <button class="btn ghost" data-close="onCallModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="onCallForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label>Tehnik<select class="select" name="personId" required></select></label>
+            <label>Algus<input class="field" name="start" type="date" required></label>
+            <label>Lõpp<input class="field" name="end" type="date" required></label>
+            <label class="full">Märkus<textarea name="note" placeholder="nt telefonivalve, piirkond või erikokkulepe"></textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn danger hidden" id="deleteOnCallFromModalBtn" type="button"><span class="icon">×</span> Kustuta</button>
+          <button class="btn ghost" type="button" data-close="onCallModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="clientModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
       <div class="dialog-head">
@@ -3032,6 +3115,7 @@
     let editingId = null;
     let editingPersonId = null;
     let editingEventId = null;
+    let editingOnCallId = null;
     let selectedClientId = clients[0].id;
     let editingClientId = null;
     let editingClientItemId = null;
@@ -3343,6 +3427,101 @@
       const h = String(Math.floor(normalized / 60)).padStart(2, "0");
       const m = String(normalized % 60).padStart(2, "0");
       return `${h}:${m}`;
+    }
+
+    const WORKDAY_START_MINUTES = 8 * 60;
+    const WORKDAY_END_MINUTES = 17 * 60;
+    const WORKDAY_CAPACITY_MINUTES = 8 * 60;
+
+    function mergeIntervals(intervals) {
+      return intervals
+        .filter(item => item.end > item.start)
+        .sort((a, b) => a.start - b.start)
+        .reduce((merged, interval) => {
+          const last = merged[merged.length - 1];
+          if (!last || interval.start > last.end) {
+            merged.push({ ...interval });
+          } else {
+            last.end = Math.max(last.end, interval.end);
+          }
+          return merged;
+        }, []);
+    }
+
+    function planningJobsForTechnician(technician, date = "") {
+      return jobs.filter(job => {
+        if (!jobHasTechnician(job, technician)) return false;
+        if (date && job.date !== date) return false;
+        return !["arhiveeritud"].includes(job.status);
+      });
+    }
+
+    function technicianBusyIntervals(technician, date) {
+      return mergeIntervals(planningJobsForTechnician(technician, date).map(job => ({
+        start: jobStartMinutes(job),
+        end: jobEndMinutes(job),
+        job
+      })));
+    }
+
+    function technicianFreeIntervals(technician, date, minMinutes = 60) {
+      const day = new Date(`${date}T12:00:00`);
+      if (!isBusinessDate(day) || isPersonUnavailable(technician, date)) return [];
+      const busy = mergeIntervals(technicianBusyIntervals(technician, date).map(interval => ({
+        start: Math.max(WORKDAY_START_MINUTES, interval.start),
+        end: Math.min(WORKDAY_END_MINUTES, interval.end)
+      })));
+      const free = [];
+      let cursor = WORKDAY_START_MINUTES;
+      busy.forEach(interval => {
+        if (interval.start - cursor >= minMinutes) free.push({ start: cursor, end: interval.start });
+        cursor = Math.max(cursor, interval.end);
+      });
+      if (WORKDAY_END_MINUTES - cursor >= minMinutes) free.push({ start: cursor, end: WORKDAY_END_MINUTES });
+      return free;
+    }
+
+    function nextAvailableSlotForTechnician(technician, durationMinutes = 120, preferred = defaultScheduleSlot()) {
+      let day = new Date(`${preferred.date}T12:00:00`);
+      for (let i = 0; i < 90; i += 1) {
+        const date = dateKey(day);
+        const minStart = i === 0 ? Math.max(WORKDAY_START_MINUTES, timeToMinutes(preferred.time || "09:00")) : WORKDAY_START_MINUTES;
+        const slot = technicianFreeIntervals(technician, date, durationMinutes)
+          .map(interval => ({ ...interval, start: Math.max(interval.start, minStart) }))
+          .find(interval => interval.end - interval.start >= durationMinutes);
+        if (slot) {
+          return {
+            date,
+            time: minutesToTime(slot.start),
+            endTime: minutesToTime(slot.start + durationMinutes),
+            durationHours: String(Math.round((durationMinutes / 60) * 2) / 2)
+          };
+        }
+        day = nextBusinessDate(day);
+      }
+      return { date: dateKey(day), time: "09:00", endTime: "11:00", durationHours: "2" };
+    }
+
+    function technicianWeekWorkload(technician, weekDays) {
+      const dates = weekDays.map(day => Array.isArray(day) ? day[0] : day.date);
+      const capacityMinutes = dates.reduce((sum, date) => {
+        const day = new Date(`${date}T12:00:00`);
+        return sum + (isBusinessDate(day) && !isPersonUnavailable(technician, date) ? WORKDAY_CAPACITY_MINUTES : 0);
+      }, 0);
+      const plannedMinutes = jobs
+        .filter(job => dates.includes(job.date) && jobHasTechnician(job, technician) && !["arhiveeritud"].includes(job.status))
+        .reduce((sum, job) => sum + jobDurationMinutes(job), 0);
+      const loadPct = capacityMinutes ? Math.round((plannedMinutes / capacityMinutes) * 100) : 0;
+      return {
+        plannedMinutes,
+        capacityMinutes,
+        freeMinutes: Math.max(0, capacityMinutes - plannedMinutes),
+        loadPct
+      };
+    }
+
+    function formatSlotDateTime(slot) {
+      return `${formatDateEt(slot.date)} ${slot.time}-${slot.endTime}`;
     }
 
     function buildTimeOptions() {
@@ -3675,16 +3854,7 @@
 
     function nextFreeSlot(technician = technicians()[0] || "") {
       const preferred = defaultScheduleSlot();
-      let day = new Date(`${preferred.date}T12:00:00`);
-      let candidates = hourlySlotsFrom(preferred.time);
-      for (let i = 0; i < 10; i += 1) {
-        const date = dateKey(day);
-        const free = candidates.find(slot => !jobs.some(job => job.date === date && job.time === slot && jobHasTechnician(job, technician)));
-        if (free) return { date, time: free };
-        day = nextBusinessDate(day);
-        candidates = hourlySlotsFrom("09:00");
-      }
-      return { date: dateKey(day), time: "09:00" };
+      return nextAvailableSlotForTechnician(technician, 120, preferred);
     }
 
     function parsePhotoEntries(value) {
@@ -3807,6 +3977,11 @@
       $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
       $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
       $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
+      if ($("#onCallTechFilter")) {
+        const selectedOnCallTech = $("#onCallTechFilter").value || "all";
+        $("#onCallTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("")}`;
+        $("#onCallTechFilter").value = people.some(person => person.id === selectedOnCallTech) ? selectedOnCallTech : "all";
+      }
       const allMobileTechsSelected = mobileTechs.length === technicians().length;
       $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
       $("#mobileTechChecks").innerHTML = `
@@ -3837,7 +4012,8 @@
       document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
       document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
       document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions;
-      document.querySelector("[name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+      document.querySelector("#eventForm [name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
+      document.querySelector("#onCallForm [name='personId']").innerHTML = people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
       document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("");
     }
 
@@ -4316,9 +4492,18 @@
           .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
         const techPerson = people.find(item => item.name === tech);
         const techOnCall = techPerson ? onCallShifts.some(shift => shift.personId === techPerson.id && shift.start <= dateKey(weekEnd) && shift.end >= dateKey(weekStart)) : false;
+        const workload = technicianWeekWorkload(tech, weekDays);
+        const loadWidth = Math.min(100, workload.loadPct);
         return `
           <div class="team-row">
-            <div class="team-row-head"><span>${escapeHtml(tech)} ${techOnCall ? `<span class="oncall-badge">Valves</span>` : ""}</span><span>${techJobs.length} tööd</span></div>
+            <div class="team-row-head">
+              <span>${escapeHtml(tech)} ${techOnCall ? `<span class="oncall-badge">Valves</span>` : ""}</span>
+              <span class="team-load">
+                <span>${techJobs.length} tööd · ${escapeHtml(formatMinutes(workload.plannedMinutes))} / ${escapeHtml(formatMinutes(workload.capacityMinutes))}</span>
+                <span class="load-meter ${workload.loadPct > 100 ? "over" : ""}" title="Koormus ${workload.loadPct}%"><span style="--load-pct:${loadWidth}%"></span></span>
+                <span>vaba ${escapeHtml(formatMinutes(workload.freeMinutes))}</span>
+              </span>
+            </div>
             <div class="team-days ${showWeekends ? "with-weekend" : ""}">
               ${weekDays.map(day => {
                 const dayJobs = techJobs.filter(job => job.date === day.date);
@@ -4360,14 +4545,26 @@
         .flatMap(job => conflictJobsFor(job).map(other => ({ job, other, key: [job.id, other.id].sort().join("::") })));
       const uniqueConflicts = [...new Map(conflicts.map(item => [item.key, item])).values()];
       $("#teamWarnings").innerHTML = uniqueConflicts.length
-        ? uniqueConflicts.map(({ job, other }) => `
+        ? `<p class="section-title">Kattuvused</p>${uniqueConflicts.map(({ job, other }) => `
           <button class="mobile-card" data-team-job="${job.id}">
             <strong>${escapeHtml(sharedTechnicians(job, other).join(", "))}</strong>
             <span class="job-meta">${escapeHtml(formatDateEt(job.date))} · ${escapeHtml(displayWorkWindow(job))} ${escapeHtml(job.client)}</span>
             <span class="job-meta">${escapeHtml(displayWorkWindow(other))} ${escapeHtml(other.client)}</span>
           </button>
-        `).join("")
+        `).join("")}`
         : `<div class="mobile-card">Selles nädalas sama tehniku kattuvaid töid ei ole.</div>`;
+      const workloadCards = visibleTechs.map(tech => {
+        const workload = technicianWeekWorkload(tech, weekDays);
+        const slot = nextAvailableSlotForTechnician(tech, 120, { date: dateKey(weekStart), time: "08:00" });
+        return `
+          <div class="mobile-card">
+            <strong>${escapeHtml(tech)}</strong>
+            <span class="job-meta">Koormus ${workload.loadPct}% · hõivatud ${escapeHtml(formatMinutes(workload.plannedMinutes))} · vaba ${escapeHtml(formatMinutes(workload.freeMinutes))}</span>
+            <span class="job-meta">Järgmine 2 h vaba aeg: ${escapeHtml(formatSlotDateTime(slot))}</span>
+          </div>
+        `;
+      }).join("");
+      $("#teamWarnings").insertAdjacentHTML("beforeend", `<p class="section-title">Koormus ja vaba aeg</p>${workloadCards}`);
 
       $$("[data-team-job]").forEach(card => {
         card.addEventListener("click", () => {
@@ -4683,6 +4880,57 @@
       `).join("") || `<div class="mobile-card">Valitud filtriga puudumisi ei ole.</div>`;
       $$("[data-edit-event]").forEach(btn => btn.addEventListener("click", () => openEventModal(null, btn.dataset.editEvent)));
       $$("[data-delete-event]").forEach(btn => btn.addEventListener("click", () => deleteEvent(btn.dataset.deleteEvent)));
+    }
+
+    function renderOnCall() {
+      const filter = $("#onCallTechFilter")?.value || "all";
+      const visiblePeople = people
+        .filter(person => person.active)
+        .filter(person => filter === "all" || person.id === filter)
+        .sort((a, b) => a.name.localeCompare(b.name, "et"));
+      const visibleShifts = onCallShifts
+        .filter(shift => filter === "all" || shift.personId === filter)
+        .slice()
+        .sort((a, b) => a.start.localeCompare(b.start));
+      const today = dateKey(new Date());
+
+      $("#onCallGrid").innerHTML = visiblePeople.map(person => {
+        const shifts = visibleShifts.filter(shift => shift.personId === person.id);
+        const current = shifts.find(shift => shift.start <= today && shift.end >= today);
+        const next = shifts.find(shift => shift.start > today);
+        return `
+          <div class="person-card">
+            <div class="person-top">
+              <div>
+                <h3>${escapeHtml(person.name)}</h3>
+                <div class="job-meta">${escapeHtml(person.role)} · ${escapeHtml(person.region || "-")}</div>
+              </div>
+              <span class="status ${current ? "töös" : "planeeritud"}">${current ? "Hetkel valves" : "Ei ole valves"}</span>
+            </div>
+            <div class="kv"><span>Praegune valve</span><strong>${current ? `${escapeHtml(current.start)} kuni ${escapeHtml(current.end)}` : "puudub"}</strong></div>
+            <div class="kv"><span>Järgmine valve</span><strong>${next ? `${escapeHtml(next.start)} kuni ${escapeHtml(next.end)}` : "planeerimata"}</strong></div>
+            <div class="person-actions">
+              <button class="btn" data-new-oncall-person="${person.id}"><span class="icon">＋</span> Lisa valve</button>
+            </div>
+          </div>
+        `;
+      }).join("") || `<div class="mobile-card">Aktiivseid tehnikuid ei leitud.</div>`;
+
+      $("#onCallTimeline").innerHTML = visibleShifts.map(shift => `
+        <div class="event-row">
+          <strong>${escapeHtml(personName(shift.personId))}</strong>
+          <span>${escapeHtml(shift.start)} kuni ${escapeHtml(shift.end)}</span>
+          <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
+          <div class="person-actions">
+            <button class="btn" data-edit-oncall="${shift.id}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn danger" data-delete-oncall="${shift.id}"><span class="icon">×</span> Kustuta</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Valveid ei ole sisestatud.</div>`;
+
+      $$("[data-new-oncall-person]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(btn.dataset.newOncallPerson)));
+      $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
+      $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
     }
 
     function renderClients() {
@@ -5811,6 +6059,7 @@
       renderActs();
       renderPeople();
       renderVacations();
+      renderOnCall();
       renderClients();
       renderObjects();
       renderProjects();
@@ -6895,6 +7144,11 @@ Summa: 2 075,34 €`;
       return `EV-${String(max + 1).padStart(2, "0")}`;
     }
 
+    function nextOnCallId() {
+      const max = onCallShifts.reduce((num, shift) => Math.max(num, Number(shift.id.split("-")[1]) || 0), 0);
+      return `OC-${String(max + 1).padStart(2, "0")}`;
+    }
+
     function nextClientId() {
       const max = clients.reduce((num, client) => Math.max(num, Number(client.id.split("-")[1]) || 0), 0);
       return `C-${String(max + 1).padStart(2, "0")}`;
@@ -6990,6 +7244,49 @@ Summa: 2 075,34 €`;
       const ok = window.confirm(`Kas kustutada kirje?\n\n${personName(item.personId)} · ${item.type} · ${item.start} kuni ${item.end}`);
       if (!ok) return;
       peopleEvents = peopleEvents.filter(event => event.id !== id);
+      renderAll();
+    }
+
+    function openOnCallModal(personId = null, id = null) {
+      editingOnCallId = id;
+      const form = $("#onCallForm");
+      form.reset();
+      fillSelects();
+      $("#onCallModalTitle").textContent = id ? "Muuda valvet" : "Lisa valve";
+      const item = id ? onCallShifts.find(shift => shift.id === id) : null;
+      const start = item?.start || dateKey(startOfWeek(calendarCursor));
+      form.elements.personId.value = item?.personId || personId || people.find(person => person.active)?.id || people[0]?.id || "";
+      form.elements.start.value = start;
+      form.elements.end.value = item?.end || dateKey(addDays(new Date(`${start}T12:00:00`), 6));
+      form.elements.note.value = item?.note || "Telefonivalve";
+      $("#deleteOnCallFromModalBtn").classList.toggle("hidden", !id);
+      $("#onCallModal").classList.add("open");
+      $("#onCallModal").setAttribute("aria-hidden", "false");
+    }
+
+    function saveOnCall(event) {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.target).entries());
+      if (data.end < data.start) data.end = data.start;
+      if (editingOnCallId) {
+        const item = onCallShifts.find(shift => shift.id === editingOnCallId);
+        if (item) Object.assign(item, data);
+      } else {
+        onCallShifts.push({ id: nextOnCallId(), ...data });
+      }
+      closeModal("onCallModal");
+      editingOnCallId = null;
+      renderAll();
+    }
+
+    function deleteOnCall(id = editingOnCallId) {
+      const item = onCallShifts.find(shift => shift.id === id);
+      if (!item) return;
+      const ok = window.confirm(`Kas kustutada valve?\n\n${personName(item.personId)} · ${item.start} kuni ${item.end}`);
+      if (!ok) return;
+      onCallShifts = onCallShifts.filter(shift => shift.id !== id);
+      if (editingOnCallId === id) closeModal("onCallModal");
+      editingOnCallId = null;
       renderAll();
     }
 
@@ -7597,7 +7894,7 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
-    const viewNames = ["pilot", "calendar", "team", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "ai", "ezefs"];
+    const viewNames = ["pilot", "calendar", "team", "mobile", "people", "vacations", "clients", "objects", "projects", "acts", "oncall", "ai", "ezefs"];
 
     function currentUrlView() {
       const view = new URLSearchParams(window.location.search).get("view");
@@ -7632,7 +7929,7 @@ Summa: 2 075,34 €`;
     }
 
     function setDetailCollapsed(collapsed) {
-      const views = ["#pilotView", "#calendarView", "#teamView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#projectsView", "#actsView", "#aiView", "#ezefsView"].map(selector => $(selector));
+      const views = ["#pilotView", "#calendarView", "#teamView", "#mobileView", "#peopleView", "#vacationsView", "#clientsView", "#objectsView", "#projectsView", "#actsView", "#oncallView", "#aiView", "#ezefsView"].map(selector => $(selector));
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
     }
 
@@ -7670,6 +7967,7 @@ Summa: 2 075,34 €`;
     $("#newPersonBtn").addEventListener("click", () => openPersonModal());
     $("#newEventBtn").addEventListener("click", () => openEventModal());
     $("#newVacationEventBtn").addEventListener("click", () => openEventModal());
+    $("#newOnCallBtn").addEventListener("click", () => openOnCallModal());
     $("#newClientBtn").addEventListener("click", () => openClientModal());
     $("#newClientItemBtn").addEventListener("click", openClientItemModal);
     $("#newClientPlanBtn").addEventListener("click", openClientPlanModal);
@@ -7726,6 +8024,8 @@ Summa: 2 075,34 €`;
     $("#createImportDraftBtn").addEventListener("click", createImportedJobDraft);
     $("#personForm").addEventListener("submit", savePerson);
     $("#eventForm").addEventListener("submit", saveEvent);
+    $("#onCallForm").addEventListener("submit", saveOnCall);
+    $("#deleteOnCallFromModalBtn").addEventListener("click", () => deleteOnCall());
     $("#clientForm").addEventListener("submit", saveClient);
     $("#clientItemForm").addEventListener("submit", saveClientItem);
     $("#clientItemForm").elements.type.addEventListener("change", updateClientItemFormMode);
@@ -7781,6 +8081,7 @@ Summa: 2 075,34 €`;
     });
     $("#peopleStatusFilter").addEventListener("change", renderAll);
     $("#vacationTypeFilter").addEventListener("change", renderAll);
+    $("#onCallTechFilter").addEventListener("change", renderAll);
     $("#clientStatusFilter").addEventListener("change", renderAll);
     $("#clientSearchField").addEventListener("input", renderAll);
     $("#objectSearchField").addEventListener("input", renderAll);
