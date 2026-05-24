@@ -3064,6 +3064,7 @@
     let suppressRemoteSave = false;
     let databaseStatus = "Lokaalne brauser";
     let latestNewsHeadline = "Uudis: internetiuudist laetakse...";
+    let latestWeatherText = "Tallinna ilm laetakse...";
     const newsSources = {
       err: { label: "ERR", url: "https://www.err.ee/rss" },
       "err-news": { label: "ERR uudised", url: "https://www.err.ee/rss" },
@@ -5370,6 +5371,7 @@
       ];
       const items = [
         ...workItems,
+        { label: "Ilm Tallinn", text: latestWeatherText },
         { label: "Paus", text: jokes[(new Date().getDate() + jobs.length) % jokes.length] }
       ];
       if (($("#newsSourceSelect")?.value || localStorage.getItem(NEWS_SOURCE_KEY) || "err") !== "off") {
@@ -5417,6 +5419,56 @@
         .map(node => node.textContent?.replace(/\s+/g, " ").trim() || "")
         .find(text => text.length >= 24 && text.length <= 180 && !blocked.test(text));
       return title || "";
+    }
+
+    function weatherCodeText(code) {
+      const map = {
+        0: "selge",
+        1: "peamiselt selge",
+        2: "vahelduv pilvisus",
+        3: "pilves",
+        45: "udu",
+        48: "härmatisega udu",
+        51: "nõrk uduvihm",
+        53: "uduvihm",
+        55: "tugev uduvihm",
+        61: "nõrk vihm",
+        63: "vihm",
+        65: "tugev vihm",
+        71: "nõrk lumesadu",
+        73: "lumesadu",
+        75: "tugev lumesadu",
+        80: "nõrk hoovihm",
+        81: "hoovihm",
+        82: "tugev hoovihm",
+        95: "äike"
+      };
+      return map[Number(code)] || "ilm muutlik";
+    }
+
+    async function loadTallinnWeather() {
+      try {
+        const url = "https://api.open-meteo.com/v1/forecast?latitude=59.437&longitude=24.7536&current=temperature_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FTallinn&forecast_days=2";
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) throw new Error("Ilmaandmed ei vastanud");
+        const data = await response.json();
+        const current = data.current || {};
+        const tomorrowIndex = 1;
+        const tomorrowCode = data.daily?.weather_code?.[tomorrowIndex];
+        const max = data.daily?.temperature_2m_max?.[tomorrowIndex];
+        const min = data.daily?.temperature_2m_min?.[tomorrowIndex];
+        const rain = data.daily?.precipitation_sum?.[tomorrowIndex];
+        const nowTemp = Number.isFinite(current.temperature_2m) ? `${Math.round(current.temperature_2m)}°C` : "-";
+        const wind = Number.isFinite(current.wind_speed_10m) ? `${Math.round(current.wind_speed_10m)} m/s` : "-";
+        const tomorrow = Number.isFinite(max) && Number.isFinite(min)
+          ? `${Math.round(min)}...${Math.round(max)}°C`
+          : "prognoos puudub";
+        const rainText = Number.isFinite(rain) && rain > 0 ? `, sademeid ${Math.round(rain)} mm` : "";
+        latestWeatherText = `Hetkel ${nowTemp}, ${weatherCodeText(current.weather_code)}, tuul ${wind}. Homme ${weatherCodeText(tomorrowCode)}, ${tomorrow}${rainText}.`;
+      } catch (error) {
+        latestWeatherText = "Tallinna ilma ei saanud hetkel laadida.";
+      }
+      renderNewsTicker();
     }
 
     function applyTickerSettings() {
@@ -7590,6 +7642,8 @@ Summa: 2 075,34 €`;
       });
     }
     loadLatestNewsHeadline();
+    loadTallinnWeather();
+    window.setInterval(loadTallinnWeather, 30 * 60 * 1000);
 
     $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
     $("#themeToggleBtn").addEventListener("click", toggleTheme);
