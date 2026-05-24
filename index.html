@@ -1218,6 +1218,20 @@
       gap: 8px;
     }
 
+    .mobile-actions .btn.is-running {
+      background: #1769aa;
+      border-color: #1769aa;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(23,105,170,.18);
+    }
+
+    .mobile-actions .btn.is-paused {
+      background: #7c5bc4;
+      border-color: #7c5bc4;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(124,91,196,.18);
+    }
+
     .people-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -1816,6 +1830,20 @@
       background: #3a2022;
       color: #ffb7b2;
       border-color: #6f3633;
+    }
+
+    body.theme-dark .mobile-actions .btn.is-running {
+      background: #1769aa;
+      border-color: #2f8ed6;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(47,142,214,.22);
+    }
+
+    body.theme-dark .mobile-actions .btn.is-paused {
+      background: #6d4eb5;
+      border-color: #9a7be0;
+      color: #fff;
+      box-shadow: 0 0 0 3px rgba(154,123,224,.22);
     }
 
     body.theme-dark .job-action-menu button:hover {
@@ -4327,8 +4355,8 @@
           <span class="job-meta">Ajakulu: ${escapeHtml(effectiveWorkTime(job) || "veel puudub")}</span>
         </div>
         <div class="mobile-actions">
-          <button class="btn" data-mobile-status="töös"><span class="icon">▶</span> Alusta töö</button>
-          <button class="btn" data-mobile-status="pausil"><span class="icon">Ⅱ</span> Pane pausile</button>
+          <button class="btn ${job.status === "töös" ? "is-running" : ""}" data-mobile-status="töös"><span class="icon">▶</span> ${job.status === "töös" ? "Töö käib" : "Alusta töö"}</button>
+          <button class="btn ${job.status === "pausil" ? "is-paused" : ""}" data-mobile-status="pausil"><span class="icon">Ⅱ</span> ${job.status === "pausil" ? "Pausil" : "Pane pausile"}</button>
           <button class="btn primary" id="mobileFillBtn"><span class="icon">✓</span> Täida töökäsk</button>
           <button class="btn" id="mobileCompleteBtn"><span class="icon">✓</span> Lõpeta töökäsk</button>
           <button class="btn ghost" id="mobileActBtn"><span class="icon">▣</span> Akt</button>
