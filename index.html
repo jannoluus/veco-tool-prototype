@@ -4910,6 +4910,8 @@
             <div class="kv"><span>Praegune valve</span><strong>${current ? `${escapeHtml(current.start)} kuni ${escapeHtml(current.end)}` : "puudub"}</strong></div>
             <div class="kv"><span>Järgmine valve</span><strong>${next ? `${escapeHtml(next.start)} kuni ${escapeHtml(next.end)}` : "planeerimata"}</strong></div>
             <div class="person-actions">
+              ${current ? `<button class="btn" data-edit-oncall="${current.id}"><span class="icon">✎</span> Muuda praegust</button>` : ""}
+              ${next ? `<button class="btn" data-edit-oncall="${next.id}"><span class="icon">✎</span> Muuda järgmist</button>` : ""}
               <button class="btn" data-new-oncall-person="${person.id}"><span class="icon">＋</span> Lisa valve</button>
             </div>
           </div>
