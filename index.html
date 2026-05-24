@@ -332,6 +332,19 @@
       font-size: 16px;
     }
 
+    .panel-title-inline {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .oncall-inline-select {
+      min-width: 170px;
+      height: 36px;
+      font-weight: 700;
+    }
+
     .filters {
       display: flex;
       align-items: center;
@@ -2219,7 +2232,10 @@
       <section class="content" id="calendarView">
         <div class="panel">
           <div class="panel-head">
-            <h2 id="calendarTitle">Nädal 20 · 2026</h2>
+            <div class="panel-title-inline">
+              <h2 id="calendarTitle">Nädal 20 · 2026</h2>
+              <select class="select oncall-inline-select" id="calendarOnCallSelect" aria-label="Nädala valve"></select>
+            </div>
             <div class="filters">
               <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
               <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
@@ -2286,7 +2302,10 @@
       <section class="content hidden" id="teamView">
         <div class="panel">
           <div class="panel-head">
-            <h2 id="teamTitle">Tiimivaade</h2>
+            <div class="panel-title-inline">
+              <h2 id="teamTitle">Tiimivaade</h2>
+              <select class="select oncall-inline-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
+            </div>
             <div class="filters">
               <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
               <button class="btn primary" id="teamTodayBtn"><span class="icon">⌖</span> Täna</button>
@@ -3409,6 +3428,39 @@
       return names.length ? `Valve: ${names.join(", ")}` : "Valve puudub";
     }
 
+    function onCallShiftForRange(start, end) {
+      const rangeStart = dateKey(start);
+      const rangeEnd = dateKey(end);
+      return onCallShifts.find(shift => shift.start <= rangeEnd && shift.end >= rangeStart) || null;
+    }
+
+    function renderOnCallRangeSelect(select, start, end) {
+      if (!select) return;
+      const current = onCallShiftForRange(start, end);
+      select.innerHTML = `<option value="">Valve puudub</option>${people
+        .filter(person => person.active)
+        .sort((a, b) => a.name.localeCompare(b.name, "et"))
+        .map(person => `<option value="${person.id}">Valves: ${escapeHtml(person.name)}</option>`)
+        .join("")}`;
+      select.value = current?.personId || "";
+    }
+
+    function setOnCallForRange(personId, start, end) {
+      const rangeStart = dateKey(start);
+      const rangeEnd = dateKey(end);
+      onCallShifts = onCallShifts.filter(shift => !(shift.start <= rangeEnd && shift.end >= rangeStart));
+      if (personId) {
+        onCallShifts.push({
+          id: nextOnCallId(),
+          personId,
+          start: rangeStart,
+          end: rangeEnd,
+          note: "Telefonivalve"
+        });
+      }
+      renderAll();
+    }
+
     function priorityScore(job) {
       let score = 20;
       if (job.priority === "Kõrge") score += 45;
@@ -4089,6 +4141,7 @@
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
       $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
       $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const todayVisible = weekDays.some(([date]) => date === dateKey(new Date()));
@@ -4477,6 +4530,7 @@
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
       $("#teamTitle").textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      renderOnCallRangeSelect($("#teamOnCallSelect"), weekStart, weekEnd);
       $("#teamToggleWeekendBtn").innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel", "täidetud", "akt"];
       const visibleTechs = selectedTeamTechnicians();
@@ -8049,6 +8103,16 @@ Summa: 2 075,34 €`;
     $("#teamTodayBtn").addEventListener("click", resetCalendarToToday);
     $("#teamNextBtn").addEventListener("click", () => moveCalendarPeriod(1));
     $("#teamToggleWeekendBtn").addEventListener("click", toggleWeekends);
+    $("#calendarOnCallSelect").addEventListener("change", () => {
+      const start = startOfWeek(calendarCursor);
+      const end = addDays(start, showWeekends ? 6 : 4);
+      setOnCallForRange($("#calendarOnCallSelect").value, start, end);
+    });
+    $("#teamOnCallSelect").addEventListener("change", () => {
+      const start = startOfWeek(calendarCursor);
+      const end = addDays(start, showWeekends ? 6 : 4);
+      setOnCallForRange($("#teamOnCallSelect").value, start, end);
+    });
     $("#technicianFilter").addEventListener("change", renderAll);
     $("#calendarMode").addEventListener("change", () => {
       detailJobId = null;
