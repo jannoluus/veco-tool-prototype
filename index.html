@@ -4366,15 +4366,19 @@
 
       const job = focusedJob || techJobs.find(item => item.id === selectedId) || techJobs[0];
 
-      $$("#mobileJobs [data-mobile-job]").forEach(card => {
-        card.addEventListener("click", () => {
-          selectedId = card.dataset.mobileJob;
-          detailJobId = selectedId;
-          mobileFocusedJobId = selectedId;
-          setDetailCollapsed(false);
-          renderAll();
-        });
-      });
+      const selectMobileJob = (event) => {
+        const card = event.target.closest("[data-mobile-job]");
+        if (!card) return;
+        event.preventDefault();
+        selectedId = card.dataset.mobileJob;
+        detailJobId = selectedId;
+        mobileFocusedJobId = selectedId;
+        setDetailCollapsed(false);
+        renderAll();
+        setTimeout(() => $("#quickFill")?.scrollIntoView({ behavior: "smooth", block: "start" }), 0);
+      };
+      $("#mobileJobs").onclick = selectMobileJob;
+      $("#mobileJobs").ontouchend = selectMobileJob;
 
       if (!job) {
         $("#quickFill").innerHTML = `
@@ -5409,7 +5413,14 @@
         mobileSelectedTechs = available.slice();
         return;
       }
-      const selected = available.filter(name => names.some(item => item.localeCompare(name, "et", { sensitivity: "base" }) === 0));
+      const normalize = (value) => String(value || "").toLocaleLowerCase("et").trim();
+      const selected = available.filter(name => {
+        const techName = normalize(name);
+        return names.some(item => {
+          const requestedName = normalize(item);
+          return requestedName === techName || requestedName.includes(techName) || techName.includes(requestedName);
+        });
+      });
       if (selected.length) mobileSelectedTechs = selected;
     }
 
