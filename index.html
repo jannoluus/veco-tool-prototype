@@ -5337,6 +5337,32 @@
       localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify(config));
     }
 
+    function applySupabaseConfigFromUrl() {
+      const url = new URL(window.location.href);
+      const params = url.searchParams;
+      const dbUrl = params.get("dburl") || params.get("supabaseUrl");
+      const dbKey = params.get("dbkey") || params.get("anonKey");
+      const workspaceId = params.get("workspace") || params.get("workspaceId") || "veco-pilot";
+      if (!dbUrl || !dbKey) return;
+      writeSupabaseConfig({ url: dbUrl.trim(), anonKey: dbKey.trim(), workspaceId: workspaceId.trim() || "veco-pilot" });
+      ["dburl", "supabaseUrl", "dbkey", "anonKey", "workspace", "workspaceId"].forEach(key => params.delete(key));
+      window.history.replaceState({}, "", url.toString());
+    }
+
+    function applyTechnicianFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get("tech") || params.get("technician");
+      if (!requested) return;
+      const available = technicians();
+      const names = requested.split(",").map(name => name.trim()).filter(Boolean);
+      if (names.some(name => name.toLowerCase() === "all" || name.toLowerCase() === "kõik")) {
+        mobileSelectedTechs = available.slice();
+        return;
+      }
+      const selected = available.filter(name => names.some(item => item.localeCompare(name, "et", { sensitivity: "base" }) === 0));
+      if (selected.length) mobileSelectedTechs = selected;
+    }
+
     function initSupabaseClient() {
       const config = readSupabaseConfig();
       if (!config.url || !config.anonKey || !window.supabase) {
@@ -7401,13 +7427,20 @@ Summa: 2 075,34 €`;
     fillSelects();
     loadPilotData();
     normalizeLegacyJobIds();
+    applySupabaseConfigFromUrl();
+    applyTechnicianFromUrl();
     applyTheme(localStorage.getItem(THEME_KEY) || "light");
     applyTickerSettings();
     setDetailCollapsed(true);
     switchView(currentUrlView(), false);
     renderAll();
     initSupabaseClient();
-    if (supabaseClient) loadPilotDataFromDatabase(false);
+    if (supabaseClient) {
+      loadPilotDataFromDatabase(false).then(() => {
+        applyTechnicianFromUrl();
+        renderAll();
+      });
+    }
     loadLatestNewsHeadline();
 
     $("#brandRefreshBtn").addEventListener("click", refreshFromBrand);
