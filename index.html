@@ -3448,6 +3448,17 @@
     function setOnCallForRange(personId, start, end) {
       const rangeStart = dateKey(start);
       const rangeEnd = dateKey(end);
+      const overlapping = onCallShifts.filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart);
+      if (overlapping.length) {
+        const currentNames = overlapping.map(shift => `${personName(shift.personId)} (${formatDate(shift.start)}-${formatDate(shift.end)})`).join(", ");
+        const message = personId
+          ? `Kas muuta selle perioodi valve?\n\nSenine: ${currentNames}\nUus: ${personName(personId)}\n\nSenised kattuvad valvekirjed eemaldatakse.`
+          : `Kas eemaldada selle perioodi valve?\n\n${currentNames}`;
+        if (!window.confirm(message)) {
+          renderAll();
+          return;
+        }
+      }
       onCallShifts = onCallShifts.filter(shift => !(shift.start <= rangeEnd && shift.end >= rangeStart));
       if (personId) {
         onCallShifts.push({
@@ -3740,8 +3751,8 @@
     function fitCalendarHourHeight(endMinutes) {
       const visibleHours = Math.max(1, (endMinutes - 7 * 60) / 60);
       const reservedHeight = window.innerWidth <= 900 ? 360 : 330;
-      const availableHeight = Math.max(480, window.innerHeight - reservedHeight);
-      calendarHourHeight = Math.max(40, Math.min(72, Math.floor(availableHeight / visibleHours)));
+      const availableHeight = Math.min(640, Math.max(480, window.innerHeight - reservedHeight));
+      calendarHourHeight = Math.max(36, Math.min(54, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
@@ -7256,10 +7267,15 @@ Summa: 2 075,34 €`;
       const person = people.find(item => item.id === id);
       if (!person) return;
       if (jobs.some(job => jobHasTechnician(job, person.name))) {
+        const ok = window.confirm(`Selle tehnikuga on seotud töökäsud.\n\n${person.name}\n\nKas deaktiveerida kasutaja kustutamise asemel, et tööde ajalugu säiliks?`);
+        if (!ok) return;
         person.active = false;
       } else {
+        const ok = window.confirm(`Kas kustutada kasutaja?\n\n${person.name}\n\nKasutaja puudumised ja valvekirjed eemaldatakse samuti. Seda toimingut ei saa tagasi võtta.`);
+        if (!ok) return;
         people = people.filter(item => item.id !== id);
         peopleEvents = peopleEvents.filter(event => event.personId !== id);
+        onCallShifts = onCallShifts.filter(shift => shift.personId !== id);
       }
       renderAll();
     }
@@ -7389,8 +7405,12 @@ Summa: 2 075,34 €`;
       const client = clients.find(item => item.id === id);
       if (!client) return;
       if (jobs.some(job => job.client === client.name)) {
+        const ok = window.confirm(`Selle kliendiga on seotud töökäsud.\n\n${client.name}\n\nKas deaktiveerida klient kustutamise asemel, et tööde ajalugu säiliks?`);
+        if (!ok) return;
         client.active = false;
       } else {
+        const ok = window.confirm(`Kas kustutada klient?\n\n${client.name}\n\nKliendi objektid, seadmed ja kontaktid eemaldatakse samuti. Seda toimingut ei saa tagasi võtta.`);
+        if (!ok) return;
         clients = clients.filter(item => item.id !== id);
         selectedClientId = clients[0]?.id || "";
       }
