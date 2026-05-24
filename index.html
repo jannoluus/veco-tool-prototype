@@ -964,6 +964,7 @@
     .team-board {
       display: grid;
       gap: 14px;
+      --team-day-height: 170px;
     }
 
     .team-row {
@@ -995,7 +996,7 @@
     }
 
     .team-day {
-      min-height: 170px;
+      min-height: var(--team-day-height, 170px);
       padding: 9px;
       background: var(--panel);
       display: grid;
@@ -4303,6 +4304,12 @@
       $("#teamToggleWeekendBtn").innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel", "täidetud", "akt"];
       const visibleTechs = selectedTeamTechnicians();
+      const visibleCount = Math.max(1, visibleTechs.length);
+      const availableHeight = Math.max(360, window.innerHeight - 250);
+      const rowChrome = 48;
+      const rowGaps = Math.max(0, visibleCount - 1) * 14;
+      const dynamicDayHeight = Math.max(170, Math.min(680, Math.floor((availableHeight - rowGaps - visibleCount * rowChrome) / visibleCount)));
+      $("#teamGrid").style.setProperty("--team-day-height", `${dynamicDayHeight}px`);
       $("#teamGrid").innerHTML = visibleTechs.map(tech => {
         const techJobs = jobs
           .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status) && weekDays.some(day => day.date === job.date))
@@ -7820,6 +7827,7 @@ Summa: 2 075,34 €`;
     });
     window.addEventListener("resize", () => {
       if ($("#calendarView").classList.contains("active")) renderCalendar();
+      if ($("#teamView").classList.contains("active")) renderTeam();
     });
     window.setInterval(() => {
       if ($("#calendarView").classList.contains("active") && $("#calendarMode").value === "week") renderCalendar();
