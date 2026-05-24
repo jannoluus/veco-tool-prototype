@@ -1383,6 +1383,19 @@
       gap: 8px;
     }
 
+    #onCallView .people-grid {
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+
+    #onCallView .person-actions {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    #onCallView .person-actions .btn {
+      justify-content: center;
+      min-width: 0;
+    }
+
     .ai-select-row {
       display: flex;
       align-items: center;
@@ -1502,6 +1515,53 @@
     }
 
     label.full { grid-column: 1 / -1; }
+
+    .week-picker {
+      grid-column: 1 / -1;
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: #fbfcfd;
+    }
+
+    .week-picker-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .week-picker-days {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+
+    .week-picker-day {
+      min-height: 46px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel);
+      padding: 7px;
+      color: var(--ink);
+      font-size: 12px;
+    }
+
+    .week-picker-day strong,
+    .week-picker-day span {
+      display: block;
+    }
+
+    .week-picker-day span {
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .week-picker-summary {
+      color: var(--ink);
+      font-weight: 800;
+    }
 
     textarea {
       min-height: 76px;
@@ -1796,6 +1856,13 @@
     body.theme-dark .act-preview,
     body.theme-dark .act-box {
       background: #172129;
+      color: var(--ink);
+    }
+
+    body.theme-dark .week-picker,
+    body.theme-dark .week-picker-day {
+      background: #111b22;
+      border-color: var(--line);
       color: var(--ink);
     }
 
@@ -2863,8 +2930,20 @@
         <div class="dialog-body">
           <div class="form-grid">
             <label>Tehnik<select class="select" name="personId" required></select></label>
-            <label>Algus<input class="field" name="start" type="date" required></label>
-            <label>Lõpp<input class="field" name="end" type="date" required></label>
+            <label>Sisestusviis<select class="select" name="rangeMode">
+              <option value="week">Nädala kaupa</option>
+              <option value="range">Kuupäevade vahemik</option>
+            </select></label>
+            <div class="week-picker" id="onCallWeekPicker">
+              <div class="week-picker-row">
+                <label>Aasta<input class="field" name="weekYear" type="number" min="2020" max="2100"></label>
+                <label>Nädal nr<input class="field" name="weekNo" type="number" min="1" max="53"></label>
+              </div>
+              <div class="week-picker-summary" id="onCallWeekSummary">Nädal</div>
+              <div class="week-picker-days" id="onCallWeekDays"></div>
+            </div>
+            <label class="oncall-range-field">Algus<input class="field" name="start" type="date" required></label>
+            <label class="oncall-range-field">Lõpp<input class="field" name="end" type="date" required></label>
             <label class="full">Märkus<textarea name="note" placeholder="nt telefonivalve, piirkond või erikokkulepe"></textarea></label>
           </div>
         </div>
@@ -3333,6 +3412,21 @@
       return Math.ceil((((target - yearStart) / 86400000) + 1) / 7);
     }
 
+    function isoWeekYear(date) {
+      const target = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      const dayNumber = target.getUTCDay() || 7;
+      target.setUTCDate(target.getUTCDate() + 4 - dayNumber);
+      return target.getUTCFullYear();
+    }
+
+    function startOfIsoWeek(year, week) {
+      const jan4 = new Date(Date.UTC(Number(year), 0, 4));
+      const dayNumber = jan4.getUTCDay() || 7;
+      const monday = new Date(jan4);
+      monday.setUTCDate(jan4.getUTCDate() - dayNumber + 1 + (Number(week) - 1) * 7);
+      return new Date(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate(), 12);
+    }
+
     function formatShortDate(date) {
       return date.toLocaleDateString("et-EE", { day: "2-digit", month: "2-digit" });
     }
@@ -3431,7 +3525,8 @@
     function onCallShiftForRange(start, end) {
       const rangeStart = dateKey(start);
       const rangeEnd = dateKey(end);
-      return onCallShifts.find(shift => shift.start <= rangeEnd && shift.end >= rangeStart) || null;
+      const matches = onCallShifts.filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart);
+      return matches.find(shift => shift.start === rangeStart && shift.end === rangeEnd) || matches[matches.length - 1] || null;
     }
 
     function renderOnCallRangeSelect(select, start, end) {
@@ -3449,6 +3544,11 @@
       const rangeStart = dateKey(start);
       const rangeEnd = dateKey(end);
       const overlapping = onCallShifts.filter(shift => shift.start <= rangeEnd && shift.end >= rangeStart);
+      const current = onCallShiftForRange(start, end);
+      if ((current?.personId || "") === personId && overlapping.length === 1) {
+        renderAll();
+        return;
+      }
       if (overlapping.length) {
         const currentNames = overlapping.map(shift => `${personName(shift.personId)} (${formatDate(shift.start)}-${formatDate(shift.end)})`).join(", ");
         const message = personId
@@ -7328,17 +7428,58 @@ Summa: 2 075,34 €`;
       const item = id ? onCallShifts.find(shift => shift.id === id) : null;
       const start = item?.start || dateKey(startOfWeek(calendarCursor));
       form.elements.personId.value = item?.personId || personId || people.find(person => person.active)?.id || people[0]?.id || "";
+      form.elements.rangeMode.value = item ? "range" : "week";
       form.elements.start.value = start;
       form.elements.end.value = item?.end || dateKey(addDays(new Date(`${start}T12:00:00`), 6));
+      const weekDate = new Date(`${start}T12:00:00`);
+      form.elements.weekYear.value = isoWeekYear(weekDate);
+      form.elements.weekNo.value = weekNumber(weekDate);
       form.elements.note.value = item?.note || "Telefonivalve";
+      updateOnCallRangeMode();
+      updateOnCallWeekFields();
       $("#deleteOnCallFromModalBtn").classList.toggle("hidden", !id);
       $("#onCallModal").classList.add("open");
       $("#onCallModal").setAttribute("aria-hidden", "false");
     }
 
+    function updateOnCallRangeMode() {
+      const form = $("#onCallForm");
+      if (!form) return;
+      const weekMode = form.elements.rangeMode.value === "week";
+      $("#onCallWeekPicker").classList.toggle("hidden", !weekMode);
+      $$("#onCallForm .oncall-range-field").forEach(field => field.classList.toggle("hidden", weekMode));
+    }
+
+    function updateOnCallWeekFields() {
+      const form = $("#onCallForm");
+      if (!form || form.elements.rangeMode.value !== "week") return;
+      const year = Number(form.elements.weekYear.value) || isoWeekYear(calendarCursor);
+      const week = Math.max(1, Math.min(53, Number(form.elements.weekNo.value) || weekNumber(calendarCursor)));
+      form.elements.weekYear.value = year;
+      form.elements.weekNo.value = week;
+      const start = startOfIsoWeek(year, week);
+      const end = addDays(start, 6);
+      form.elements.start.value = dateKey(start);
+      form.elements.end.value = dateKey(end);
+      $("#onCallWeekSummary").textContent = `Nädal ${week} · ${formatWeekRange(start, end)} · ${year}`;
+      const labels = ["E", "T", "K", "N", "R", "L", "P"];
+      $("#onCallWeekDays").innerHTML = labels.map((label, index) => {
+        const day = addDays(start, index);
+        return `<div class="week-picker-day"><strong>${label}</strong><span>${escapeHtml(formatShortDate(day))}</span></div>`;
+      }).join("");
+    }
+
     function saveOnCall(event) {
       event.preventDefault();
       const data = Object.fromEntries(new FormData(event.target).entries());
+      if (data.rangeMode === "week") {
+        const start = startOfIsoWeek(data.weekYear, data.weekNo);
+        data.start = dateKey(start);
+        data.end = dateKey(addDays(start, 6));
+      }
+      delete data.rangeMode;
+      delete data.weekYear;
+      delete data.weekNo;
       if (data.end < data.start) data.end = data.start;
       if (editingOnCallId) {
         const item = onCallShifts.find(shift => shift.id === editingOnCallId);
@@ -8101,6 +8242,19 @@ Summa: 2 075,34 €`;
     $("#personForm").addEventListener("submit", savePerson);
     $("#eventForm").addEventListener("submit", saveEvent);
     $("#onCallForm").addEventListener("submit", saveOnCall);
+    $("#onCallForm").elements.rangeMode.addEventListener("change", () => {
+      updateOnCallRangeMode();
+      updateOnCallWeekFields();
+    });
+    $("#onCallForm").elements.weekYear.addEventListener("input", updateOnCallWeekFields);
+    $("#onCallForm").elements.weekNo.addEventListener("input", updateOnCallWeekFields);
+    $("#onCallForm").elements.start.addEventListener("change", () => {
+      const date = new Date(`${$("#onCallForm").elements.start.value}T12:00:00`);
+      if (Number.isNaN(date.getTime())) return;
+      $("#onCallForm").elements.weekYear.value = isoWeekYear(date);
+      $("#onCallForm").elements.weekNo.value = weekNumber(date);
+      updateOnCallWeekFields();
+    });
     $("#deleteOnCallFromModalBtn").addEventListener("click", () => deleteOnCall());
     $("#clientForm").addEventListener("submit", saveClient);
     $("#clientItemForm").addEventListener("submit", saveClientItem);
