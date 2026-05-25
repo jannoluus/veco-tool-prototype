@@ -4070,10 +4070,11 @@
       const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
       const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
       const compactViewport = viewportHeight < 1120 && window.innerWidth > 1120;
-      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 190 : 48);
-      const availableHeight = Math.max(220, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 36 : 68) : (compactViewport ? 34 : 56);
-      calendarHourHeight = Math.max(compactViewport ? 18 : 24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
+      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 82 : 48);
+      const availableHeight = Math.max(360, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
+      const minHourHeight = window.innerWidth <= 900 ? 24 : (compactViewport ? 40 : 36);
+      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 54 : 68) : (compactViewport ? 48 : 56);
+      calendarHourHeight = Math.max(minHourHeight, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
