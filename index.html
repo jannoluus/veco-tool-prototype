@@ -888,12 +888,17 @@
       display: grid;
       --calendar-head-height: 42px;
       --calendar-hour-height: 40px;
-      grid-template-columns: 38px repeat(5, minmax(120px, 1fr));
+      --notes-column-width: clamp(160px, 13vw, 220px);
+      grid-template-columns: 38px var(--notes-column-width) repeat(5, minmax(120px, 1fr));
       gap: 10px;
     }
 
     .week-grid.with-weekend {
-      grid-template-columns: 38px repeat(7, minmax(120px, 1fr));
+      grid-template-columns: 38px var(--notes-column-width) repeat(7, minmax(120px, 1fr));
+    }
+
+    .week-grid.notes-collapsed {
+      --notes-column-width: 46px;
     }
 
     .time-axis {
@@ -1046,6 +1051,109 @@
       position: relative;
       flex: 1 1 auto;
       min-height: var(--calendar-body-height, 480px);
+    }
+
+    .notes-column {
+      border-style: dashed;
+    }
+
+    .notes-column .day-head {
+      gap: 8px;
+    }
+
+    .notes-column.collapsed .day-head {
+      justify-content: center;
+      padding-inline: 6px;
+    }
+
+    .notes-body {
+      display: grid;
+      align-content: start;
+      gap: 8px;
+      padding: 10px;
+      background-image: none;
+    }
+
+    .notes-column.collapsed .notes-body {
+      padding: 0;
+    }
+
+    .notes-add-btn {
+      width: 100%;
+      justify-content: center;
+      min-height: 34px;
+    }
+
+    .pending-note {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel-strong);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .pending-note strong {
+      font-size: 13px;
+    }
+
+    .pending-note span,
+    .pending-note p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .pending-note p {
+      color: var(--text);
+    }
+
+    .pending-note-actions {
+      display: grid;
+      grid-template-columns: repeat(2, 32px) 1fr repeat(2, 32px);
+      gap: 6px;
+      align-items: center;
+    }
+
+    .note-icon-btn,
+    .note-action-btn {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: var(--panel-strong);
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+
+    .note-icon-btn {
+      width: 32px;
+      padding: 0;
+    }
+
+    .note-action-btn {
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .note-icon-btn:disabled {
+      opacity: .35;
+      cursor: default;
+    }
+
+    .note-icon-btn.danger {
+      color: var(--danger);
+    }
+
+    .empty-note {
+      padding: 12px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+      font-size: 12px;
     }
 
     .current-time-line {
@@ -2632,6 +2740,7 @@
               <button class="btn" id="copySelectedBtn"><span class="icon">▣</span> Kopeeri</button>
               <button class="btn ghost" id="editSelectedBtn"><span class="icon">✎</span> Muuda</button>
               <button class="btn danger" id="deleteSelectedBtn"><span class="icon">×</span> Kustuta</button>
+              <button class="btn ghost" id="closeDetailBtn"><span class="icon">×</span> Sulge</button>
             </div>
           </div>
           <div class="detail-body" id="detailBody"></div>
@@ -3022,6 +3131,28 @@
         <div class="dialog-actions">
           <button class="btn danger hidden" id="deleteJobFromModalBtn" type="button"><span class="icon">×</span> Kustuta</button>
           <button class="btn ghost" type="button" data-close="jobModal">Tühista</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="pendingNoteModal" aria-hidden="true">
+    <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="pendingNoteModalTitle">
+      <div class="dialog-head">
+        <h2 id="pendingNoteModalTitle">Lisa märge</h2>
+        <button class="btn ghost" data-close="pendingNoteModal"><span class="icon">×</span> Sulge</button>
+      </div>
+      <form id="pendingNoteForm">
+        <div class="dialog-body">
+          <div class="form-grid">
+            <label class="full">Pealkiri<input class="field" name="title" required placeholder="nt Filtrite pakkumine"></label>
+            <label class="full">Viide<input class="field" name="reference" placeholder="nt VK242 või kliendi ID"></label>
+            <label class="full">Märkus<textarea name="body" placeholder="Kirjuta siia ootel teema, aadress või taustainfo"></textarea></label>
+          </div>
+        </div>
+        <div class="dialog-actions">
+          <button class="btn ghost" type="button" data-close="pendingNoteModal">Tühista</button>
           <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta</button>
         </div>
       </form>
@@ -3555,6 +3686,13 @@
     let databaseStatus = "Lokaalne brauser";
     let latestNewsHeadline = "Uudis: internetiuudist laetakse...";
     let latestWeatherText = "Tallinna ilm laetakse...";
+    let pendingNotes = [
+      { id: "PN-01", title: "VK242 Vee, Kanali TH", reference: "VESSE KESKUS", body: "Sademevee äravoolude TH. ID: 332808" },
+      { id: "PN-02", title: "VK242 Vee, Kanali TH", reference: "KALMARI TEE 10 VIA 3L", body: "Pumplate poolaasta hooldus. ID: 332688" }
+    ];
+    let editingPendingNoteId = null;
+    const PENDING_NOTES_COLLAPSED_KEY = "vecoPendingNotesCollapsedV1";
+    let pendingNotesCollapsed = localStorage.getItem(PENDING_NOTES_COLLAPSED_KEY) === "true";
     const newsSources = {
       err: { label: "ERR", url: "https://www.err.ee/rss" },
       "err-news": { label: "ERR uudised", url: "https://www.err.ee/rss" },
@@ -3569,7 +3707,8 @@
       onCallShifts: JSON.parse(JSON.stringify(onCallShifts)),
       projects: JSON.parse(JSON.stringify(projects)),
       clients: JSON.parse(JSON.stringify(clients)),
-      jobs: JSON.parse(JSON.stringify(jobs))
+      jobs: JSON.parse(JSON.stringify(jobs)),
+      pendingNotes: JSON.parse(JSON.stringify(pendingNotes))
     };
 
     const statusLabels = {
@@ -4576,7 +4715,8 @@
       const weekEnd = addDays(weekStart, weekLength - 1);
       $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
-      $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
+      const notesClass = pendingNotesCollapsed ? " notes-collapsed" : "";
+      $("#weekGrid").className = `${showWeekends ? "week-grid with-weekend" : "week-grid"}${notesClass}`;
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const todayVisible = weekDays.some(([date]) => date === dateKey(new Date()));
       const baseEndMinutes = calendarEndMinutes(visibleWeekJobs);
@@ -4589,7 +4729,7 @@
       const timeAxis = `<div class="time-axis" aria-hidden="true">${
         Array.from({ length: Math.floor((endMinutes - 7 * 60) / 60) + 1 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
       }${selectedJobRangeMarkers(endMinutes)}${currentTimeAxisMarker(weekDays, endMinutes)}</div>`;
-      $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
+      $("#weekGrid").innerHTML = timeAxis + renderPendingNotesColumn() + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const overlapLayout = overlapLayoutForJobs(dayJobs);
         const weekday = new Date(`${date}T12:00:00`).getDay();
@@ -4624,9 +4764,119 @@
         `;
       }).join("");
 
+      bindPendingNotes();
       bindCalendarSelection();
       bindCalendarDrag();
       bindDurationResize();
+    }
+
+    function createPendingNoteId() {
+      return `PN-${String(Date.now()).slice(-6)}-${Math.random().toString(16).slice(2, 5)}`;
+    }
+
+    function renderPendingNotesColumn() {
+      const collapsed = pendingNotesCollapsed;
+      return `
+        <section class="day notes-column ${collapsed ? "collapsed" : ""}" aria-label="Märkmed">
+          <div class="day-head">
+            <strong>${collapsed ? "M" : "Märkmed"}</strong>
+            <button class="note-icon-btn" type="button" data-notes-toggle title="${collapsed ? "Näita märkmeid" : "Peida märkmed"}">${collapsed ? "›" : "‹"}</button>
+          </div>
+          <div class="day-body notes-body">
+            ${collapsed ? "" : `
+              <button class="btn ghost notes-add-btn" type="button" data-note-add><span class="icon">+</span> Lisa märge</button>
+              ${pendingNotes.length ? pendingNotes.map((note, index) => `
+                <article class="pending-note">
+                  <div class="pending-note-main">
+                    <strong>${escapeHtml(note.title || "Märge")}</strong>
+                    ${note.reference ? `<span>Viide: ${escapeHtml(note.reference)}</span>` : ""}
+                    ${note.body ? `<p>${escapeHtml(note.body)}</p>` : ""}
+                  </div>
+                  <div class="pending-note-actions">
+                    <button class="note-icon-btn" type="button" data-note-up="${escapeAttr(note.id)}" ${index === 0 ? "disabled" : ""} title="Nihuta üles">↑</button>
+                    <button class="note-icon-btn" type="button" data-note-down="${escapeAttr(note.id)}" ${index === pendingNotes.length - 1 ? "disabled" : ""} title="Nihuta alla">↓</button>
+                    <button class="note-action-btn" type="button" data-note-job="${escapeAttr(note.id)}">Loo töökäsk</button>
+                    <button class="note-icon-btn" type="button" data-note-edit="${escapeAttr(note.id)}" title="Muuda">✎</button>
+                    <button class="note-icon-btn danger" type="button" data-note-delete="${escapeAttr(note.id)}" title="Kustuta">×</button>
+                  </div>
+                </article>
+              `).join("") : `<div class="empty-note">Märkmeid ei ole.</div>`}
+            `}
+          </div>
+        </section>
+      `;
+    }
+
+    function bindPendingNotes() {
+      document.querySelector("[data-notes-toggle]")?.addEventListener("click", () => {
+        pendingNotesCollapsed = !pendingNotesCollapsed;
+        localStorage.setItem(PENDING_NOTES_COLLAPSED_KEY, pendingNotesCollapsed ? "true" : "false");
+        renderCalendar();
+      });
+      document.querySelector("[data-note-add]")?.addEventListener("click", () => openPendingNoteModal());
+      document.querySelectorAll("[data-note-edit]").forEach(button => {
+        button.addEventListener("click", () => openPendingNoteModal(button.dataset.noteEdit));
+      });
+      document.querySelectorAll("[data-note-delete]").forEach(button => {
+        button.addEventListener("click", () => deletePendingNote(button.dataset.noteDelete));
+      });
+      document.querySelectorAll("[data-note-up]").forEach(button => {
+        button.addEventListener("click", () => movePendingNote(button.dataset.noteUp, -1));
+      });
+      document.querySelectorAll("[data-note-down]").forEach(button => {
+        button.addEventListener("click", () => movePendingNote(button.dataset.noteDown, 1));
+      });
+      document.querySelectorAll("[data-note-job]").forEach(button => {
+        button.addEventListener("click", () => openJobModalFromPendingNote(button.dataset.noteJob));
+      });
+    }
+
+    function openPendingNoteModal(id = null) {
+      editingPendingNoteId = id;
+      const note = pendingNotes.find(item => item.id === id);
+      const form = $("#pendingNoteForm");
+      $("#pendingNoteModalTitle").textContent = note ? "Muuda märget" : "Lisa märge";
+      form.elements.title.value = note?.title || "";
+      form.elements.reference.value = note?.reference || "";
+      form.elements.body.value = note?.body || "";
+      $("#pendingNoteModal").classList.add("open");
+      $("#pendingNoteModal").setAttribute("aria-hidden", "false");
+      setTimeout(() => form.elements.title.focus(), 0);
+    }
+
+    function savePendingNote(event) {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const note = {
+        id: editingPendingNoteId || createPendingNoteId(),
+        title: form.elements.title.value.trim(),
+        reference: form.elements.reference.value.trim(),
+        body: form.elements.body.value.trim()
+      };
+      if (!note.title) return;
+      const existingIndex = pendingNotes.findIndex(item => item.id === note.id);
+      if (existingIndex >= 0) pendingNotes[existingIndex] = note;
+      else pendingNotes.unshift(note);
+      closeModal("pendingNoteModal");
+      editingPendingNoteId = null;
+      renderAll();
+    }
+
+    function deletePendingNote(id) {
+      const note = pendingNotes.find(item => item.id === id);
+      if (!note) return;
+      if (!confirm(`Kas kustutan märkme "${note.title}"?`)) return;
+      pendingNotes = pendingNotes.filter(item => item.id !== id);
+      renderAll();
+    }
+
+    function movePendingNote(id, direction) {
+      const index = pendingNotes.findIndex(item => item.id === id);
+      const targetIndex = index + direction;
+      if (index < 0 || targetIndex < 0 || targetIndex >= pendingNotes.length) return;
+      const [note] = pendingNotes.splice(index, 1);
+      pendingNotes.splice(targetIndex, 0, note);
+      renderAll();
     }
 
     function bindCalendarSelection() {
@@ -8729,6 +8979,12 @@ Summa: 2 075,34 €`;
       views.forEach(view => view.classList.toggle("detail-collapsed", collapsed));
     }
 
+    function closeDetailPanel() {
+      detailJobId = null;
+      setDetailCollapsed(true);
+      renderAll();
+    }
+
     fillSelects();
     loadPilotData();
     normalizeLegacyJobIds();
@@ -8808,6 +9064,7 @@ Summa: 2 075,34 €`;
     });
     $("#editSelectedBtn").addEventListener("click", () => openJobModal(selectedId));
     $("#deleteSelectedBtn").addEventListener("click", () => deleteSelectedJob(detailJobId || selectedId));
+    $("#closeDetailBtn").addEventListener("click", closeDetailPanel);
     $("#deleteJobFromModalBtn").addEventListener("click", () => {
       if (!editingId) return;
       if (deleteSelectedJob(editingId)) closeModal("jobModal");
