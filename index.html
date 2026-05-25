@@ -6473,12 +6473,30 @@
       return String(Date.now()).slice(-6);
     }
 
+    function nextJobIdForSlot(date, time, currentId = "") {
+      const usedIds = new Set(jobs.map(job => String(job.id || "")));
+      if (currentId) usedIds.delete(String(currentId));
+      return nextJobId(date, time, usedIds);
+    }
+
+    function shouldRefreshJobIdForSlot(job, data) {
+      if (!job || !data?.date || !data?.time) return false;
+      const newBase = compactJobIdBase(data.date, data.time);
+      const currentId = String(job.id || "");
+      return /^\d{6}$/.test(currentId) && !currentId.startsWith(newBase);
+    }
+
     function normalizeLegacyJobIds() {
       const usedIds = new Set(jobs.map(job => String(job.id || "")));
       const renamed = new Map();
       jobs.forEach(job => {
         const legacyId = String(job.id || "");
-        if (!/^VK-\d+$/.test(legacyId)) return;
+        const isOldVkId = /^VK-\d+$/.test(legacyId);
+        const isWrongCompactId = /^\d{6}$/.test(legacyId)
+          && job.date
+          && job.time
+          && !legacyId.startsWith(compactJobIdBase(job.date, job.time));
+        if (!isOldVkId && !isWrongCompactId) return;
         usedIds.delete(legacyId);
         const nextId = nextJobId(job.date, job.time, usedIds);
         usedIds.delete(job.id);
@@ -7319,11 +7337,15 @@ Summa: 2 075,34 €`;
       if (editingId) {
         const previewJob = { ...existingJob, ...data };
         if (!confirmJobConflicts(previewJob, existingJob.id)) return;
+        const refreshedId = shouldRefreshJobIdForSlot(existingJob, data)
+          ? nextJobIdForSlot(data.date, data.time, existingJob.id)
+          : existingJob.id;
         Object.assign(existingJob, data);
+        existingJob.id = refreshedId;
         selectedId = existingJob.id;
         detailJobId = selectedId;
       } else {
-        const job = { id: nextJobId(data.date, data.time), ...data, timeLogs: [] };
+        const job = { id: nextJobIdForSlot(data.date, data.time), ...data, timeLogs: [] };
         if (!confirmJobConflicts(job, job.id)) return;
         jobs.push(job);
         selectedId = job.id;
