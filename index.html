@@ -260,6 +260,8 @@
       .day-body .job-card {
         gap: 4px;
         padding: 8px 8px 30px;
+        min-width: 0;
+        font-size: 11px;
       }
 
       .day-body .job-card .job-meta,
@@ -271,6 +273,34 @@
       .day-body .job-card .job-window,
       .day-body .job-card .job-technicians {
         line-height: 1.2;
+      }
+
+      .day-body .job-card .job-time {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        column-gap: 6px;
+        align-items: start;
+      }
+
+      .day-body .job-card .job-time span:first-child,
+      .day-body .job-card .job-technicians,
+      .day-body .job-card .job-window {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .day-body .job-card .job-time span:first-child {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+
+      .day-body .job-card .job-time span:last-child {
+        font-size: 10px;
+      }
+
+      .day-body .job-card .job-window {
+        font-size: 13px;
       }
 
       .day-body .job-card .status {
@@ -3973,17 +4003,18 @@
 
     function overlapLayoutForJobs(dayJobs) {
       const sorted = [...dayJobs].sort((a, b) => jobStartMinutes(a) - jobStartMinutes(b) || jobEndMinutes(a) - jobEndMinutes(b));
-      const groups = [];
-      sorted.forEach(job => {
-        let group = groups.find(item => jobStartMinutes(job) < item.end && jobEndMinutes(job) > item.start);
-        if (!group) {
-          group = { start: jobStartMinutes(job), end: jobEndMinutes(job), jobs: [] };
-          groups.push(group);
+      const groups = sorted.reduce((list, job) => {
+        const start = jobStartMinutes(job);
+        const end = jobEndMinutes(job);
+        const last = list[list.length - 1];
+        if (!last || start >= last.end) {
+          list.push({ start, end, jobs: [job] });
+        } else {
+          last.jobs.push(job);
+          last.end = Math.max(last.end, end);
         }
-        group.jobs.push(job);
-        group.start = Math.min(group.start, jobStartMinutes(job));
-        group.end = Math.max(group.end, jobEndMinutes(job));
-      });
+        return list;
+      }, []);
       const layout = new Map();
       groups.forEach(group => {
         const columns = [];
@@ -4100,8 +4131,13 @@
       const columns = Math.max(1, layout.columns || 1);
       const column = Math.max(0, layout.column || 0);
       const widthPercent = 100 / columns;
-      const left = columns === 1 ? "9px" : `calc(9px + ${column * widthPercent}%)`;
-      const width = columns === 1 ? "calc(100% - 18px)" : `calc(${widthPercent}% - 13px)`;
+      const gapPx = 8;
+      const outerPx = 9;
+      const totalGapPx = (columns - 1) * gapPx;
+      const widthPxOffset = (outerPx * 2 + totalGapPx) / columns;
+      const leftPxOffset = outerPx + column * (gapPx - widthPxOffset);
+      const left = columns === 1 ? "9px" : `calc(${leftPxOffset.toFixed(2)}px + ${(column * widthPercent).toFixed(4)}%)`;
+      const width = columns === 1 ? "calc(100% - 18px)" : `calc(${widthPercent.toFixed(4)}% - ${widthPxOffset.toFixed(2)}px)`;
       return `--job-top:${top}px;--job-height:${height}px;--job-left:${left};--job-width:${width}`;
     }
 
