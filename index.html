@@ -216,32 +216,51 @@
       margin-top: 5px;
     }
 
-    @media (max-height: 900px) and (min-width: 1121px) {
+    @media (max-height: 1120px) and (min-width: 1121px) {
       .side-stats {
         display: none;
       }
     }
 
-    @media (max-height: 980px) and (min-width: 1121px) {
+    @media (max-height: 1120px) and (min-width: 1121px) {
       .topbar {
-        padding-top: 10px;
-        padding-bottom: 10px;
+        padding-top: 8px;
+        padding-bottom: 8px;
       }
 
       .content {
-        padding-top: 12px;
-        padding-bottom: 14px;
+        padding-top: 10px;
+        padding-bottom: 10px;
       }
 
       .panel-head {
-        min-height: 48px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+        min-height: 44px;
+        padding-top: 8px;
+        padding-bottom: 8px;
       }
 
       #calendarView > .panel > .panel-head,
       #teamView > .panel > .panel-head {
-        column-gap: 18px;
+        column-gap: 14px;
+      }
+
+      .calendar {
+        padding: 8px;
+      }
+
+      .week-grid {
+        --calendar-head-height: 38px;
+        gap: 8px;
+      }
+
+      .day-head {
+        padding: 8px;
+      }
+
+      .news-ticker {
+        height: 38px;
+        margin: 8px;
+        margin-top: 0;
       }
     }
 
@@ -3991,11 +4010,11 @@
       const panelTop = panel?.getBoundingClientRect().top || 0;
       const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
       const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
-      const compactViewport = viewportHeight < 980 && window.innerWidth > 1120;
-      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 84 : 48);
-      const availableHeight = Math.max(300, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 52 : 68) : (compactViewport ? 46 : 56);
-      calendarHourHeight = Math.max(compactViewport ? 22 : 24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
+      const compactViewport = viewportHeight < 1120 && window.innerWidth > 1120;
+      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 190 : 48);
+      const availableHeight = Math.max(220, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
+      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 36 : 68) : (compactViewport ? 34 : 56);
+      calendarHourHeight = Math.max(compactViewport ? 18 : 24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
