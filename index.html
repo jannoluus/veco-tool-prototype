@@ -222,6 +222,29 @@
       }
     }
 
+    @media (max-height: 980px) and (min-width: 1121px) {
+      .topbar {
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      .content {
+        padding-top: 12px;
+        padding-bottom: 14px;
+      }
+
+      .panel-head {
+        min-height: 48px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+      }
+
+      #calendarView > .panel > .panel-head,
+      #teamView > .panel > .panel-head {
+        column-gap: 18px;
+      }
+    }
+
     main {
       min-width: 0;
       display: flex;
@@ -3968,10 +3991,11 @@
       const panelTop = panel?.getBoundingClientRect().top || 0;
       const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
       const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
-      const innerSpacing = window.innerWidth <= 900 ? 32 : 40;
+      const compactViewport = viewportHeight < 980 && window.innerWidth > 1120;
+      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 84 : 48);
       const availableHeight = Math.max(300, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      const maxHourHeight = window.innerWidth >= 1500 ? 68 : 56;
-      calendarHourHeight = Math.max(24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
+      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 52 : 68) : (compactViewport ? 46 : 56);
+      calendarHourHeight = Math.max(compactViewport ? 22 : 24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
@@ -4910,6 +4934,7 @@
         <button class="job-card ${extraClass} ${job.id === selectedId ? "selected" : ""}" data-mobile-job="${job.id}">
           <span class="job-time"><span>${escapeHtml(job.date)} ${escapeHtml(job.time)}</span><span>${escapeHtml(job.id)}</span></span>
           <span class="job-title">${escapeHtml(job.client)}</span>
+          <span class="job-meta">Tehnikud: ${escapeHtml(jobTechnicianLabel(job))}</span>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
           <span class="job-meta">${escapeHtml(job.address)}</span>
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
@@ -4967,6 +4992,7 @@
           </div>
           ${job.referenceNo ? `<span class="job-meta">Viide: ${escapeHtml(job.referenceNo)}</span>` : ""}
           <span class="job-meta">${escapeHtml(job.date)} ${escapeHtml(displayWorkWindow(job))} · ${escapeHtml(statusLabels[job.status])}</span>
+          <span class="job-meta">Tehnikud: ${escapeHtml(jobTechnicianLabel(job))}</span>
           <span class="job-meta">${escapeHtml(job.address)}</span>
           ${job.buildingPart ? `<span class="job-meta">Hooneosa: ${escapeHtml(job.buildingPart)}</span>` : ""}
           ${job.asset ? `<span class="job-meta">Seade: ${escapeHtml(job.asset)}</span>` : ""}
@@ -6873,6 +6899,45 @@ Prioriteet: tavaline`;
         .trim();
     }
 
+    function detectPostalAddressFromText(text) {
+      const source = String(text || "").replace(/\u00a0/g, " ");
+      const lines = source.split(/\r?\n/).map(line => stripOcrNoise(line).trim()).filter(Boolean);
+      const addressPattern = /\b([A-ZÕÄÖÜŠŽ][A-Za-zÕÄÖÜõäöüŠŽšž.-]+(?:\s+[A-ZÕÄÖÜŠŽa-zõäöüšž.-]+){0,4}\s+\d+[A-Za-z]?(?:-\d+)?(?:,\s*[A-ZÕÄÖÜŠŽ][A-Za-zÕÄÖÜõäöüŠŽšž.-]+)?)\b/;
+      const blocked = /(?:kell|kuup|tel|telefon|id|nr|töökäsu|loodud|tähtaeg)/i;
+      for (const line of lines.slice().reverse()) {
+        if (blocked.test(line)) continue;
+        const match = line.match(addressPattern);
+        if (match) return normalizeImportedLocation(match[1]);
+      }
+      const compact = source.replace(/\s+/g, " ");
+      return normalizeImportedLocation(compact.match(addressPattern)?.[1] || "");
+    }
+
+    function detectOrganizationFromText(text, address = "") {
+      const lines = String(text || "").split(/\r?\n/).map(line => stripOcrNoise(line).trim()).filter(Boolean);
+      const addressIndex = address
+        ? lines.findIndex(line => normalizeImportedLocation(line).toLowerCase().includes(address.toLowerCase().split(",")[0]))
+        : -1;
+      const ignored = /^(tere|heade soovidega|lugupidamisega|parimate soovidega|administratiivjuht|haldur|juht|tehnik|tel|telefon)$/i;
+      const orgHints = /(ülikool|instituut|oü|as\b|mtü|korteriühistu|keskus|linn|vald|ministeerium|amet|kool|haigla|clinic|office)/i;
+      const candidates = (addressIndex >= 0 ? lines.slice(Math.max(0, addressIndex - 5), addressIndex) : lines)
+        .filter(line => !ignored.test(line) && !/@/.test(line) && !/\+372/.test(line) && !/^\d/.test(line));
+      const hinted = candidates.filter(line => orgHints.test(line));
+      if (hinted.length) return hinted.slice(-2).join(" / ");
+      return "";
+    }
+
+    function detectPersonNameFromText(text) {
+      const lines = String(text || "").split(/\r?\n/).map(line => stripOcrNoise(line).trim()).filter(Boolean);
+      const signoffIndex = lines.findIndex(line => /^(heade soovidega|lugupidamisega|parimate soovidega)$/i.test(line));
+      const candidates = signoffIndex >= 0 ? lines.slice(signoffIndex + 1, signoffIndex + 4) : lines;
+      const name = candidates.find(line =>
+        /^[A-ZÕÄÖÜŠŽ][A-Za-zÕÄÖÜõäöüŠŽšž.-]+(?:\s+[A-ZÕÄÖÜŠŽ][A-Za-zÕÄÖÜõäöüŠŽšž.-]+){1,2}$/.test(line)
+        && !/(ülikool|instituut|oü|as\b|mtü|keskus|juht|tel|telefon)/i.test(line)
+      );
+      return name || "";
+    }
+
     function cleanReferenceNo(value) {
       return compactImportedValue(value).replace(/^[\s—–-]+/, "").trim();
     }
@@ -6962,6 +7027,8 @@ Prioriteet: tavaline`;
       const notice = detectMaintenanceNotice(text);
       const noticeAsset = notice.title.match(/\b(km\d+|rk\d+|sv\d+|vent\d+|ttk)\b/i)?.[1];
       if (noticeAsset) return noticeAsset.toUpperCase();
+      if (/jahutussead/i.test(text)) return "Jahutusseadmed";
+      if (/päikesepaneel/i.test(text)) return "Päikesepaneelide paigaldusega seotud töö";
       const activityTitle = String(text || "").match(/(?:^|\n)\s*([A-ZÄÖÜÕ]{2,}\d{2,}\s+[^-\n]+)\s*-/i)?.[1];
       if (activityTitle) return stripOcrNoise(activityTitle);
       const related = detectRelatedObjectsFromText(text);
@@ -7001,6 +7068,8 @@ Prioriteet: tavaline`;
       const granlund = granlundParts(text);
       const exportRow = detectGranlundExport(text);
       const allDevice = detectAllDeviceWork(text);
+      const postalAddress = detectPostalAddressFromText(text);
+      const organization = detectOrganizationFromText(text, postalAddress);
       if (allDevice.object) {
         return {
           id: `OCR-${allDevice.object}`,
@@ -7039,6 +7108,15 @@ Prioriteet: tavaline`;
       }
       const found = clients.find(client => lower.includes(client.name.toLowerCase()) || explicit.toLowerCase().includes(client.name.toLowerCase()));
       if (found) return found;
+      if (organization || postalAddress) {
+        return {
+          id: `OCR-${organization || postalAddress}`,
+          name: organization || postalAddress,
+          contact: detectContactFromText(text).name,
+          phone: detectContactFromText(text).phone,
+          items: postalAddress ? [{ id: `OCR-OBJ-${postalAddress}`, type: "object", name: postalAddress.split(",")[0], detail: postalAddress, phone: "", email: "", note: "" }] : []
+        };
+      }
       if (explicit) {
         return {
           id: `OCR-${explicit}`,
@@ -7055,6 +7133,8 @@ Prioriteet: tavaline`;
       const normalized = text.toLowerCase();
       const allDevice = detectAllDeviceWork(text);
       if (allDevice.location || allDevice.object) return allDevice.location || allDevice.object;
+      const postalAddress = detectPostalAddressFromText(text);
+      if (postalAddress) return postalAddress;
       const notice = detectMaintenanceNotice(text);
       if (notice.object) return notice.object;
       const granlund = granlundParts(text);
@@ -7090,7 +7170,7 @@ Prioriteet: tavaline`;
       const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || "";
       const phone = text.match(/\+372\s?[\d\s]{7,}/)?.[0]?.trim() || "";
       const allDevice = detectAllDeviceWork(text);
-      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || allDevice.creator || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || "";
+      const name = labeledValue(text, ["Kontaktisik/Tellija", "Kontaktisik", "Kontakt", "Saatja"]) || allDevice.creator || text.match(/Loodud:\s*\d{2}\.\d{2}\.\d{4}\s+([^|]+)/i)?.[1]?.trim() || detectPersonNameFromText(text);
       return { email, phone, name };
     }
 
@@ -7132,6 +7212,7 @@ Prioriteet: tavaline`;
       const granlundDue = text.match(/Tähtaeg\s*:\s*(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/i);
       const dateMatch = granlundDue || (allDevice.dueDate || "").match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || dueText.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/) || text.match(/(\d{1,2})[./-](\d{1,2})[./-](\d{2,4})/);
       const timeMatch = text.match(/\b([01]?\d|2[0-3])[:.](00|30|[0-5]\d)\b/);
+      const hourOnlyMatch = !timeMatch ? text.match(/\b(?:kella|kl)\s*([01]?\d|2[0-3])\b/i) : null;
       let date = fallbackSlot.date;
       if (dateMatch) {
         const day = dateMatch[1].padStart(2, "0");
@@ -7139,7 +7220,11 @@ Prioriteet: tavaline`;
         const year = dateMatch[3].length === 2 ? `20${dateMatch[3]}` : dateMatch[3];
         date = `${year}-${month}-${day}`;
       }
-      const time = timeMatch ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}` : fallbackSlot.time;
+      const time = timeMatch
+        ? `${timeMatch[1].padStart(2, "0")}:${timeMatch[2]}`
+        : hourOnlyMatch
+          ? `${hourOnlyMatch[1].padStart(2, "0")}:00`
+          : fallbackSlot.time;
       return { date, time };
     }
 
