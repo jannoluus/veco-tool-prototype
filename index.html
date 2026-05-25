@@ -204,6 +204,95 @@
       background: var(--sidebar-stat-bg);
     }
 
+    .side-queue {
+      border: 1px solid var(--sidebar-stat-border);
+      border-radius: var(--radius);
+      background: var(--sidebar-stat-bg);
+      overflow: hidden;
+    }
+
+    .side-queue-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--sidebar-stat-border);
+    }
+
+    .side-queue-title {
+      font-weight: 800;
+      font-size: 13px;
+      color: var(--sidebar-ink);
+    }
+
+    .side-queue-count {
+      color: var(--sidebar-muted);
+      font-size: 11px;
+      white-space: nowrap;
+    }
+
+    .side-queue-list {
+      display: grid;
+      gap: 6px;
+      max-height: 42vh;
+      overflow: auto;
+      padding: 8px;
+    }
+
+    .side-queue-item {
+      border: 1px solid var(--sidebar-stat-border);
+      border-radius: 8px;
+      background: color-mix(in srgb, var(--sidebar-stat-bg), var(--primary) 7%);
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .side-queue-item strong {
+      display: block;
+      font-size: 12px;
+      line-height: 1.2;
+      color: var(--sidebar-ink);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .side-queue-item span {
+      color: var(--sidebar-muted);
+      font-size: 11px;
+      line-height: 1.25;
+    }
+
+    .side-queue-actions {
+      display: grid;
+      grid-template-columns: 28px 28px 1fr;
+      gap: 5px;
+    }
+
+    .side-queue-actions button {
+      border: 1px solid var(--sidebar-stat-border);
+      border-radius: 7px;
+      background: var(--surface-muted);
+      color: var(--ink);
+      min-height: 28px;
+      cursor: pointer;
+      font-weight: 800;
+    }
+
+    .side-queue-actions button:last-child {
+      color: var(--primary);
+      font-size: 12px;
+    }
+
+    .side-queue-empty {
+      padding: 12px;
+      color: var(--sidebar-muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
     .side-stat span {
       display: block;
       color: var(--sidebar-muted);
@@ -2367,9 +2456,15 @@
         </div>
       </nav>
       <div class="side-stats">
-        <div class="side-stat"><span>Tänased tööd</span><strong id="todayCount">0</strong></div>
-        <div class="side-stat"><span>Täidetud</span><strong id="doneCount">0</strong></div>
-        <div class="side-stat"><span>Piloot</span><strong style="font-size:13px;">salvestub brauserisse</strong></div>
+        <div class="side-queue">
+          <div class="side-queue-head">
+            <div class="side-queue-title">Ootel tööd</div>
+            <div class="side-queue-count" id="sidebarQueueCount">0</div>
+          </div>
+          <div class="side-queue-list" id="sidebarQueueList">
+            <div class="side-queue-empty">Tööjärjekord laaditakse...</div>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -3450,6 +3545,7 @@
     let activeJobMenuId = null;
     let calendarHourHeight = 40;
     let selectedAiJobIds = new Set();
+    let sidebarQueueOrder = [];
     let showArchivedActs = false;
     let mobileFocusedJobId = null;
     let mobileSelectedTechs = [];
@@ -5982,9 +6078,66 @@
     }
 
     function renderStats() {
-      $("#todayCount").textContent = jobs.filter(job => job.date === dateKey(new Date())).length;
-      $("#doneCount").textContent = jobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
+      renderSidebarQueue();
       renderDatabaseStatus();
+    }
+
+    function sidebarQueueJobs() {
+      const passiveStatuses = ["täidetud", "akt", "saadetud", "arhiveeritud"];
+      const activeIds = new Set(jobs.map(job => String(job.id)));
+      sidebarQueueOrder = sidebarQueueOrder.filter(id => activeIds.has(String(id)));
+      const queueCandidates = jobs.filter(job => !passiveStatuses.includes(job.status));
+      const inQueue = new Set(sidebarQueueOrder.map(String));
+      queueCandidates.forEach(job => {
+        if (!inQueue.has(String(job.id))) sidebarQueueOrder.push(String(job.id));
+      });
+      const rank = new Map(sidebarQueueOrder.map((id, index) => [String(id), index]));
+      return queueCandidates
+        .slice()
+        .sort((a, b) => (rank.get(String(a.id)) ?? 9999) - (rank.get(String(b.id)) ?? 9999)
+          || a.date.localeCompare(b.date)
+          || String(a.time || "").localeCompare(String(b.time || "")));
+    }
+
+    function renderSidebarQueue() {
+      const list = $("#sidebarQueueList");
+      const count = $("#sidebarQueueCount");
+      if (!list || !count) return;
+      const queue = sidebarQueueJobs();
+      count.textContent = `${queue.length} tk`;
+      if (!queue.length) {
+        list.innerHTML = `<div class="side-queue-empty">Ootel või tegemata töid ei ole.</div>`;
+        return;
+      }
+      list.innerHTML = queue.slice(0, 12).map((job, index) => `
+        <div class="side-queue-item" data-sidebar-job="${escapeHtml(job.id)}">
+          <strong>${escapeHtml(job.client || "Töö")}</strong>
+          <span>${formatDateEt(job.date)} ${escapeHtml(job.time || "")} · ${escapeHtml(job.technician || (job.technicians || []).join(", ") || "määramata")}</span>
+          <span>${escapeHtml(job.address || job.referenceNo || "")}</span>
+          <div class="side-queue-actions">
+            <button type="button" data-queue-move="${escapeHtml(job.id)}" data-direction="-1" ${index === 0 ? "disabled" : ""}>↑</button>
+            <button type="button" data-queue-move="${escapeHtml(job.id)}" data-direction="1" ${index === queue.length - 1 ? "disabled" : ""}>↓</button>
+            <button type="button" data-queue-open="${escapeHtml(job.id)}">Ava</button>
+          </div>
+        </div>
+      `).join("");
+      $$("[data-queue-open]").forEach(button => button.addEventListener("click", () => {
+        selectedId = button.dataset.queueOpen;
+        detailJobId = selectedId;
+        renderAll();
+      }));
+      $$("[data-queue-move]").forEach(button => button.addEventListener("click", () => {
+        const id = String(button.dataset.queueMove);
+        const direction = Number(button.dataset.direction);
+        const ordered = sidebarQueueJobs().map(job => String(job.id));
+        const index = ordered.indexOf(id);
+        const next = index + direction;
+        if (index < 0 || next < 0 || next >= ordered.length) return;
+        [ordered[index], ordered[next]] = [ordered[next], ordered[index]];
+        sidebarQueueOrder = ordered;
+        savePilotData();
+        renderAll();
+      }));
     }
 
     function tickerLogo() {
@@ -6135,7 +6288,7 @@
     }
 
     function pilotPayload() {
-      return { people, peopleEvents, onCallShifts, projects, clients, jobs };
+      return { people, peopleEvents, onCallShifts, projects, clients, jobs, sidebarQueueOrder };
     }
 
     function applyPilotPayload(data) {
@@ -6145,6 +6298,7 @@
       projects = data.projects || projects;
       clients = data.clients || clients;
       jobs = data.jobs || jobs;
+      sidebarQueueOrder = Array.isArray(data.sidebarQueueOrder) ? data.sidebarQueueOrder : sidebarQueueOrder;
       normalizeLegacyJobIds();
       selectedId = jobs.find(job => job.id === selectedId)?.id || jobs[0]?.id || "";
       selectedProjectId = projects.find(project => project.id === selectedProjectId)?.id || projects[0]?.id || "";
