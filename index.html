@@ -216,6 +216,12 @@
       margin-top: 5px;
     }
 
+    @media (max-height: 900px) and (min-width: 1121px) {
+      .side-stats {
+        display: none;
+      }
+    }
+
     main {
       min-width: 0;
       display: flex;
@@ -3958,12 +3964,13 @@
     function fitCalendarHourHeight(endMinutes) {
       const visibleHours = Math.max(1, (endMinutes - 7 * 60) / 60);
       const panel = $("#calendarView > .panel");
+      const viewportHeight = window.visualViewport?.height || window.innerHeight;
       const panelTop = panel?.getBoundingClientRect().top || 0;
       const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
       const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
-      const innerSpacing = window.innerWidth <= 900 ? 44 : 58;
-      const availableHeight = Math.max(420, window.innerHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      calendarHourHeight = Math.max(30, Math.min(48, Math.floor(availableHeight / visibleHours)));
+      const innerSpacing = window.innerWidth <= 900 ? 32 : 40;
+      const availableHeight = Math.max(300, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
+      calendarHourHeight = Math.max(24, Math.min(44, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
