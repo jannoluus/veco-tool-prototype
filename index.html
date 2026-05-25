@@ -3970,7 +3970,8 @@
       const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
       const innerSpacing = window.innerWidth <= 900 ? 32 : 40;
       const availableHeight = Math.max(300, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      calendarHourHeight = Math.max(24, Math.min(44, Math.floor(availableHeight / visibleHours)));
+      const maxHourHeight = window.innerWidth >= 1500 ? 68 : 56;
+      calendarHourHeight = Math.max(24, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
@@ -7079,7 +7080,7 @@ Prioriteet: tavaline`;
       const granlundId = text.match(/\b[I1]D\s*:\s*(\d{3,})/i)?.[1];
       if (granlundId) return granlundId;
       const exportRow = detectGranlundExport(text);
-      const exportCode = exportRow.servicePart.match(/\b\d{3}(?:\.\d+)?\b/)?.[0];
+      const exportCode = String(exportRow.servicePart || "").match(/\b\d{3}(?:\.\d+)?\b/)?.[0];
       if (exportCode) return exportCode;
       const match = text.match(/(?:viide|kutse|kood|projekt|pakkumine|tellimus|nr)[:\s#-]*([A-ZÕÄÖÜ0-9-]{3,})/i) || text.match(/\b(S\d{6,}|VK-\d{3,}|PR-\d{3,}|PO-\d{3,})\b/i);
       return match ? cleanReferenceNo(match[1]) : "";
