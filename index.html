@@ -113,7 +113,7 @@
       padding: 22px 16px;
       display: flex;
       flex-direction: column;
-      gap: 22px;
+      gap: 16px;
       border-right: 1px solid var(--line);
     }
 
@@ -146,6 +146,39 @@
     .nav {
       display: grid;
       gap: 7px;
+    }
+
+    .sidebar-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .sidebar-actions .btn,
+    .sidebar-actions .select,
+    .sidebar-actions .check-select > summary {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .sidebar-actions .select {
+      min-height: 38px;
+    }
+
+    .sidebar-actions .btn.primary {
+      justify-content: center;
+    }
+
+    .sidebar-restore {
+      position: fixed;
+      left: 14px;
+      top: 14px;
+      z-index: 20;
+      display: none;
+      box-shadow: var(--shadow);
+    }
+
+    .app.sidebar-collapsed .sidebar-restore {
+      display: inline-flex;
     }
 
     .nav-more {
@@ -332,7 +365,7 @@
       position: sticky;
       top: 0;
       z-index: 5;
-      display: flex;
+      display: none;
       align-items: center;
       gap: 14px;
       justify-content: space-between;
@@ -2345,6 +2378,14 @@
       <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
         <span class="brand-wordmark" aria-label="VECO">VECO</span>
       </button>
+      <div class="sidebar-actions" aria-label="Kiirtegevused">
+        <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
+        <details class="check-select mobile-top-filter" id="mobileTechPicker">
+          <summary id="mobileTechSummary">Kõik tehnikud</summary>
+          <div class="check-select-menu" id="mobileTechChecks"></div>
+        </details>
+        <input id="importDataFile" type="file" accept="application/json" class="hidden">
+      </div>
       <nav class="nav" aria-label="Põhivaated">
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
@@ -2369,23 +2410,7 @@
     </aside>
 
     <main>
-      <header class="topbar">
-        <div class="toolbar">
-          <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
-          <select class="select" id="technicianFilter" aria-label="Tehniku filter">
-            <option value="all">Kõik tehnikud</option>
-          </select>
-          <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-          <input id="importDataFile" type="file" accept="application/json" class="hidden">
-          <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
-          <details class="check-select mobile-top-filter" id="mobileTechPicker">
-            <summary id="mobileTechSummary">Kõik tehnikud</summary>
-            <div class="check-select-menu" id="mobileTechChecks"></div>
-          </details>
-          <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
-        </div>
-      </header>
-
+      <button class="btn ghost sidebar-restore" id="restoreSidebarBtn" type="button"><span class="icon">☰</span> Näita menüüd</button>
       <section class="content hidden" id="pilotView">
         <div class="panel">
           <div class="panel-head">
@@ -2476,6 +2501,12 @@
               <select class="select oncall-inline-select" id="calendarOnCallSelect" aria-label="Nädala valve"></select>
             </div>
             <div class="filters">
+              <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+              <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+              <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
               <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
               <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
               <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
@@ -2485,19 +2516,6 @@
                 <option value="year">Aasta</option>
               </select>
               <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
-              <select class="select" id="statusFilter" aria-label="Staatuse filter">
-                <option value="all">Kõik staatused</option>
-                <option value="uus">Uus</option>
-                <option value="planeeritud">Planeeritud</option>
-                <option value="töös">Töös</option>
-                <option value="pausil">Pausil</option>
-                <option value="ootel">Ootel</option>
-                <option value="täidetud">Täidetud</option>
-                <option value="akt">Akt genereeritud</option>
-                <option value="saadetud">Saadetud</option>
-                <option value="arhiveeritud">Arhiveeritud</option>
-              </select>
-              <input class="field" id="searchField" placeholder="Otsi klienti, objekti..." aria-label="Otsing">
             </div>
           </div>
           <div class="calendar">
