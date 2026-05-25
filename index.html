@@ -3957,9 +3957,13 @@
 
     function fitCalendarHourHeight(endMinutes) {
       const visibleHours = Math.max(1, (endMinutes - 7 * 60) / 60);
-      const reservedHeight = window.innerWidth <= 900 ? 360 : 330;
-      const availableHeight = Math.min(640, Math.max(480, window.innerHeight - reservedHeight));
-      calendarHourHeight = Math.max(36, Math.min(54, Math.floor(availableHeight / visibleHours)));
+      const panel = $("#calendarView > .panel");
+      const panelTop = panel?.getBoundingClientRect().top || 0;
+      const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
+      const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
+      const innerSpacing = window.innerWidth <= 900 ? 44 : 58;
+      const availableHeight = Math.max(420, window.innerHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
+      calendarHourHeight = Math.max(30, Math.min(48, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
 
