@@ -181,6 +181,10 @@
       display: inline-flex;
     }
 
+    .app:not(.sidebar-collapsed) .sidebar-restore {
+      display: none;
+    }
+
     .nav-more {
       display: grid;
       gap: 7px;
@@ -454,6 +458,24 @@
       border-radius: var(--radius);
       box-shadow: var(--shadow);
       min-width: 0;
+    }
+
+    #calendarView > .panel {
+      display: flex;
+      flex-direction: column;
+      min-height: min(820px, calc(100vh - 118px));
+      overflow: hidden;
+    }
+
+    #calendarView > .panel > .panel-head,
+    #calendarView > .panel > .news-ticker {
+      flex: 0 0 auto;
+    }
+
+    #calendarView > .panel > .calendar {
+      flex: 1 1 auto;
+      min-height: 520px;
+      overflow: visible;
     }
 
     .panel-head {
@@ -834,6 +856,7 @@
       --calendar-hour-height: 40px;
       grid-template-columns: 38px repeat(5, minmax(120px, 1fr));
       gap: 10px;
+      min-height: 520px;
     }
 
     .week-grid.with-weekend {
@@ -4079,15 +4102,15 @@
     function fitCalendarHourHeight(endMinutes) {
       const visibleHours = Math.max(1, (endMinutes - 7 * 60) / 60);
       const panel = $("#calendarView > .panel");
-      const viewportHeight = window.visualViewport?.height || window.innerHeight;
-      const panelTop = panel?.getBoundingClientRect().top || 0;
-      const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 100;
-      const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 48;
-      const compactViewport = viewportHeight < 1120 && window.innerWidth > 1120;
-      const innerSpacing = window.innerWidth <= 900 ? 32 : (compactViewport ? 82 : 48);
-      const availableHeight = Math.max(360, viewportHeight - panelTop - panelHeadHeight - tickerHeight - innerSpacing);
-      const minHourHeight = window.innerWidth <= 900 ? 24 : (compactViewport ? 40 : 36);
-      const maxHourHeight = window.innerWidth >= 1500 ? (compactViewport ? 54 : 68) : (compactViewport ? 48 : 56);
+      const viewportHeight = window.visualViewport?.height || window.innerHeight || 900;
+      const viewportWidth = window.innerWidth || 1280;
+      const panelTop = Math.max(0, panel?.getBoundingClientRect().top || 0);
+      const panelHeadHeight = $("#calendarView > .panel > .panel-head")?.offsetHeight || 96;
+      const tickerHeight = $("#calendarView .news-ticker")?.offsetHeight || 44;
+      const bottomReserve = viewportWidth <= 900 ? 28 : 72;
+      const availableHeight = Math.max(420, viewportHeight - panelTop - panelHeadHeight - tickerHeight - bottomReserve);
+      const minHourHeight = viewportWidth <= 900 ? 24 : 38;
+      const maxHourHeight = viewportWidth >= 1500 ? 58 : 50;
       calendarHourHeight = Math.max(minHourHeight, Math.min(maxHourHeight, Math.floor(availableHeight / visibleHours)));
       return calendarHourHeight;
     }
@@ -4372,23 +4395,27 @@
     function fillSelects() {
       const techOptions = technicians().map(name => `<option value="${name}">${name}</option>`).join("");
       const timeOptions = buildTimeOptions();
-      const selectedTech = $("#technicianFilter").value || "all";
-      const selectedActsTech = $("#actsTechFilter").value || "all";
+      const selectedTech = $("#technicianFilter")?.value || "all";
+      const selectedActsTech = $("#actsTechFilter")?.value || "all";
       const mobileTechs = selectedMobileTechnicians();
       const teamTechs = selectedTeamTechnicians();
       const sortedTechs = technicians().slice().sort((a, b) => a.localeCompare(b, "et"));
-      $("#technicianFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
-      $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
-      $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
-      $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
+      if ($("#technicianFilter")) {
+        $("#technicianFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
+        $("#technicianFilter").value = technicians().includes(selectedTech) ? selectedTech : "all";
+      }
+      if ($("#actsTechFilter")) {
+        $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
+        $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
+      }
       if ($("#onCallTechFilter")) {
         const selectedOnCallTech = $("#onCallTechFilter").value || "all";
         $("#onCallTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("")}`;
         $("#onCallTechFilter").value = people.some(person => person.id === selectedOnCallTech) ? selectedOnCallTech : "all";
       }
       const allMobileTechsSelected = mobileTechs.length === technicians().length;
-      $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
-      $("#mobileTechChecks").innerHTML = `
+      if ($("#mobileTechSummary")) $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
+      if ($("#mobileTechChecks")) $("#mobileTechChecks").innerHTML = `
         <label class="select-all">
           <input type="checkbox" value="__all" ${allMobileTechsSelected ? "checked" : ""}>
           <span>Vali kõik</span>
@@ -4400,8 +4427,8 @@
         </label>
       `).join("")}`;
       const allTeamTechsSelected = teamTechs.length === sortedTechs.length;
-      $("#teamTechSummary").textContent = allTeamTechsSelected ? "Kõik tehnikud" : (teamTechs.length === 1 ? teamTechs[0] : `${teamTechs.length} tehnikut`);
-      $("#teamTechChecks").innerHTML = `
+      if ($("#teamTechSummary")) $("#teamTechSummary").textContent = allTeamTechsSelected ? "Kõik tehnikud" : (teamTechs.length === 1 ? teamTechs[0] : `${teamTechs.length} tehnikut`);
+      if ($("#teamTechChecks")) $("#teamTechChecks").innerHTML = `
         <label class="select-all">
           <input type="checkbox" value="__all" ${allTeamTechsSelected ? "checked" : ""}>
           <span>Vali kõik</span>
@@ -4412,13 +4439,13 @@
           <span>${escapeHtml(name)}</span>
         </label>
       `).join("")}`;
-      document.querySelector("#jobForm [name='technician']").innerHTML = techOptions;
-      document.querySelector("#jobForm [name='time']").innerHTML = timeOptions;
-      document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`;
-      document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions;
-      document.querySelector("#eventForm [name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
-      document.querySelector("#onCallForm [name='personId']").innerHTML = people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("");
-      document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join("");
+      document.querySelector("#jobForm [name='technician']") && (document.querySelector("#jobForm [name='technician']").innerHTML = techOptions);
+      document.querySelector("#jobForm [name='time']") && (document.querySelector("#jobForm [name='time']").innerHTML = timeOptions);
+      document.querySelector("#jobForm [name='endTime']") && (document.querySelector("#jobForm [name='endTime']").innerHTML = `<option value="">Vali lõpp</option>${timeOptions}`);
+      document.querySelector("#clientPlanForm [name='technician']") && (document.querySelector("#clientPlanForm [name='technician']").innerHTML = techOptions);
+      document.querySelector("#eventForm [name='personId']") && (document.querySelector("#eventForm [name='personId']").innerHTML = people.map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join(""));
+      document.querySelector("#onCallForm [name='personId']") && (document.querySelector("#onCallForm [name='personId']").innerHTML = people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join(""));
+      document.querySelector("[name='clientId']") && (document.querySelector("[name='clientId']").innerHTML = clients.map(client => `<option value="${client.id}">${escapeHtml(client.name)}</option>`).join(""));
     }
 
     function updateClientItemFormMode() {
@@ -4462,9 +4489,9 @@
     }
 
     function filteredJobs() {
-      const tech = $("#technicianFilter").value;
-      const status = $("#statusFilter").value;
-      const query = $("#searchField").value.trim().toLowerCase();
+      const tech = $("#technicianFilter")?.value || "all";
+      const status = $("#statusFilter")?.value || "all";
+      const query = ($("#searchField")?.value || "").trim().toLowerCase();
       return jobs.filter(job => {
         const matchesTech = jobHasTechnician(job, tech);
         const matchesStatus = status === "all" || job.status === status;
@@ -4474,8 +4501,11 @@
     }
 
     function renderCalendar() {
+      const calendarTitle = $("#calendarTitle");
+      const weekGrid = $("#weekGrid");
+      if (!calendarTitle || !weekGrid) return;
       const visible = filteredJobs();
-      const mode = $("#calendarMode").value;
+      const mode = $("#calendarMode")?.value || "week";
       if (mode === "month") {
         renderMonthCalendar(visible);
         return;
@@ -4492,9 +4522,9 @@
         return [dateKey(date), dayLabels[index], formatShortDate(date)];
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      $("#calendarTitle").textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
-      $("#weekGrid").className = showWeekends ? "week-grid with-weekend" : "week-grid";
+      weekGrid.className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const todayVisible = weekDays.some(([date]) => date === dateKey(new Date()));
       const baseEndMinutes = calendarEndMinutes(visibleWeekJobs);
@@ -4502,12 +4532,12 @@
       const endMinutes = todayVisible && nowMinutes > baseEndMinutes ? Math.min(23 * 60, Math.ceil((nowMinutes + 60) / 60) * 60) : baseEndMinutes;
       const hourHeight = fitCalendarHourHeight(endMinutes);
       const bodyHeight = Math.round(((endMinutes - 7 * 60) / 60) * hourHeight);
-      $("#weekGrid").style.setProperty("--calendar-hour-height", `${hourHeight}px`);
-      $("#weekGrid").style.setProperty("--calendar-body-height", `${bodyHeight}px`);
+      weekGrid.style.setProperty("--calendar-hour-height", `${hourHeight}px`);
+      weekGrid.style.setProperty("--calendar-body-height", `${bodyHeight}px`);
       const timeAxis = `<div class="time-axis" aria-hidden="true">${
         Array.from({ length: Math.floor((endMinutes - 7 * 60) / 60) + 1 }, (_, index) => `<span style="--hour-index:${index}">${String(index + 7).padStart(2, "0")}:00</span>`).join("")
       }${selectedJobRangeMarkers(endMinutes)}${currentTimeAxisMarker(weekDays, endMinutes)}</div>`;
-      $("#weekGrid").innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
+      weekGrid.innerHTML = timeAxis + weekDays.map(([date, day, label]) => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         const overlapLayout = overlapLayoutForJobs(dayJobs);
         const weekday = new Date(`${date}T12:00:00`).getDay();
@@ -4772,15 +4802,18 @@
     }
 
     function renderMonthCalendar(visible) {
+      const calendarTitle = $("#calendarTitle");
+      const weekGrid = $("#weekGrid");
+      if (!calendarTitle || !weekGrid) return;
       const year = calendarCursor.getFullYear();
       const month = calendarCursor.getMonth();
       const monthDays = Array.from({ length: daysInMonth(year, month) }, (_, index) => dateKey(new Date(year, month, index + 1, 12)));
       const firstDayOffset = (new Date(year, month, 1, 12).getDay() + 6) % 7;
       const leadingBlanks = Array.from({ length: firstDayOffset }, () => `<div class="month-cell blank" aria-hidden="true"></div>`);
       const weekdayHeads = ["E", "T", "K", "N", "R", "L", "P"].map(day => `<div class="month-weekday">${day}</div>`);
-      $("#calendarTitle").textContent = `${monthNames[month]} ${year}`;
-      $("#weekGrid").className = "calendar-grid month";
-      $("#weekGrid").innerHTML = weekdayHeads.join("") + leadingBlanks.join("") + monthDays.map(date => {
+      calendarTitle.textContent = `${monthNames[month]} ${year}`;
+      weekGrid.className = "calendar-grid month";
+      weekGrid.innerHTML = weekdayHeads.join("") + leadingBlanks.join("") + monthDays.map(date => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
         return `
           <div class="month-cell" data-calendar-day="${date}">
@@ -4798,10 +4831,13 @@
     }
 
     function renderYearCalendar(visible) {
+      const calendarTitle = $("#calendarTitle");
+      const weekGrid = $("#weekGrid");
+      if (!calendarTitle || !weekGrid) return;
       const year = calendarCursor.getFullYear();
-      $("#calendarTitle").textContent = `Aasta ${year}`;
-      $("#weekGrid").className = "calendar-grid year";
-      $("#weekGrid").innerHTML = monthNames.map((name, index) => {
+      calendarTitle.textContent = `Aasta ${year}`;
+      weekGrid.className = "calendar-grid year";
+      weekGrid.innerHTML = monthNames.map((name, index) => {
         const month = String(index + 1).padStart(2, "0");
         const monthJobs = visible.filter(job => job.date.startsWith(`${year}-${month}`));
         const done = monthJobs.filter(job => ["täidetud", "akt", "saadetud"].includes(job.status)).length;
@@ -4873,6 +4909,10 @@
     }
 
     function renderTeam() {
+      const teamTitle = $("#teamTitle");
+      const teamGrid = $("#teamGrid");
+      const teamWarnings = $("#teamWarnings");
+      if (!teamTitle || !teamGrid) return;
       const weekStart = startOfWeek(calendarCursor);
       const weekLength = showWeekends ? 7 : 5;
       const dayLabels = ["E", "T", "K", "N", "R", "L", "P"];
@@ -4881,9 +4921,10 @@
         return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      $("#teamTitle").textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       renderOnCallRangeSelect($("#teamOnCallSelect"), weekStart, weekEnd);
-      $("#teamToggleWeekendBtn").innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
+      const teamToggleWeekendBtn = $("#teamToggleWeekendBtn");
+      if (teamToggleWeekendBtn) teamToggleWeekendBtn.innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
       const activeStatuses = ["uus", "planeeritud", "töös", "pausil", "ootel", "täidetud", "akt"];
       const visibleTechs = selectedTeamTechnicians();
       const visibleCount = Math.max(1, visibleTechs.length);
@@ -4891,8 +4932,8 @@
       const rowChrome = 48;
       const rowGaps = Math.max(0, visibleCount - 1) * 14;
       const dynamicDayHeight = Math.max(170, Math.min(680, Math.floor((availableHeight - rowGaps - visibleCount * rowChrome) / visibleCount)));
-      $("#teamGrid").style.setProperty("--team-day-height", `${dynamicDayHeight}px`);
-      $("#teamGrid").innerHTML = visibleTechs.map(tech => {
+      teamGrid.style.setProperty("--team-day-height", `${dynamicDayHeight}px`);
+      teamGrid.innerHTML = visibleTechs.map(tech => {
         const techJobs = jobs
           .filter(job => jobHasTechnician(job, tech) && activeStatuses.includes(job.status) && weekDays.some(day => day.date === job.date))
           .sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`));
@@ -4950,15 +4991,6 @@
         .filter(job => weekDays.some(day => day.date === job.date) && visibleTechs.some(tech => jobHasTechnician(job, tech)))
         .flatMap(job => conflictJobsFor(job).map(other => ({ job, other, key: [job.id, other.id].sort().join("::") })));
       const uniqueConflicts = [...new Map(conflicts.map(item => [item.key, item])).values()];
-      $("#teamWarnings").innerHTML = uniqueConflicts.length
-        ? `<p class="section-title">Kattuvused</p>${uniqueConflicts.map(({ job, other }) => `
-          <button class="mobile-card" data-team-job="${job.id}">
-            <strong>${escapeHtml(sharedTechnicians(job, other).join(", "))}</strong>
-            <span class="job-meta">${escapeHtml(formatDateEt(job.date))} · ${escapeHtml(displayWorkWindow(job))} ${escapeHtml(job.client)}</span>
-            <span class="job-meta">${escapeHtml(displayWorkWindow(other))} ${escapeHtml(other.client)}</span>
-          </button>
-        `).join("")}`
-        : `<div class="mobile-card">Selles nädalas sama tehniku kattuvaid töid ei ole.</div>`;
       const workloadCards = visibleTechs.map(tech => {
         const workload = technicianWeekWorkload(tech, weekDays);
         const slot = nextAvailableSlotForTechnician(tech, 120, { date: dateKey(weekStart), time: "08:00" });
@@ -4970,7 +5002,18 @@
           </div>
         `;
       }).join("");
-      $("#teamWarnings").insertAdjacentHTML("beforeend", `<p class="section-title">Koormus ja vaba aeg</p>${workloadCards}`);
+      if (teamWarnings) {
+        teamWarnings.innerHTML = uniqueConflicts.length
+          ? `<p class="section-title">Kattuvused</p>${uniqueConflicts.map(({ job, other }) => `
+            <button class="mobile-card" data-team-job="${job.id}">
+              <strong>${escapeHtml(sharedTechnicians(job, other).join(", "))}</strong>
+              <span class="job-meta">${escapeHtml(formatDateEt(job.date))} · ${escapeHtml(displayWorkWindow(job))} ${escapeHtml(job.client)}</span>
+              <span class="job-meta">${escapeHtml(displayWorkWindow(other))} ${escapeHtml(other.client)}</span>
+            </button>
+          `).join("")}`
+          : `<div class="mobile-card">Selles nädalas sama tehniku kattuvaid töid ei ole.</div>`;
+        teamWarnings.insertAdjacentHTML("beforeend", `<p class="section-title">Koormus ja vaba aeg</p>${workloadCards}`);
+      }
 
       $$("[data-team-job]").forEach(card => {
         card.addEventListener("click", () => {
@@ -7602,7 +7645,7 @@ Summa: 2 075,34 €`;
     }
 
     function moveCalendarPeriod(direction) {
-      const mode = $("#calendarMode").value;
+      const mode = $("#calendarMode")?.value || "week";
       const next = new Date(calendarCursor);
       if (mode === "week") next.setDate(next.getDate() + direction * 7);
       if (mode === "month") next.setMonth(next.getMonth() + direction);
@@ -7616,8 +7659,8 @@ Summa: 2 075,34 €`;
     function resetCalendarToToday() {
       calendarCursor = new Date();
       calendarCursor.setHours(12, 0, 0, 0);
-      $("#statusFilter").value = "all";
-      $("#searchField").value = "";
+      if ($("#statusFilter")) $("#statusFilter").value = "all";
+      if ($("#searchField")) $("#searchField").value = "";
       detailJobId = null;
       setDetailCollapsed(true);
       renderAll();
@@ -8572,9 +8615,11 @@ Summa: 2 075,34 €`;
 
     function toggleSidebar() {
       const collapsed = $("#appShell").classList.toggle("sidebar-collapsed");
-      $("#toggleSidebarBtn").innerHTML = collapsed
-        ? `<span class="icon">☰</span> Näita menüüd`
-        : `<span class="icon">☰</span> Peida menüü`;
+      if ($("#toggleSidebarBtn")) {
+        $("#toggleSidebarBtn").innerHTML = collapsed
+          ? `<span class="icon">☰</span> Näita menüüd`
+          : `<span class="icon">☰</span> Peida menüü`;
+      }
     }
 
     function toggleDetail() {
@@ -8665,7 +8710,8 @@ Summa: 2 075,34 €`;
       renderAi();
     });
     $("#aiDeleteSelectedBtn").addEventListener("click", () => deleteAiJobs([...selectedAiJobIds]));
-    $("#toggleSidebarBtn").addEventListener("click", toggleSidebar);
+    $("#toggleSidebarBtn")?.addEventListener("click", toggleSidebar);
+    $("#restoreSidebarBtn")?.addEventListener("click", toggleSidebar);
     $("#copySelectedBtn").addEventListener("click", () => {
       const targetTech = $("#copySelectedTech").value;
       copyJobToTechnician(detailJobId || selectedId, targetTech);
@@ -8718,31 +8764,35 @@ Summa: 2 075,34 €`;
     $("#saveActPdfBtn").addEventListener("click", saveActPdf);
     $("#printActSideBtn").addEventListener("click", openAct);
     $("#markSentBtn").addEventListener("click", () => { updateStatus("saadetud"); closeModal("actModal"); });
-    $("#todayBtn").addEventListener("click", resetCalendarToToday);
-    $("#prevPeriodBtn").addEventListener("click", () => moveCalendarPeriod(-1));
-    $("#nextPeriodBtn").addEventListener("click", () => moveCalendarPeriod(1));
-    $("#toggleWeekendBtn").addEventListener("click", toggleWeekends);
-    $("#teamPrevBtn").addEventListener("click", () => moveCalendarPeriod(-1));
-    $("#teamTodayBtn").addEventListener("click", resetCalendarToToday);
-    $("#teamNextBtn").addEventListener("click", () => moveCalendarPeriod(1));
-    $("#teamToggleWeekendBtn").addEventListener("click", toggleWeekends);
-    $("#calendarOnCallSelect").addEventListener("change", () => {
+    $("#todayBtn")?.addEventListener("click", resetCalendarToToday);
+    $("#prevPeriodBtn")?.addEventListener("click", () => moveCalendarPeriod(-1));
+    $("#nextPeriodBtn")?.addEventListener("click", () => moveCalendarPeriod(1));
+    $("#toggleWeekendBtn")?.addEventListener("click", toggleWeekends);
+    $("#teamPrevBtn")?.addEventListener("click", () => moveCalendarPeriod(-1));
+    $("#teamTodayBtn")?.addEventListener("click", resetCalendarToToday);
+    $("#teamNextBtn")?.addEventListener("click", () => moveCalendarPeriod(1));
+    $("#teamToggleWeekendBtn")?.addEventListener("click", toggleWeekends);
+    $("#calendarOnCallSelect")?.addEventListener("change", () => {
+      const select = $("#calendarOnCallSelect");
+      if (!select) return;
       const start = startOfWeek(calendarCursor);
       const end = addDays(start, showWeekends ? 6 : 4);
-      setOnCallForRange($("#calendarOnCallSelect").value, start, end);
+      setOnCallForRange(select.value, start, end);
     });
-    $("#teamOnCallSelect").addEventListener("change", () => {
+    $("#teamOnCallSelect")?.addEventListener("change", () => {
+      const select = $("#teamOnCallSelect");
+      if (!select) return;
       const start = startOfWeek(calendarCursor);
       const end = addDays(start, showWeekends ? 6 : 4);
-      setOnCallForRange($("#teamOnCallSelect").value, start, end);
+      setOnCallForRange(select.value, start, end);
     });
-    $("#technicianFilter").addEventListener("change", renderAll);
-    $("#calendarMode").addEventListener("change", () => {
+    $("#technicianFilter")?.addEventListener("change", renderAll);
+    $("#calendarMode")?.addEventListener("change", () => {
       detailJobId = null;
       setDetailCollapsed(true);
       renderAll();
     });
-    $("#statusFilter").addEventListener("change", renderAll);
+    $("#statusFilter")?.addEventListener("change", renderAll);
     $("#tickerSpeedSelect").addEventListener("change", () => {
       localStorage.setItem(TICKER_SPEED_KEY, $("#tickerSpeedSelect").value);
       applyTickerSettings();
@@ -8776,7 +8826,7 @@ Summa: 2 075,34 €`;
     $("#objectSearchField").addEventListener("input", renderAll);
     $("#objectStatusFilter").addEventListener("change", renderAll);
     $("#projectStatusFilter").addEventListener("change", renderAll);
-    $("#searchField").addEventListener("input", renderAll);
+    $("#searchField")?.addEventListener("input", renderAll);
     $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
       if (!btn.dataset.view) return;
       if (btn.dataset.view === "mobile") {
@@ -8816,11 +8866,11 @@ Summa: 2 075,34 €`;
       renderCalendar();
     });
     window.addEventListener("resize", () => {
-      if ($("#calendarView").classList.contains("active")) renderCalendar();
-      if ($("#teamView").classList.contains("active")) renderTeam();
+      if (!$("#calendarView").classList.contains("hidden")) renderCalendar();
+      if (!$("#teamView").classList.contains("hidden")) renderTeam();
     });
     window.setInterval(() => {
-      if ($("#calendarView").classList.contains("active") && $("#calendarMode").value === "week") renderCalendar();
+      if (!$("#calendarView").classList.contains("hidden") && ($("#calendarMode")?.value || "week") === "week") renderCalendar();
     }, 60000);
   </script>
 </body>
