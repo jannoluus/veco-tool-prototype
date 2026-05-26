@@ -518,6 +518,18 @@
       flex-wrap: wrap;
     }
 
+    .panel-menu-toggle {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    .app.sidebar-collapsed .panel-menu-toggle {
+      margin-left: 48px;
+    }
+
+
     #calendarView > .panel > .panel-head,
     #teamView > .panel > .panel-head {
       display: grid;
@@ -3059,7 +3071,6 @@
         <span class="brand-wordmark" aria-label="VECO">VECO</span>
       </button>
       <div class="sidebar-actions" aria-label="Kiirtegevused">
-        <button class="btn ghost" id="toggleSidebarBtn"><span class="icon">☰</span> Peida menüü</button>
         <details class="check-select mobile-top-filter" id="mobileTechPicker">
           <summary id="mobileTechSummary">Kõik tehnikud</summary>
           <div class="check-select-menu" id="mobileTechChecks"></div>
@@ -3177,6 +3188,7 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title-inline">
+              <button class="btn ghost panel-menu-toggle" id="toggleSidebarBtn" type="button" title="Peida/näita menüüd"><span class="icon">☰</span></button>
               <h2 id="calendarTitle">Nädal 20 · 2026</h2>
               <select class="select oncall-inline-select" id="calendarOnCallSelect" aria-label="Nädala valve"></select>
             </div>
@@ -7227,7 +7239,7 @@
     }
 
     function renderAll() {
-      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
+      const activeViewId = viewNames.map(view => `${view}View`).find(id => !$(`#${id}`)?.classList.contains("hidden")) || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
@@ -9332,6 +9344,7 @@ Summa: 2 075,34 €`;
         $(`#${view}View`)?.classList.toggle("hidden", view !== targetView);
       });
       $$(".nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.view === targetView));
+      if (targetView !== "calendar") setDetailCollapsed(true);
       if (updateUrl) {
         const url = new URL(window.location.href);
         url.searchParams.set("view", targetView);
@@ -9342,9 +9355,8 @@ Summa: 2 075,34 €`;
     function toggleSidebar() {
       const collapsed = $("#appShell").classList.toggle("sidebar-collapsed");
       if ($("#toggleSidebarBtn")) {
-        $("#toggleSidebarBtn").innerHTML = collapsed
-          ? `<span class="icon">☰</span> Näita menüüd`
-          : `<span class="icon">☰</span> Peida menüü`;
+        $("#toggleSidebarBtn").innerHTML = `<span class="icon">☰</span>`;
+        $("#toggleSidebarBtn").title = collapsed ? "Näita menüüd" : "Peida menüü";
       }
     }
 
@@ -9559,13 +9571,8 @@ Summa: 2 075,34 €`;
     $("#searchField")?.addEventListener("input", renderAll);
     $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
       if (!btn.dataset.view) return;
-      if (btn.dataset.view === "mobile") {
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", "mobile");
-        window.open(url.toString(), "_blank", "noopener");
-        return;
-      }
       switchView(btn.dataset.view);
+      renderAll();
     }));
     $$("[data-close]").forEach(btn => btn.addEventListener("click", () => closeModal(btn.dataset.close)));
     $$(".modal").forEach(modal => modal.addEventListener("click", event => {
