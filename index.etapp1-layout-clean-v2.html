@@ -3063,60 +3063,66 @@
     }
 
 
-    /* Sidebar rail toggle: narrow divider between menu and calendar */
+    /* Google Calendar style sidebar toggle: hamburger + VECO stays visible when collapsed */
     .app {
-      grid-template-columns: 216px 18px minmax(0, 1fr);
+      grid-template-columns: 216px minmax(0, 1fr);
     }
 
     .app.sidebar-collapsed {
-      grid-template-columns: 18px minmax(0, 1fr);
+      grid-template-columns: 142px minmax(0, 1fr);
     }
 
-    .sidebar-rail-toggle {
-      position: sticky;
-      top: 0;
-      z-index: 18;
-      min-width: 18px;
-      width: 18px;
-      min-height: 100vh;
-      height: 100vh;
-      padding: 0;
-      display: grid;
-      place-items: center;
-      background: #0b1721;
-      border-left: 1px solid rgba(67,94,116,.45);
-      border-right: 1px solid rgba(67,94,116,.45);
-      color: rgba(148,190,224,.72);
-      box-shadow: inset -1px 0 0 rgba(255,255,255,.025);
-      transition: background .14s ease, width .14s ease, color .14s ease;
+    .app.sidebar-collapsed .sidebar {
+      display: flex;
+      width: 142px;
+      overflow: hidden;
     }
 
-    .sidebar-rail-toggle span {
-      width: 100%;
-      height: 100%;
-      border: 0;
-      border-radius: 0;
-      display: grid;
+    .sidebar {
+      padding-top: 14px;
+    }
+
+    .sidebar-top {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 4px;
+    }
+
+    .sidebar-menu-button {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      border-radius: 999px;
+      display: inline-grid;
       place-items: center;
       background: transparent;
-      color: inherit;
-      font-size: 16px;
-      line-height: 1;
-      opacity: .72;
-      transition: opacity .14s ease, color .14s ease;
+      color: var(--sidebar-ink);
+      border: 1px solid transparent;
+      transition: background .14s ease, border-color .14s ease;
     }
 
-    .sidebar-rail-toggle:hover {
-      background: #102435;
-      color: #d8ecff;
+    .sidebar-menu-button:hover {
+      background: var(--sidebar-hover);
+      border-color: var(--line);
     }
 
-    .sidebar-rail-toggle:hover span {
-      opacity: 1;
+    .sidebar-top .brand {
+      min-width: 0;
+      flex: 1 1 auto;
+      padding: 8px 10px;
+      overflow: hidden;
     }
 
-    .app.sidebar-collapsed .sidebar-rail-toggle {
-      background: #0f2130;
+    .app.sidebar-collapsed .sidebar-top .brand {
+      padding-left: 4px;
+    }
+
+    .app.sidebar-collapsed .nav,
+    .app.sidebar-collapsed .sidebar-actions,
+    .app.sidebar-collapsed .side-stats {
+      display: none !important;
     }
 
     .panel-menu-toggle,
@@ -3129,213 +3135,12 @@
       .app.sidebar-collapsed {
         grid-template-columns: 1fr;
       }
-      .sidebar-rail-toggle {
+      .app.sidebar-collapsed .sidebar {
         display: none;
       }
-    }
-
-
-    /* v2 fixes: light/dark theme and cleaner sidebar rail */
-    body:not(.theme-dark) {
-      --ink: #172026;
-      --muted: #61707c;
-      --line: #dce3e8;
-      --panel: #ffffff;
-      --bg: #f5f7f8;
-      --blue: #1769aa;
-      --blue-2: #0f527f;
-      --sidebar-bg: #ffffff;
-      --sidebar-ink: #172026;
-      --sidebar-muted: #61707c;
-      --sidebar-hover: #eef3f7;
-      --sidebar-active: #e7edf1;
-      --sidebar-stat-bg: #f8fafb;
-      --sidebar-stat-border: #dce3e8;
-      background: var(--bg) !important;
-      color: var(--ink) !important;
-    }
-
-    body:not(.theme-dark) main,
-    body:not(.theme-dark) .app {
-      background: var(--bg) !important;
-    }
-
-    body:not(.theme-dark) .sidebar {
-      background: var(--sidebar-bg) !important;
-      border-right-color: var(--line) !important;
-      color: var(--sidebar-ink) !important;
-    }
-
-    body:not(.theme-dark) .brand {
-      background: #eef3f7 !important;
-      color: var(--blue) !important;
-    }
-
-    body:not(.theme-dark) .brand:hover {
-      background: #e3ebf1 !important;
-    }
-
-    body:not(.theme-dark) .brand-wordmark {
-      color: var(--blue) !important;
-    }
-
-    body:not(.theme-dark) .nav button,
-    body:not(.theme-dark) .nav-file-action,
-    body:not(.theme-dark) .sidebar-actions .btn {
-      color: var(--sidebar-ink) !important;
-      background: transparent !important;
-      border-color: transparent !important;
-    }
-
-    body:not(.theme-dark) .nav button.active,
-    body:not(.theme-dark) .nav button:hover,
-    body:not(.theme-dark) .nav-file-action:hover,
-    body:not(.theme-dark) .sidebar-actions .btn:hover {
-      background: var(--sidebar-active) !important;
-      border-color: #d4dde4 !important;
-      color: var(--sidebar-ink) !important;
-    }
-
-    body:not(.theme-dark) .panel,
-    body:not(.theme-dark) .dialog,
-    body:not(.theme-dark) .dialog-head,
-    body:not(.theme-dark) .dialog-actions,
-    body:not(.theme-dark) .field,
-    body:not(.theme-dark) .select,
-    body:not(.theme-dark) .check-select > summary,
-    body:not(.theme-dark) .check-select-menu,
-    body:not(.theme-dark) textarea,
-    body:not(.theme-dark) .job-card,
-    body:not(.theme-dark) .job-action-menu,
-    body:not(.theme-dark) .mini-job,
-    body:not(.theme-dark) .team-job,
-    body:not(.theme-dark) .mobile-card,
-    body:not(.theme-dark) .person-card,
-    body:not(.theme-dark) .event-row,
-    body:not(.theme-dark) .act-preview,
-    body:not(.theme-dark) .act-box {
-      background: #ffffff !important;
-      color: var(--ink) !important;
-      border-color: var(--line) !important;
-    }
-
-    body:not(.theme-dark) .topbar {
-      background: rgba(245,247,248,.94) !important;
-      border-bottom-color: var(--line) !important;
-    }
-
-    body:not(.theme-dark) .panel-head,
-    body:not(.theme-dark) .day-head,
-    body:not(.theme-dark) .team-row-head {
-      background: #eef3f5 !important;
-      border-color: var(--line) !important;
-    }
-
-    body:not(.theme-dark) .day,
-    body:not(.theme-dark) .team-row,
-    body:not(.theme-dark) .team-day,
-    body:not(.theme-dark) .month-cell,
-    body:not(.theme-dark) .year-cell,
-    body:not(.theme-dark) .object-mini-day,
-    body:not(.theme-dark) .paste-zone,
-    body:not(.theme-dark) .photo-tile,
-    body:not(.theme-dark) .news-ticker,
-    body:not(.theme-dark) .ticker-controls {
-      background-color: #fbfcfd !important;
-      color: var(--ink) !important;
-      border-color: var(--line) !important;
-    }
-
-    body:not(.theme-dark) .btn {
-      background: #e7edf1 !important;
-      color: var(--ink) !important;
-      border-color: transparent !important;
-    }
-
-    body:not(.theme-dark) .btn.primary {
-      background: var(--blue) !important;
-      color: #fff !important;
-    }
-
-    body:not(.theme-dark) .btn.ghost {
-      background: transparent !important;
-      border-color: var(--line) !important;
-    }
-
-    body:not(.theme-dark) .job-meta,
-    body:not(.theme-dark) .kv span,
-    body:not(.theme-dark) label,
-    body:not(.theme-dark) .section-title {
-      color: var(--muted) !important;
-    }
-
-    .sidebar-rail-toggle {
-      background: transparent !important;
-      border-left: 1px solid rgba(67,94,116,.35) !important;
-      border-right: 1px solid rgba(67,94,116,.35) !important;
-      box-shadow: none !important;
-    }
-
-    .sidebar-rail-toggle span {
-      font-size: 13px !important;
-      opacity: .52 !important;
-    }
-
-    .sidebar-rail-toggle:hover {
-      background: rgba(31,139,232,.10) !important;
-      color: var(--blue) !important;
-    }
-
-    .sidebar-rail-toggle:hover span {
-      opacity: .9 !important;
-    }
-
-    body:not(.theme-dark) .sidebar-rail-toggle {
-      background: transparent !important;
-      border-left-color: #d8e1e8 !important;
-      border-right-color: #d8e1e8 !important;
-      color: #61707c !important;
-    }
-
-    body:not(.theme-dark) .app.sidebar-collapsed .sidebar-rail-toggle,
-    .app.sidebar-collapsed .sidebar-rail-toggle {
-      background: transparent !important;
-    }
-
-
-    /* Final menu collapse rail: no hamburger/round button, only a slim clickable color strip */
-    .sidebar-rail-toggle {
-      width: 12px !important;
-      min-width: 12px !important;
-      background: rgba(31,139,232,.16) !important;
-      border-left: 1px solid rgba(67,94,116,.38) !important;
-      border-right: 1px solid rgba(67,94,116,.38) !important;
-      color: transparent !important;
-      cursor: col-resize;
-    }
-
-    .sidebar-rail-toggle span,
-    .sidebar-rail-toggle span::before,
-    .sidebar-rail-toggle span::after {
-      display: none !important;
-      content: none !important;
-    }
-
-    .sidebar-rail-toggle:hover {
-      width: 14px !important;
-      min-width: 14px !important;
-      background: rgba(31,139,232,.34) !important;
-      color: transparent !important;
-    }
-
-    body:not(.theme-dark) .sidebar-rail-toggle {
-      background: rgba(23,105,170,.13) !important;
-      border-left-color: #cfdce6 !important;
-      border-right-color: #cfdce6 !important;
-    }
-
-    body:not(.theme-dark) .sidebar-rail-toggle:hover {
-      background: rgba(23,105,170,.28) !important;
+      .sidebar-top {
+        min-width: max-content;
+      }
     }
 
   </style>
@@ -3343,9 +3148,12 @@
 <body>
   <div class="app" id="appShell">
     <aside class="sidebar">
-      <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
-        <span class="brand-wordmark" aria-label="VECO">VECO</span>
-      </button>
+      <div class="sidebar-top">
+        <button class="sidebar-menu-button" id="toggleSidebarBtn" type="button" title="Peida menüü" aria-label="Peida/näita menüüd"><span class="icon">☰</span></button>
+        <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
+          <span class="brand-wordmark" aria-label="VECO">VECO</span>
+        </button>
+      </div>
       <div class="sidebar-actions" aria-label="Kiirtegevused">
         <details class="check-select mobile-top-filter" id="mobileTechPicker">
           <summary id="mobileTechSummary">Kõik tehnikud</summary>
@@ -3376,9 +3184,8 @@
       </nav>
     </aside>
 
-    <button class="sidebar-rail-toggle" id="toggleSidebarBtn" type="button" title="Peida menüü" aria-label="Peida menüü"><span aria-hidden="true"></span></button>
-
     <main>
+      <button class="btn ghost sidebar-restore" id="restoreSidebarBtn" type="button"><span class="icon">☰</span> Näita menüüd</button>
       <section class="content hidden" id="pilotView">
         <div class="panel">
           <div class="panel-head">
@@ -3466,7 +3273,6 @@
           <div class="panel-head">
             <div class="panel-title-inline">
               <h2 id="calendarTitle">Nädal 20 · 2026</h2>
-              <select class="select oncall-inline-select" id="calendarOnCallSelect" aria-label="Nädala valve"></select>
             </div>
             <div class="filters">
               <select class="select" id="technicianFilter" aria-label="Tehniku filter">
@@ -3530,7 +3336,6 @@
           <div class="panel-head">
             <div class="panel-title-inline">
               <h2 id="teamTitle">Tiimivaade</h2>
-              <select class="select oncall-inline-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
             </div>
             <div class="filters">
               <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
@@ -5485,7 +5290,7 @@
         return [dateKey(date), dayLabels[index], formatShortDate(date)];
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
       renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
       weekGrid.className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
@@ -5884,7 +5689,7 @@
         return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
       renderOnCallRangeSelect($("#teamOnCallSelect"), weekStart, weekEnd);
       const teamToggleWeekendBtn = $("#teamToggleWeekendBtn");
       if (teamToggleWeekendBtn) teamToggleWeekendBtn.innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
@@ -7431,16 +7236,13 @@
     }
 
     function applyTheme(theme) {
-      const nextTheme = theme === "light" ? "light" : "dark";
-      document.body.classList.toggle("theme-dark", nextTheme === "dark");
-      document.body.classList.toggle("theme-light", nextTheme === "light");
-      localStorage.setItem(THEME_KEY, nextTheme);
+      document.body.classList.toggle("theme-dark", theme === "dark");
+      localStorage.setItem(THEME_KEY, theme);
       const btn = $("#themeToggleBtn");
       if (btn) {
-        btn.innerHTML = nextTheme === "dark"
+        btn.innerHTML = theme === "dark"
           ? `<span class="icon">◐</span> Hele`
           : `<span class="icon">◐</span> Tume`;
-        btn.title = nextTheme === "dark" ? "Lülita hele režiim sisse" : "Lülita tume režiim sisse";
       }
     }
 
@@ -9590,33 +9392,7 @@ Summa: 2 075,34 €`;
               .act-window-toolbar { display: none; }
               .act-page { max-width: none; margin: 0; padding: 20mm; box-shadow: none; }
             }
-          
-    /* ETAPP 1 fix: when sidebar is hidden, use only the header hamburger.
-       The old fixed restore button overlapped the calendar title. */
-    .sidebar-restore {
-      display: none !important;
-    }
-
-    .app.sidebar-collapsed .panel-menu-toggle {
-      margin-left: 0 !important;
-    }
-
-    .panel-title-inline {
-      min-width: 0;
-    }
-
-    .panel-menu-toggle {
-      flex: 0 0 38px;
-    }
-
-    #calendarTitle,
-    #teamTitle {
-      min-width: 0;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-</style>
+          </style>
         </head>
         <body>
           <div class="act-window-toolbar">
@@ -9660,9 +9436,8 @@ Summa: 2 075,34 €`;
     function toggleSidebar() {
       const collapsed = $("#appShell").classList.toggle("sidebar-collapsed");
       if ($("#toggleSidebarBtn")) {
-        $("#toggleSidebarBtn").innerHTML = `<span aria-hidden="true"></span>`;
+        $("#toggleSidebarBtn").innerHTML = `<span class="icon">☰</span>`;
         $("#toggleSidebarBtn").title = collapsed ? "Näita menüüd" : "Peida menüü";
-        $("#toggleSidebarBtn").setAttribute("aria-label", collapsed ? "Näita menüüd" : "Peida menüü");
       }
     }
 
@@ -9875,29 +9650,8 @@ Summa: 2 075,34 €`;
     on("#objectStatusFilter", "change", renderAll);
     on("#projectStatusFilter", "change", renderAll);
     $("#searchField")?.addEventListener("input", renderAll);
-    // Tehniku vaade peab avanema eraldi tabis/aknas, et admini kalender jääks avatuks.
-    const mobileNavButton = document.querySelector('.nav button[data-view="mobile"]');
-    if (mobileNavButton) {
-      mobileNavButton.addEventListener("click", event => {
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", "mobile");
-        url.hash = "";
-        window.open(url.toString(), "_blank");
-      }, true);
-    }
-
-    $$(".nav button").forEach(btn => btn.addEventListener("click", event => {
+    $$(".nav button").forEach(btn => btn.addEventListener("click", () => {
       if (!btn.dataset.view) return;
-      if (btn.dataset.view === "mobile") {
-        event.preventDefault();
-        const url = new URL(window.location.href);
-        url.searchParams.set("view", "mobile");
-        url.hash = "";
-        window.open(url.toString(), "_blank");
-        return;
-      }
       switchView(btn.dataset.view);
       renderAll();
     }));
