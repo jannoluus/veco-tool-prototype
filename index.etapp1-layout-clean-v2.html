@@ -9582,7 +9582,31 @@ Summa: 2 075,34 €`;
               .act-window-toolbar { display: none; }
               .act-page { max-width: none; margin: 0; padding: 20mm; box-shadow: none; }
             }
-          </style>
+          
+
+    /* === Fix v2.2: align sidebar hamburger with navigation items === */
+    .sidebar {
+      gap: 10px !important;
+    }
+
+    .sidebar-top {
+      justify-content: flex-start !important;
+      align-items: center !important;
+      min-height: 40px !important;
+      padding: 0 !important;
+      margin: 0 0 4px 0 !important;
+    }
+
+    .sidebar-menu-button {
+      margin-left: 0 !important;
+      border-radius: 8px !important;
+    }
+
+    .app.sidebar-collapsed .sidebar-top {
+      justify-content: center !important;
+      margin-bottom: 4px !important;
+    }
+</style>
         </head>
         <body>
           <div class="act-window-toolbar">
