@@ -3062,33 +3062,36 @@
       }
     }
 
+  
 
-    /* Google Calendar style sidebar toggle: hamburger + VECO stays visible when collapsed */
+    /* === Sidebar/header refinement v3: Google Calendar style === */
     .app {
-      grid-template-columns: 216px minmax(0, 1fr);
+      grid-template-columns: 216px minmax(0, 1fr) !important;
     }
 
     .app.sidebar-collapsed {
-      grid-template-columns: 56px minmax(0, 1fr);
+      grid-template-columns: 56px minmax(0, 1fr) !important;
     }
 
-    .app.sidebar-collapsed .sidebar {
-      display: flex;
-      width: 56px;
+    .app .sidebar {
+      width: 216px !important;
+      padding: 14px 10px 18px !important;
+      gap: 10px !important;
       overflow: hidden;
     }
 
-    .sidebar {
-      padding-top: 14px;
+    .app.sidebar-collapsed .sidebar {
+      display: flex !important;
+      width: 56px !important;
+      padding: 14px 8px !important;
     }
 
     .sidebar-top {
-      display: flex;
+      display: flex !important;
       align-items: center;
-      justify-content: center;
-      gap: 8px;
+      justify-content: flex-start;
       min-height: 42px;
-      padding: 0 4px;
+      padding: 0 0 12px 0;
     }
 
     .sidebar-menu-button {
@@ -3109,222 +3112,81 @@
       border-color: var(--line);
     }
 
-    .sidebar-top .brand {
-      min-width: 0;
-      flex: 1 1 auto;
-      padding: 8px 10px;
-      overflow: hidden;
-    }
-
-    .app.sidebar-collapsed .sidebar-top .brand {
-      padding-left: 4px;
+    .app.sidebar-collapsed .sidebar-top {
+      justify-content: center;
+      padding-bottom: 0;
     }
 
     .app.sidebar-collapsed .nav,
+    .app.sidebar-collapsed .nav-more,
     .app.sidebar-collapsed .sidebar-actions,
     .app.sidebar-collapsed .side-stats {
       display: none !important;
     }
 
     .panel-menu-toggle,
-    .sidebar-restore {
+    .sidebar-restore,
+    .sidebar-rail-toggle,
+    .oncall-inline-select {
       display: none !important;
     }
 
-    .calendar-title-row {
-      align-items: center;
-      gap: 12px;
+    .calendar-title-strip {
+      display: flex !important;
+      align-items: center !important;
+      gap: 14px !important;
       min-width: 0;
     }
 
-    .topbar-brand {
+    .title-brand {
       flex: 0 0 auto;
-      min-height: 36px;
-      padding: 0 12px;
-      border-radius: 8px;
-      background: #152433;
-      color: #2f9bff;
-      border: 1px solid #223647;
-      font-size: 24px;
-      line-height: 1;
-      font-weight: 900;
-      letter-spacing: -0.04em;
-      font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
-    }
-
-    .topbar-brand:hover {
-      background: #1b2b38;
-    }
-
-    .oncall-title-badge {
-      flex: 0 1 auto;
-      min-width: 0;
-      max-width: 360px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
       display: inline-flex;
       align-items: center;
+      justify-content: center;
+      height: 38px;
+      padding: 0 13px;
+      border-radius: 9px;
+      background: rgba(23,105,170,.12);
+      border: 1px solid rgba(58,129,185,.35);
+      color: #2f9bff;
+    }
+
+    .title-brand:hover {
+      background: rgba(23,105,170,.22);
+      border-color: rgba(58,129,185,.62);
+    }
+
+    .title-brand .brand-wordmark {
+      font-size: 26px;
+      line-height: .95;
+      color: #2f9bff;
+    }
+
+    .oncall-badge-inline {
+      display: inline-flex;
+      align-items: center;
+      max-width: 220px;
       min-height: 26px;
-      padding: 3px 9px;
+      padding: 4px 10px;
       border-radius: 999px;
-      border: 1px solid #23415a;
-      background: #0d2a40;
+      background: rgba(23,105,170,.22);
+      border: 1px solid rgba(58,129,185,.45);
       color: #9fd0ff;
       font-size: 12px;
-      font-weight: 900;
-    }
-
-    body:not(.theme-dark) .topbar-brand {
-      background: #eef6ff;
-      border-color: #cfe0ef;
-      color: var(--blue);
-    }
-
-    body:not(.theme-dark) .oncall-title-badge {
-      background: #eaf4ff;
-      border-color: #cfe0ef;
-      color: #145b91;
-    }
-
-
-    @media (max-width: 1120px) {
-      .app,
-      .app.sidebar-collapsed {
-        grid-template-columns: 1fr;
-      }
-      .app.sidebar-collapsed .sidebar {
-        display: none;
-      }
-      .sidebar-top {
-        min-width: max-content;
-      }
-    }
-
-
-    /* === Fix v2.1: Google-style sidebar, title logo and on-call badge === */
-    .app {
-      grid-template-columns: 216px minmax(0, 1fr) !important;
-    }
-
-    .app.sidebar-collapsed {
-      grid-template-columns: 52px minmax(0, 1fr) !important;
-    }
-
-    .app.sidebar-collapsed .sidebar {
-      display: flex !important;
-      width: 52px !important;
-      min-width: 52px !important;
-      padding: 12px 6px !important;
-      overflow: hidden !important;
-    }
-
-    .sidebar-top {
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      min-height: 44px !important;
-      padding: 0 !important;
-    }
-
-    .sidebar-menu-button {
-      width: 40px !important;
-      height: 40px !important;
-      flex: 0 0 40px !important;
-      border-radius: 999px !important;
-      background: transparent !important;
-      color: var(--sidebar-ink) !important;
-      border: 1px solid transparent !important;
-      box-shadow: none !important;
-    }
-
-    .sidebar-menu-button:hover {
-      background: var(--sidebar-hover) !important;
-      border-color: var(--line) !important;
-    }
-
-    .app.sidebar-collapsed .nav,
-    .app.sidebar-collapsed .sidebar-actions,
-    .app.sidebar-collapsed .side-stats {
-      display: none !important;
-    }
-
-    .panel-menu-toggle,
-    .sidebar-restore {
-      display: none !important;
-    }
-
-    .calendar-title-row {
-      display: flex !important;
-      align-items: center !important;
-      gap: 12px !important;
-      min-width: 0 !important;
-      overflow: visible !important;
-    }
-
-    .topbar-brand {
-      display: inline-flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      width: auto !important;
-      min-width: 92px !important;
-      max-width: none !important;
-      min-height: 36px !important;
-      padding: 0 14px !important;
-      border-radius: 8px !important;
-      overflow: visible !important;
-      white-space: nowrap !important;
-      background: #152433 !important;
-      color: #2f9bff !important;
-      border: 1px solid #223647 !important;
-      font-size: 24px !important;
-      line-height: 1 !important;
-      font-weight: 900 !important;
-      letter-spacing: -0.04em !important;
-      font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif !important;
-    }
-
-    #calendarTitle {
-      flex: 0 1 auto !important;
-      min-width: 0 !important;
-      white-space: nowrap !important;
-    }
-
-    .oncall-title-badge {
-      display: inline-flex !important;
-      align-items: center !important;
-      flex: 0 1 auto !important;
-      min-width: 0 !important;
-      max-width: 360px !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-      white-space: nowrap !important;
-      min-height: 26px !important;
-      padding: 3px 9px !important;
-      border-radius: 999px !important;
-      border: 1px solid #23415a !important;
-      background: #0d2a40 !important;
-      color: #9fd0ff !important;
-      font-size: 12px !important;
-      font-weight: 900 !important;
-    }
-
-    body:not(.theme-dark) .topbar-brand {
-      background: #eef6ff !important;
-      border-color: #cfe0ef !important;
-      color: var(--blue) !important;
-    }
-
-    body:not(.theme-dark) .oncall-title-badge {
-      background: #eaf4ff !important;
-      border-color: #cfe0ef !important;
-      color: #145b91 !important;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
     @media (max-width: 1120px) {
       .app,
       .app.sidebar-collapsed {
         grid-template-columns: 1fr !important;
+      }
+      .app .sidebar,
+      .app.sidebar-collapsed .sidebar {
+        width: auto !important;
       }
     }
 
@@ -3334,7 +3196,9 @@
   <div class="app" id="appShell">
     <aside class="sidebar">
       <div class="sidebar-top">
-        <button class="sidebar-menu-button" id="toggleSidebarBtn" type="button" title="Peida menüü" aria-label="Peida/näita menüüd"><span class="icon">☰</span></button>
+        <button class="sidebar-menu-button" id="toggleSidebarBtn" type="button" title="Peida menüü" aria-label="Peida/näita menüüd">
+          <span class="icon">☰</span>
+        </button>
       </div>
       <div class="sidebar-actions" aria-label="Kiirtegevused">
         <details class="check-select mobile-top-filter" id="mobileTechPicker">
@@ -3453,10 +3317,12 @@
       <section class="content" id="calendarView">
         <div class="panel">
           <div class="panel-head">
-            <div class="panel-title-inline calendar-title-row">
-              <button class="topbar-brand" id="brandRefreshBtn" type="button" title="Värskenda" aria-label="VECO">VECO</button>
+            <div class="panel-title-inline calendar-title-strip">
+              <button class="title-brand" id="brandRefreshBtn" type="button" title="Värskenda">
+                <span class="brand-wordmark" aria-label="VECO">VECO</span>
+              </button>
               <h2 id="calendarTitle">Nädal 20 · 2026</h2>
-              <span class="oncall-title-badge" id="calendarOnCallBadge">Valve puudub</span>
+              <span class="oncall-badge-inline" id="calendarOnCallBadge">Valve: Admin</span>
             </div>
             <div class="filters">
               <select class="select" id="technicianFilter" aria-label="Tehniku filter">
@@ -3520,6 +3386,7 @@
           <div class="panel-head">
             <div class="panel-title-inline">
               <h2 id="teamTitle">Tiimivaade</h2>
+              <select class="select oncall-inline-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
             </div>
             <div class="filters">
               <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
@@ -5475,9 +5342,8 @@
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
       calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
-      const calendarOnCallBadge = $("#calendarOnCallBadge");
-      if (calendarOnCallBadge) calendarOnCallBadge.textContent = onCallLabelForRange(weekStart, weekEnd);
-      renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
+      const onCallBadge = $("#calendarOnCallBadge");
+      if (onCallBadge) onCallBadge.textContent = onCallLabelForRange(weekStart, weekEnd);
       weekGrid.className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
       const todayVisible = weekDays.some(([date]) => date === dateKey(new Date()));
@@ -5766,8 +5632,6 @@
       const leadingBlanks = Array.from({ length: firstDayOffset }, () => `<div class="month-cell blank" aria-hidden="true"></div>`);
       const weekdayHeads = ["E", "T", "K", "N", "R", "L", "P"].map(day => `<div class="month-weekday">${day}</div>`);
       calendarTitle.textContent = `${monthNames[month]} ${year}`;
-      const monthOnCallBadge = $("#calendarOnCallBadge");
-      if (monthOnCallBadge) monthOnCallBadge.textContent = onCallLabelForRange(new Date(year, month, 1), new Date(year, month + 1, 0));
       weekGrid.className = "calendar-grid month";
       weekGrid.innerHTML = weekdayHeads.join("") + leadingBlanks.join("") + monthDays.map(date => {
         const dayJobs = visible.filter(job => job.date === date).sort((a, b) => a.time.localeCompare(b.time));
@@ -5792,8 +5656,6 @@
       if (!calendarTitle || !weekGrid) return;
       const year = calendarCursor.getFullYear();
       calendarTitle.textContent = `Aasta ${year}`;
-      const yearOnCallBadge = $("#calendarOnCallBadge");
-      if (yearOnCallBadge) yearOnCallBadge.textContent = onCallLabelForRange(new Date(year, 0, 1), new Date(year, 11, 31));
       weekGrid.className = "calendar-grid year";
       weekGrid.innerHTML = monthNames.map((name, index) => {
         const month = String(index + 1).padStart(2, "0");
@@ -5879,7 +5741,7 @@
         return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
       renderOnCallRangeSelect($("#teamOnCallSelect"), weekStart, weekEnd);
       const teamToggleWeekendBtn = $("#teamToggleWeekendBtn");
       if (teamToggleWeekendBtn) teamToggleWeekendBtn.innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
@@ -9582,31 +9444,7 @@ Summa: 2 075,34 €`;
               .act-window-toolbar { display: none; }
               .act-page { max-width: none; margin: 0; padding: 20mm; box-shadow: none; }
             }
-          
-
-    /* === Fix v2.2: align sidebar hamburger with navigation items === */
-    .sidebar {
-      gap: 10px !important;
-    }
-
-    .sidebar-top {
-      justify-content: flex-start !important;
-      align-items: center !important;
-      min-height: 40px !important;
-      padding: 0 !important;
-      margin: 0 0 4px 0 !important;
-    }
-
-    .sidebar-menu-button {
-      margin-left: 0 !important;
-      border-radius: 8px !important;
-    }
-
-    .app.sidebar-collapsed .sidebar-top {
-      justify-content: center !important;
-      margin-bottom: 4px !important;
-    }
-</style>
+          </style>
         </head>
         <body>
           <div class="act-window-toolbar">
