@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="et">
 <head>
   <meta charset="utf-8">
@@ -3062,14 +3062,99 @@
       }
     }
 
+
+    /* V2 sidebar/header cleanup */
+    .app { grid-template-columns: 206px minmax(0, 1fr) !important; }
+    .app.sidebar-collapsed { grid-template-columns: 56px minmax(0, 1fr) !important; }
+    .app.sidebar-collapsed .sidebar {
+      display: flex !important;
+      width: 56px !important;
+      min-width: 56px !important;
+      padding: 14px 10px !important;
+      border-right: 1px solid var(--line) !important;
+    }
+    .app.sidebar-collapsed .sidebar .sidebar-actions,
+    .app.sidebar-collapsed .sidebar .nav,
+    .app.sidebar-collapsed .sidebar .side-stats,
+    .app.sidebar-collapsed .sidebar .brand { display: none !important; }
+    .sidebar { padding: 14px 10px !important; gap: 14px !important; }
+    .sidebar-menu-toggle {
+      width: 38px;
+      min-width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      display: inline-grid;
+      place-items: center;
+      align-self: flex-start;
+      margin: 0 0 4px 0;
+      background: transparent;
+      color: var(--sidebar-ink);
+      border: 1px solid transparent;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .sidebar-menu-toggle:hover {
+      background: var(--sidebar-active);
+      border-color: var(--line);
+    }
+    .app.sidebar-collapsed .sidebar-menu-toggle { margin-left: 0; }
+    .sidebar-restore, .panel-menu-toggle { display: none !important; }
+    .header-logo {
+      display: inline-flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 14px;
+      border-radius: 9px;
+      background: rgba(24, 104, 170, .18);
+      color: #2f9bff;
+      font-size: 25px;
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -0.06em;
+      font-family: "Arial Black", "Segoe UI Black", Arial, sans-serif;
+      white-space: nowrap;
+    }
+    .hidden-select { display: none !important; }
+    .header-oncall { white-space: nowrap; }
+    #calendarView > .panel > .panel-head,
+    #teamView > .panel > .panel-head {
+      grid-template-columns: minmax(0, 1fr) auto !important;
+      align-items: center !important;
+    }
+    #calendarView > .panel > .panel-head .panel-title-inline,
+    #teamView > .panel > .panel-head .panel-title-inline {
+      max-width: none !important;
+      flex-wrap: nowrap !important;
+    }
+    #calendarTitle, #teamTitle {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    @media (max-width: 760px) {
+      .app, .app.sidebar-collapsed { grid-template-columns: minmax(0, 1fr) !important; }
+      .sidebar { display: none !important; }
+      #calendarView > .panel > .panel-head,
+      #teamView > .panel > .panel-head { grid-template-columns: 1fr !important; }
+      .header-logo { font-size: 21px; height: 32px; padding: 0 11px; }
+    }
+
+
+    /* V2 final sidebar/title fixes */
+    .sidebar .brand { display: none !important; }
+    .sidebar-menu-toggle { align-self: flex-start !important; margin-left: 0 !important; }
+    .app.sidebar-collapsed .sidebar { justify-content: flex-start !important; align-items: flex-start !important; }
+    .app.sidebar-collapsed .sidebar-menu-toggle { display: inline-grid !important; }
+    .hidden-select, #calendarOnCallSelect, #teamOnCallSelect { display: none !important; visibility: hidden !important; width: 0 !important; min-width: 0 !important; max-width: 0 !important; padding: 0 !important; border: 0 !important; overflow: hidden !important; }
+    #calendarView > .panel > .panel-head .panel-title-inline,
+    #teamView > .panel > .panel-head .panel-title-inline { gap: 14px !important; }
+
   </style>
 </head>
 <body>
   <div class="app" id="appShell">
     <aside class="sidebar">
-      <button class="brand" id="brandRefreshBtn" type="button" title="Värskenda">
-        <span class="brand-wordmark" aria-label="VECO">VECO</span>
-      </button>
+      <button class="sidebar-menu-toggle" id="toggleSidebarBtn" type="button" title="Peida menüü" aria-label="Peida/näita menüüd">☰</button>
       <div class="sidebar-actions" aria-label="Kiirtegevused">
         <details class="check-select mobile-top-filter" id="mobileTechPicker">
           <summary id="mobileTechSummary">Kõik tehnikud</summary>
@@ -3101,7 +3186,6 @@
     </aside>
 
     <main>
-      <button class="btn ghost sidebar-restore" id="restoreSidebarBtn" type="button"><span class="icon">☰</span> Näita menüüd</button>
       <section class="content hidden" id="pilotView">
         <div class="panel">
           <div class="panel-head">
@@ -3188,9 +3272,10 @@
         <div class="panel">
           <div class="panel-head">
             <div class="panel-title-inline">
-              <button class="btn ghost panel-menu-toggle" id="toggleSidebarBtn" type="button" title="Peida/näita menüüd"><span class="icon">☰</span></button>
+              <span class="header-logo" aria-label="VECO">VECO</span>
               <h2 id="calendarTitle">Nädal 20 · 2026</h2>
-              <select class="select oncall-inline-select" id="calendarOnCallSelect" aria-label="Nädala valve"></select>
+              <span class="oncall-badge header-oncall" id="calendarOnCallBadge">Valve: Admin</span>
+              <select class="select oncall-inline-select hidden-select" id="calendarOnCallSelect" aria-label="Nädala valve" hidden></select>
             </div>
             <div class="filters">
               <select class="select" id="technicianFilter" aria-label="Tehniku filter">
@@ -3254,7 +3339,8 @@
           <div class="panel-head">
             <div class="panel-title-inline">
               <h2 id="teamTitle">Tiimivaade</h2>
-              <select class="select oncall-inline-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
+              <span class="oncall-badge header-oncall" id="teamOnCallBadge">Valve: Admin</span>
+              <select class="select oncall-inline-select hidden-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
             </div>
             <div class="filters">
               <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
@@ -5188,7 +5274,9 @@
         return [dateKey(date), dayLabels[index], formatShortDate(date)];
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      calendarTitle.textContent = `Nädal ${weekNumber(calendarCursor)} · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      const calendarOnCallBadge = $("#calendarOnCallBadge");
+      if (calendarOnCallBadge) calendarOnCallBadge.textContent = onCallLabelForRange(weekStart, weekEnd);
       renderOnCallRangeSelect($("#calendarOnCallSelect"), weekStart, weekEnd);
       weekGrid.className = showWeekends ? "week-grid with-weekend" : "week-grid";
       const visibleWeekJobs = visible.filter(job => weekDays.some(([date]) => date === job.date));
@@ -5587,7 +5675,9 @@
         return { date: dateKey(date), day: dayLabels[index], label: formatShortDate(date) };
       });
       const weekEnd = addDays(weekStart, weekLength - 1);
-      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()} · ${onCallLabelForRange(weekStart, weekEnd)}`;
+      teamTitle.textContent = `Tiimivaade · ${formatWeekRange(weekStart, weekEnd)} · ${calendarCursor.getFullYear()}`;
+      const teamOnCallBadge = $("#teamOnCallBadge");
+      if (teamOnCallBadge) teamOnCallBadge.textContent = onCallLabelForRange(weekStart, weekEnd);
       renderOnCallRangeSelect($("#teamOnCallSelect"), weekStart, weekEnd);
       const teamToggleWeekendBtn = $("#teamToggleWeekendBtn");
       if (teamToggleWeekendBtn) teamToggleWeekendBtn.innerHTML = showWeekends ? `<span class="icon">▦</span> Peida L/P` : `<span class="icon">▦</span> Näita L/P`;
@@ -9341,7 +9431,7 @@ Summa: 2 075,34 €`;
     function toggleSidebar() {
       const collapsed = $("#appShell").classList.toggle("sidebar-collapsed");
       if ($("#toggleSidebarBtn")) {
-        $("#toggleSidebarBtn").innerHTML = `<span class="icon">☰</span>`;
+        $("#toggleSidebarBtn").textContent = "☰";
         $("#toggleSidebarBtn").title = collapsed ? "Näita menüüd" : "Peida menüü";
       }
     }
@@ -9435,7 +9525,6 @@ Summa: 2 075,34 €`;
     });
     on("#aiDeleteSelectedBtn", "click", () => deleteAiJobs([...selectedAiJobIds]));
     $("#toggleSidebarBtn")?.addEventListener("click", toggleSidebar);
-    $("#restoreSidebarBtn")?.addEventListener("click", toggleSidebar);
     on("#copySelectedBtn", "click", () => {
       const targetTech = $("#copySelectedTech")?.value;
       if (targetTech) copyJobToTechnician(detailJobId || selectedId, targetTech);
