@@ -17,6 +17,7 @@
     .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(7,17,26,.94);backdrop-filter:blur(10px)}
     .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em;color:#2d9cff;font-size:28px;line-height:1}.brand small{display:block;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:0;text-transform:uppercase}.brand-stack{display:grid;gap:2px}
     .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.select,.field,textarea{border:1px solid var(--line);background:#0b1823;color:var(--text);border-radius:10px;min-height:40px;padding:0 10px}.select{min-width:180px}.btn{min-height:40px;border-radius:10px;padding:0 13px;background:#152b3e;color:var(--text);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:var(--green);border-color:var(--green);color:#fff}.btn.amber{background:#3b2a11;border-color:#76501b;color:#ffd38a}.btn.red{background:#3b171b;border-color:#75333a;color:#ffb8bd}.btn.ghost{background:transparent}.layout{display:grid;grid-template-columns:minmax(320px,460px) minmax(0,1fr);gap:14px;padding:14px;min-width:0}.panel{background:rgba(15,29,41,.92);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0;overflow:hidden}.panel-head{min-height:56px;padding:13px 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:10px}.panel-head h2{font-size:16px;margin:0}.panel-body{padding:14px;display:grid;gap:12px}.tabs{display:flex;gap:8px;overflow:auto}.tab{white-space:nowrap}.tab.active{background:var(--blue);border-color:var(--blue)}.job-list{display:grid;gap:10px}.job-card{width:100%;text-align:left;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:13px;padding:12px;display:grid;gap:8px}.job-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(34,134,255,.18)}.job-card.overdue{border-color:#b87528;background:#251f16}.job-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.job-id{font-size:12px;color:var(--muted);font-weight:800}.job-title{font-weight:900;font-size:16px;line-height:1.2}.job-meta{color:var(--muted);font-size:13px;line-height:1.35}.badge{width:max-content;max-width:100%;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#19364e;color:#9fd0ff}.badge.uus{background:#e8eef4;color:#335167}.badge.planeeritud{background:#173852;color:#9fd0ff}.badge.töös{background:#0f4a34;color:#9dffd3}.badge.pausil{background:#3a2d5c;color:#d7c9ff}.badge.ootel{background:#4a1e22;color:#ffb8bd}.badge.täidetud,.badge.akt,.badge.saadetud{background:#103d2c;color:#adffd8}.quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800}textarea{min-height:86px;padding:10px;resize:vertical}.empty{border:1px dashed var(--line);border-radius:13px;padding:18px;color:var(--muted);line-height:1.45}.section-title{color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin:4px 0 -2px}.detail-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.detail-title h1{font-size:22px;margin:0;line-height:1.15}.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:7px;font-size:14px}.kv span{color:var(--muted)}.timeline{display:grid;gap:6px}.time-row{border:1px solid var(--line);border-radius:10px;padding:9px;background:#0b1823;color:var(--muted);font-size:13px}.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.65)}.modal.open{display:flex}.dialog{width:min(920px,100%);max-height:92vh;overflow:hidden;background:#fff;color:#111;border-radius:14px;display:flex;flex-direction:column}.dialog-head,.dialog-actions{padding:14px 18px;border-bottom:1px solid #dce3e8;display:flex;align-items:center;justify-content:space-between;gap:10px}.dialog-actions{border-top:1px solid #dce3e8;border-bottom:0;justify-content:flex-end}.dialog-body{padding:18px;overflow:auto}.act-preview{font-family:Arial,sans-serif;color:#111;background:#fff}.act-top{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:12px}.act-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:10px 0}.act-box{border-bottom:1px solid #e5eaee;padding:7px 0;display:grid;grid-template-columns:120px 1fr;gap:10px}.act-box span{color:#59646d;font-size:12px}.signature-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:42px}.signature{border-top:1px solid #111;padding-top:7px}.statusline{font-size:12px;color:var(--muted)}
+    .hidden{display:none!important}
     @media(max-width:900px){.layout{grid-template-columns:1fr}.topbar{align-items:stretch;flex-direction:column}.controls{display:grid;grid-template-columns:1fr 1fr}.select,.btn{width:100%}.quick-actions{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.brand{font-size:24px}}
     @media print{body *{visibility:hidden}.act-preview,.act-preview *{visibility:visible}.act-preview{position:absolute;inset:0;padding:28px}}
   </style>
@@ -33,11 +34,11 @@
     </header>
     <main class="layout">
       <section class="panel">
-        <div class="panel-head"><h2>Minu tööd</h2><div class="tabs"><button class="btn tab active" data-filter="active">Aktiivsed</button><button class="btn tab" data-filter="today">Täna</button><button class="btn tab" data-filter="all">Kõik</button></div></div>
+        <div class="panel-head"><h2>Minu tööd</h2><div class="tabs"><button class="btn tab active" data-filter="active">Aktiivsed</button><button class="btn tab" data-filter="today">Täna</button><button class="btn tab" data-filter="overdue">Tegemata</button><button class="btn tab" data-filter="all">Kõik</button></div></div>
         <div class="panel-body"><div class="job-list" id="jobList"></div></div>
       </section>
       <section class="panel">
-        <div class="panel-head"><h2>Kiirtäitmine</h2><button class="btn ghost" id="openAdminBtn">Ava kalender</button></div>
+        <div class="panel-head"><h2>Kiirtäitmine</h2><button class="btn ghost hidden" id="closeJobBtn" type="button">Sulge</button></div>
         <div class="panel-body" id="jobDetail"><div class="empty">Vali vasakult töökäsk.</div></div>
       </section>
     </main>
@@ -123,20 +124,27 @@
       if (match) select.value = match;
       if (select.value) localStorage.setItem("vecoMobileTech", select.value);
     }
+    function isFinishedStatus(status){ return ["täidetud","akt","saadetud","arhiveeritud"].includes(status); }
+    function isStarted(job){
+      return job.status === "töös" || job.status === "pausil" || (Array.isArray(job.timeLogs) && job.timeLogs.some(l => l.start));
+    }
+    function isOverdueUnstarted(job){
+      return Boolean(job.date) && job.date < today() && !isStarted(job) && !isFinishedStatus(job.status);
+    }
     function filteredJobs(){
       const tech = currentTech();
       let jobs = (data.jobs||[]).filter(j => jobHasTech(j, tech));
       if (filterMode === "active") jobs = jobs.filter(j => activeStatuses().includes(j.status));
       if (filterMode === "today") jobs = jobs.filter(j => j.date === today());
+      if (filterMode === "overdue") jobs = jobs.filter(isOverdueUnstarted);
       return jobs.sort((a,b) => `${a.date||''} ${a.time||''}`.localeCompare(`${b.date||''} ${b.time||''}`));
     }
     function renderJobs(){
       const list = $("#jobList");
       const jobs = filteredJobs();
       const todayKey = today();
-      if (!selectedJobId && jobs[0]) selectedJobId = jobs[0].id;
       list.innerHTML = jobs.map(job => {
-        const overdue = job.date < todayKey && ["uus","planeeritud"].includes(job.status);
+        const overdue = isOverdueUnstarted(job);
         return `<button class="job-card ${job.id===selectedJobId?'selected':''} ${overdue?'overdue':''}" data-job="${escapeHtml(job.id)}">
           <div class="job-row"><span class="job-id">${escapeHtml(job.date||'')} · ${escapeHtml(displayWindow(job))}</span><span class="job-id">${escapeHtml(job.id||'')}</span></div>
           <div class="job-title">${escapeHtml(job.client||'Töökäsk')}</div>
@@ -170,7 +178,9 @@
     }
     function renderDetail(){
       const box = $("#jobDetail"); const job = selectedJob();
-      if (!job) { box.innerHTML = `<div class="empty">Vali vasakult töökäsk.</div>`; return; }
+      const closeBtn = $("#closeJobBtn");
+      if (!job) { if (closeBtn) closeBtn.classList.add("hidden"); box.innerHTML = `<div class="empty">Vali vasakult töö. Ühtegi tööd ei ole vaikimisi avatud.</div>`; return; }
+      if (closeBtn) closeBtn.classList.remove("hidden");
       const running = (job.timeLogs||[]).some(l => l.start && !l.end);
       box.innerHTML = `
         <div class="detail-title"><h1>${escapeHtml(job.client||'Töökäsk')}</h1><span class="badge ${escapeHtml(job.status||'uus')}">${escapeHtml(statusLabels[job.status] || job.status || 'Uus')}</span></div>
@@ -219,7 +229,7 @@
       $$(".tab").forEach(b => b.addEventListener('click', () => { filterMode=b.dataset.filter; $$(".tab").forEach(x=>x.classList.toggle('active',x===b)); selectedJobId=''; render(); }));
       $("#refreshBtn").onclick = async () => { await loadRemote(); populateTechs(); render(); };
       $("#copyLinkBtn").onclick = async () => { const u=new URL(location.href); u.searchParams.set('tech', currentTech()); try{ await navigator.clipboard.writeText(u.toString()); alert('Link kopeeritud.'); }catch{ prompt('Kopeeri link:', u.toString()); } };
-      $("#openAdminBtn").onclick = () => window.open('index.etapp1-layout-clean-v2.html', '_blank');
+      $("#closeJobBtn").onclick = () => { selectedJobId = ""; render(); };
       $("#closeActBtn").onclick = () => $("#actModal").classList.remove('open');
       $("#printActBtn").onclick = () => window.print();
       render();
