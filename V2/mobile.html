@@ -16,20 +16,22 @@
     .app{min-height:100vh;display:grid;grid-template-rows:auto 1fr;background:radial-gradient(circle at top left, rgba(34,134,255,.12), transparent 42%), var(--bg)}
     .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;border-bottom:1px solid var(--line);background:rgba(7,17,26,.94);backdrop-filter:blur(10px)}
     .brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:-.03em;color:#2d9cff;font-size:28px;line-height:1}.brand small{display:block;color:var(--muted);font-size:12px;font-weight:800;letter-spacing:0;text-transform:uppercase}.brand-stack{display:grid;gap:2px}
-    .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.select,.field,textarea{border:1px solid var(--line);background:#0b1823;color:var(--text);border-radius:10px;min-height:40px;padding:0 10px}.select{min-width:180px}.btn{min-height:40px;border-radius:10px;padding:0 13px;background:#152b3e;color:var(--text);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:var(--green);border-color:var(--green);color:#fff}.btn.amber{background:#3b2a11;border-color:#76501b;color:#ffd38a}.btn.red{background:#3b171b;border-color:#75333a;color:#ffb8bd}.btn.ghost{background:transparent}.layout{display:grid;grid-template-columns:minmax(320px,460px) minmax(0,1fr);gap:14px;padding:14px;min-width:0}.panel{background:rgba(15,29,41,.92);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0;overflow:hidden}.panel-head{min-height:56px;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}.panel-head h2{display:none}.panel-body{padding:14px;display:grid;gap:12px}.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;min-width:0;overflow:visible}.tab{white-space:nowrap;min-width:0;padding:0 10px;font-size:14px}.tab.active{background:var(--blue);border-color:var(--blue)}.job-list{display:grid;gap:10px}.job-card{width:100%;text-align:left;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:13px;padding:12px;display:grid;gap:8px}.job-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(34,134,255,.18)}.job-card.overdue{border-color:#b87528;background:#251f16}.job-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.job-id{font-size:12px;color:var(--muted);font-weight:800}.job-title{font-weight:900;font-size:16px;line-height:1.2}.job-meta{color:var(--muted);font-size:13px;line-height:1.35}.badge{width:max-content;max-width:100%;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#19364e;color:#9fd0ff}.badge.uus{background:#e8eef4;color:#335167}.badge.planeeritud{background:#173852;color:#9fd0ff}.badge.töös{background:#0f4a34;color:#9dffd3}.badge.pausil{background:#3a2d5c;color:#d7c9ff}.badge.ootel{background:#4a1e22;color:#ffb8bd}.badge.täidetud,.badge.akt,.badge.saadetud{background:#103d2c;color:#adffd8}.quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800}textarea{min-height:86px;padding:10px;resize:vertical}.empty{border:1px dashed var(--line);border-radius:13px;padding:18px;color:var(--muted);line-height:1.45}.section-title{color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin:4px 0 -2px}.detail-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.detail-title h1{font-size:22px;margin:0;line-height:1.15}.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:7px;font-size:14px}.kv span{color:var(--muted)}.timeline{display:grid;gap:6px}.time-row{border:1px solid var(--line);border-radius:10px;padding:9px;background:#0b1823;color:var(--muted);font-size:13px}.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.65)}.modal.open{display:flex}.dialog{width:min(920px,100%);max-height:92vh;overflow:hidden;background:#fff;color:#111;border-radius:14px;display:flex;flex-direction:column}.dialog-head,.dialog-actions{padding:14px 18px;border-bottom:1px solid #dce3e8;display:flex;align-items:center;justify-content:space-between;gap:10px}.dialog-actions{border-top:1px solid #dce3e8;border-bottom:0;justify-content:flex-end}.dialog-body{padding:18px;overflow:auto}.act-preview{font-family:Arial,sans-serif;color:#111;background:#fff}.act-top{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:12px}.act-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:10px 0}.act-box{border-bottom:1px solid #e5eaee;padding:7px 0;display:grid;grid-template-columns:120px 1fr;gap:10px}.act-box span{color:#59646d;font-size:12px}.signature-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:42px}.signature{border-top:1px solid #111;padding-top:7px}.statusline{font-size:12px;color:var(--muted)}
+    .controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.tech-picker{position:relative;min-width:260px}.tech-picker>summary{list-style:none;border:1px solid var(--line);background:#0b1823;color:var(--text);border-radius:10px;min-height:40px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;font-weight:800}.tech-picker>summary::-webkit-details-marker{display:none}.tech-picker>summary::after{content:"⌄";color:var(--muted);font-size:13px}.tech-picker[open]>summary{border-color:var(--blue);box-shadow:0 0 0 3px rgba(34,134,255,.12)}.tech-menu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:min(340px,90vw);max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:#0b1823;box-shadow:var(--shadow);padding:8px;display:grid;gap:4px}.tech-menu label{display:flex;align-items:center;gap:8px;min-height:34px;padding:7px 8px;border-radius:8px;color:var(--text);font-size:14px;font-weight:800;cursor:pointer}.tech-menu label:hover{background:#152b3e}.tech-menu input{width:16px;height:16px;accent-color:var(--blue)}.select,.field,textarea{border:1px solid var(--line);background:#0b1823;color:var(--text);border-radius:10px;min-height:40px;padding:0 10px}.select{min-width:180px}.btn{min-height:40px;border-radius:10px;padding:0 13px;background:#152b3e;color:var(--text);border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;gap:8px;font-weight:800}.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}.btn.green{background:var(--green);border-color:var(--green);color:#fff}.btn.amber{background:#3b2a11;border-color:#76501b;color:#ffd38a}.btn.red{background:#3b171b;border-color:#75333a;color:#ffb8bd}.btn.ghost{background:transparent}.layout{display:grid;grid-template-columns:minmax(320px,460px) minmax(0,1fr);gap:14px;padding:14px;min-width:0}.panel{background:rgba(15,29,41,.92);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);min-width:0;overflow:hidden}.panel-head{min-height:56px;padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}.panel-head h2{display:none}.panel-body{padding:14px;display:grid;gap:12px}.tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;width:100%;min-width:0;overflow:visible}.tab{white-space:nowrap;min-width:0;padding:0 10px;font-size:14px}.tab.active{background:var(--blue);border-color:var(--blue)}.job-list{display:grid;gap:10px}.job-card{width:100%;text-align:left;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:13px;padding:12px;display:grid;gap:8px}.job-card.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(34,134,255,.18)}.job-card.overdue{border-color:#b87528;background:#251f16}.job-row{display:flex;align-items:center;justify-content:space-between;gap:10px}.job-id{font-size:12px;color:var(--muted);font-weight:800}.job-title{font-weight:900;font-size:16px;line-height:1.2}.job-meta{color:var(--muted);font-size:13px;line-height:1.35}.badge{width:max-content;max-width:100%;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:900;background:#19364e;color:#9fd0ff}.badge.uus{background:#e8eef4;color:#335167}.badge.planeeritud{background:#173852;color:#9fd0ff}.badge.töös{background:#0f4a34;color:#9dffd3}.badge.pausil{background:#3a2d5c;color:#d7c9ff}.badge.ootel{background:#4a1e22;color:#ffb8bd}.badge.täidetud,.badge.akt,.badge.saadetud{background:#103d2c;color:#adffd8}.quick-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.full{grid-column:1/-1}label{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:800}textarea{min-height:86px;padding:10px;resize:vertical}.empty{border:1px dashed var(--line);border-radius:13px;padding:18px;color:var(--muted);line-height:1.45}.section-title{color:var(--muted);font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin:4px 0 -2px}.detail-title{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}.detail-title h1{font-size:22px;margin:0;line-height:1.15}.kv{display:grid;grid-template-columns:120px minmax(0,1fr);gap:7px;font-size:14px}.kv span{color:var(--muted)}.timeline{display:grid;gap:6px}.time-row{border:1px solid var(--line);border-radius:10px;padding:9px;background:#0b1823;color:var(--muted);font-size:13px}.modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.65)}.modal.open{display:flex}.dialog{width:min(920px,100%);max-height:92vh;overflow:hidden;background:#fff;color:#111;border-radius:14px;display:flex;flex-direction:column}.dialog-head,.dialog-actions{padding:14px 18px;border-bottom:1px solid #dce3e8;display:flex;align-items:center;justify-content:space-between;gap:10px}.dialog-actions{border-top:1px solid #dce3e8;border-bottom:0;justify-content:flex-end}.dialog-body{padding:18px;overflow:auto}.act-preview{font-family:Arial,sans-serif;color:#111;background:#fff}.act-top{text-align:center;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:12px}.act-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 20px;margin:10px 0}.act-box{border-bottom:1px solid #e5eaee;padding:7px 0;display:grid;grid-template-columns:120px 1fr;gap:10px}.act-box span{color:#59646d;font-size:12px}.signature-row{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:42px}.signature{border-top:1px solid #111;padding-top:7px}.statusline{font-size:12px;color:var(--muted)}
     .hidden{display:none!important}
-    @media(max-width:900px){.layout{grid-template-columns:1fr}.topbar{align-items:stretch;flex-direction:column}.controls{display:grid;grid-template-columns:1fr 1fr}.select,.btn{width:100%}.quick-actions{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.brand{font-size:24px}}
+    @media(max-width:900px){.layout{grid-template-columns:1fr}.topbar{align-items:stretch;flex-direction:column}.controls{display:grid;grid-template-columns:1fr 1fr}.tech-picker{grid-column:1/-1;width:100%;min-width:0}.select,.btn{width:100%}.quick-actions{grid-template-columns:1fr 1fr}.form-grid{grid-template-columns:1fr}.brand{font-size:24px}}
     @media print{body *{visibility:hidden}.act-preview,.act-preview *{visibility:visible}.act-preview{position:absolute;inset:0;padding:28px}}
-  </style>
+  .panel:first-child .panel-head{padding:12px 14px}.panel:first-child .panel-head::before{content:none!important}.panel:first-child .panel-head h2{display:none!important}.tabs{flex:1 1 auto}.tab{font-size:13px;padding:0 8px}</style>
 </head>
 <body>
   <div class="app">
     <header class="topbar">
       <div class="brand"><span>VECO</span><div class="brand-stack"><small>Tehniku vaade</small><span class="statusline" id="syncStatus">Lokaalne</span></div></div>
       <div class="controls">
-        <select class="select" id="techSelect"></select>
+        <details class="tech-picker" id="techPicker">
+          <summary id="techSummary">Kõik tehnikud</summary>
+          <div class="tech-menu" id="techMenu"></div>
+        </details>
         <button class="btn ghost" id="refreshBtn">↻ Värskenda</button>
-        <button class="btn primary" id="copyLinkBtn">↗ Kopeeri link</button>
       </div>
     </header>
     <main class="layout">
@@ -60,6 +62,7 @@
     let data = { people: [], peopleEvents: [], onCallShifts: [], projects: [], clients: [], jobs: [] };
     let selectedJobId = "";
     let filterMode = "active";
+    let selectedTechNames = [];
     let remoteBusy = false;
 
     function escapeHtml(v){ return String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c])); }
@@ -72,9 +75,14 @@
       const fromJobs = (data.jobs||[]).flatMap(j => Array.isArray(j.technicians) ? j.technicians : [j.technician]).filter(Boolean);
       return [...new Set([...names, ...fromJobs])].sort((a,b)=>a.localeCompare(b,'et'));
     }
-    function currentTech(){ return $("#techSelect").value || techNames()[0] || ""; }
+    function currentTechs(){ return selectedTechNames.length ? selectedTechNames : techNames(); }
     function jobTechs(job){ return Array.isArray(job.technicians) && job.technicians.length ? job.technicians : (job.technician ? [job.technician] : []); }
-    function jobHasTech(job, tech){ return !tech || tech === "all" || jobTechs(job).some(t => String(t).toLowerCase() === String(tech).toLowerCase()); }
+    function jobHasTech(job, techs){
+      const selected = Array.isArray(techs) ? techs : [techs].filter(Boolean);
+      if (!selected.length) return true;
+      const selectedLower = selected.map(t => String(t).toLowerCase());
+      return jobTechs(job).some(t => selectedLower.includes(String(t).toLowerCase()));
+    }
     function activeStatuses(){ return ["uus","planeeritud","töös","pausil","ootel"]; }
     function totalMinutes(job){
       return (job.timeLogs||[]).reduce((sum, log) => {
@@ -114,15 +122,52 @@
         if (showStatus) setSync("Salvestatud DB-sse");
       } catch(e){ if (showStatus) setSync("DB salvestusviga"); }
     }
-    function populateTechs(){
-      const select = $("#techSelect");
-      const techs = techNames();
-      select.innerHTML = techs.map(t => `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`).join("") || `<option value="">Tehnikuid pole</option>`;
+    function parseRequestedTechs(techs){
       const params = new URLSearchParams(location.search);
-      const requested = params.get("tech") || params.get("technician") || localStorage.getItem("vecoMobileTech") || "";
-      const match = techs.find(t => t.toLowerCase() === requested.toLowerCase()) || techs.find(t => requested.toLowerCase().includes(t.toLowerCase()));
-      if (match) select.value = match;
-      if (select.value) localStorage.setItem("vecoMobileTech", select.value);
+      const requestedRaw = params.get("tech") || params.get("technicians") || localStorage.getItem("vecoMobileTechs") || localStorage.getItem("vecoMobileTech") || "";
+      if (!requestedRaw) return techs.length ? [techs[0]] : [];
+      const parts = requestedRaw.split(/[|,;]/).map(x => x.trim()).filter(Boolean);
+      const matches = [];
+      for (const part of parts) {
+        const match = techs.find(t => t.toLowerCase() === part.toLowerCase()) || techs.find(t => part.toLowerCase().includes(t.toLowerCase()));
+        if (match && !matches.includes(match)) matches.push(match);
+      }
+      return matches.length ? matches : (techs.length ? [techs[0]] : []);
+    }
+    function updateTechSummary(){
+      const summary = $("#techSummary");
+      if (!summary) return;
+      const techs = techNames();
+      if (!selectedTechNames.length || selectedTechNames.length === techs.length) summary.textContent = "Kõik tehnikud";
+      else if (selectedTechNames.length === 1) summary.textContent = selectedTechNames[0];
+      else summary.textContent = `${selectedTechNames.length} tehnikut valitud`;
+    }
+    function saveTechSelection(){
+      localStorage.setItem("vecoMobileTechs", selectedTechNames.join("|"));
+      const u = new URL(location.href);
+      if (selectedTechNames.length) u.searchParams.set("tech", selectedTechNames.join("|"));
+      else u.searchParams.delete("tech");
+      history.replaceState({}, "", u);
+    }
+    function populateTechs(){
+      const menu = $("#techMenu");
+      const techs = techNames();
+      if (!selectedTechNames.length) selectedTechNames = parseRequestedTechs(techs);
+      selectedTechNames = selectedTechNames.filter(t => techs.includes(t));
+      menu.innerHTML = techs.length ? techs.map(t => `
+        <label><input type="checkbox" value="${escapeHtml(t)}" ${selectedTechNames.includes(t) ? "checked" : ""}> ${escapeHtml(t)}</label>
+      `).join("") : `<div class="empty">Tehnikuid pole.</div>`;
+      menu.querySelectorAll('input[type="checkbox"]').forEach(input => {
+        input.addEventListener("change", () => {
+          selectedTechNames = Array.from(menu.querySelectorAll('input[type="checkbox"]:checked')).map(x => x.value);
+          saveTechSelection();
+          selectedJobId = "";
+          updateTechSummary();
+          render();
+        });
+      });
+      updateTechSummary();
+      saveTechSelection();
     }
     function isFinishedStatus(status){ return ["täidetud","akt","saadetud","arhiveeritud"].includes(status); }
     function isStarted(job){
@@ -132,8 +177,8 @@
       return Boolean(job.date) && job.date < today() && !isStarted(job) && !isFinishedStatus(job.status);
     }
     function filteredJobs(){
-      const tech = currentTech();
-      let jobs = (data.jobs||[]).filter(j => jobHasTech(j, tech));
+      const techs = currentTechs();
+      let jobs = (data.jobs||[]).filter(j => jobHasTech(j, techs));
       if (filterMode === "active") jobs = jobs.filter(j => activeStatuses().includes(j.status));
       if (filterMode === "today") jobs = jobs.filter(j => j.date === today());
       if (filterMode === "overdue") jobs = jobs.filter(isOverdueUnstarted);
@@ -225,10 +270,8 @@
     function render(){ renderJobs(); renderDetail(); }
     async function init(){
       loadLocal(); await loadRemote(); populateTechs();
-      $("#techSelect").addEventListener("change", () => { localStorage.setItem("vecoMobileTech", currentTech()); const u=new URL(location.href); u.searchParams.set('tech', currentTech()); history.replaceState({},'',u); selectedJobId=''; render(); });
       $$(".tab").forEach(b => b.addEventListener('click', () => { filterMode=b.dataset.filter; $$(".tab").forEach(x=>x.classList.toggle('active',x===b)); selectedJobId=''; render(); }));
       $("#refreshBtn").onclick = async () => { await loadRemote(); populateTechs(); render(); };
-      $("#copyLinkBtn").onclick = async () => { const u=new URL(location.href); u.searchParams.set('tech', currentTech()); try{ await navigator.clipboard.writeText(u.toString()); alert('Link kopeeritud.'); }catch{ prompt('Kopeeri link:', u.toString()); } };
       $("#closeJobBtn").onclick = () => { selectedJobId = ""; render(); };
       $("#closeActBtn").onclick = () => $("#actModal").classList.remove('open');
       $("#printActBtn").onclick = () => window.print();
