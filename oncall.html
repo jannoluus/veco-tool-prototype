@@ -2637,10 +2637,7 @@
           <div class="panel-head">
             <h2>Valvegraafik</h2>
             <div class="filters">
-              <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
-                <option value="all">Kõik tehnikud</option>
-              </select>
-              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Loo rotatsioon</button>
+              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Muuda rotatsiooni</button>
             </div>
           </div>
           <div class="detail-body">
@@ -3166,7 +3163,7 @@
   <div class="modal" id="onCallRotationModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
       <div class="dialog-head">
-        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
+        <h2 id="onCallRotationModalTitle">Muuda valve rotatsiooni</h2>
         <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
       </div>
       <form id="onCallRotationForm">
@@ -3186,7 +3183,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo rotatsioon</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta rotatsioon</button>
         </div>
       </form>
     </div>
@@ -4408,11 +4405,7 @@
         $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
         $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
       }
-      if ($("#onCallTechFilter")) {
-        const selectedOnCallTech = $("#onCallTechFilter").value || "all";
-        $("#onCallTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("")}`;
-        $("#onCallTechFilter").value = people.some(person => person.id === selectedOnCallTech) ? selectedOnCallTech : "all";
-      }
+
       const allMobileTechsSelected = mobileTechs.length === technicians().length;
       if ($("#mobileTechSummary")) $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
       if ($("#mobileTechChecks")) $("#mobileTechChecks").innerHTML = `
@@ -5352,56 +5345,76 @@
     }
 
     function renderOnCall() {
-      const filter = $("#onCallTechFilter")?.value || "all";
-      const visiblePeople = people
+      const today = dateKey(new Date());
+      const activePeople = people
         .filter(person => person.active)
-        .filter(person => filter === "all" || person.id === filter)
         .sort((a, b) => a.name.localeCompare(b.name, "et"));
       const visibleShifts = onCallShifts
-        .filter(shift => filter === "all" || shift.personId === filter)
+        .filter(shift => activePeople.some(person => person.id === shift.personId))
         .slice()
         .sort((a, b) => a.start.localeCompare(b.start));
-      const today = dateKey(new Date());
+      const current = visibleShifts.find(shift => shift.start <= today && shift.end >= today) || null;
+      const next = visibleShifts.find(shift => shift.start > today) || null;
+      const upcoming = visibleShifts.filter(shift => shift.end >= today);
 
-      $("#onCallGrid").innerHTML = visiblePeople.map(person => {
-        const shifts = visibleShifts.filter(shift => shift.personId === person.id);
-        const current = shifts.find(shift => shift.start <= today && shift.end >= today);
-        const next = shifts.find(shift => shift.start > today);
+      const shiftWeekLabel = (shift) => {
+        if (!shift) return "-";
+        const start = new Date(`${shift.start}T12:00:00`);
+        return `Nädal ${weekNumber(start)}`;
+      };
+      const shiftRangeLabel = (shift) => shift ? `${shift.start} kuni ${shift.end}` : "planeerimata";
+      const shiftPersonCard = (shift, emptyText) => {
+        if (!shift) return `<div class="mobile-card"><strong>${escapeHtml(emptyText)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+        const person = people.find(item => item.id === shift.personId) || {};
         return `
           <div class="person-card">
             <div class="person-top">
               <div>
-                <h3>${escapeHtml(person.name)}</h3>
-                <div class="job-meta">${escapeHtml(person.role)} · ${escapeHtml(person.region || "-")}</div>
+                <h3>${escapeHtml(person.name || "Tundmatu")}</h3>
+                <div class="job-meta">${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</div>
               </div>
-              <span class="status ${current ? "töös" : "planeeritud"}">${current ? "Hetkel valves" : "Ei ole valves"}</span>
+              <span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${shift.start <= today && shift.end >= today ? "Hetkel valves" : "Järgmine valve"}</span>
             </div>
-            <div class="kv"><span>Praegune valve</span><strong>${current ? `${escapeHtml(current.start)} kuni ${escapeHtml(current.end)}` : "puudub"}</strong></div>
-            <div class="kv"><span>Järgmine valve</span><strong>${next ? `${escapeHtml(next.start)} kuni ${escapeHtml(next.end)}` : "planeerimata"}</strong></div>
+            <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
+            <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
             <div class="person-actions">
-              ${current ? `<button class="btn" data-edit-oncall="${current.id}" title="Muuda praegust valvet"><span class="icon">✎</span> Praegune</button>` : ""}
-              ${next ? `<button class="btn" data-edit-oncall="${next.id}" title="Muuda järgmist valvet"><span class="icon">✎</span> Järgmine</button>` : ""}
-              <button class="btn" data-new-oncall-person="${person.id}"><span class="icon">＋</span> Lisa valve</button>
+              <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
+              <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
             </div>
           </div>
         `;
-      }).join("") || `<div class="mobile-card">Aktiivseid tehnikuid ei leitud.</div>`;
+      };
 
-      $("#onCallTimeline").innerHTML = visibleShifts.map(shift => `
+      $("#onCallGrid").innerHTML = `
+        <div class="mobile-card">
+          <strong>Praegune valve</strong>
+          <span class="job-meta">${current ? `${escapeHtml(shiftWeekLabel(current))} · ${escapeHtml(shiftRangeLabel(current))}` : "Praegu aktiivset valvekirjet ei ole."}</span>
+          ${current ? `<span class="oncall-badge">${escapeHtml(personName(current.personId))}</span>` : ""}
+        </div>
+        <div class="mobile-card">
+          <strong>Järgmine valve</strong>
+          <span class="job-meta">${next ? `${escapeHtml(shiftWeekLabel(next))} · ${escapeHtml(shiftRangeLabel(next))}` : "Järgmist valvekirjet ei ole."}</span>
+          ${next ? `<span class="oncall-badge">${escapeHtml(personName(next.personId))}</span>` : ""}
+          ${next ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(next.id)}"><span class="icon">✎</span> Muuda järgmist valvet</button><button class="btn danger" data-delete-oncall="${escapeAttr(next.id)}"><span class="icon">×</span> Kustuta järgmine valve</button></div>` : ""}
+        </div>
+        ${shiftPersonCard(current, "Praegune valve puudub")}
+        ${shiftPersonCard(next, "Järgmine valve puudub")}
+      `;
+
+      $("#onCallTimeline").innerHTML = upcoming.map(shift => `
         <div class="event-row">
-          <strong>${escapeHtml(personName(shift.personId))}</strong>
-          <span>${escapeHtml(shift.start)} kuni ${escapeHtml(shift.end)}</span>
+          <strong>${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(personName(shift.personId))}</strong>
+          <span>${escapeHtml(shiftRangeLabel(shift))}</span>
           <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
           <div class="person-actions">
-            <button class="btn" data-edit-oncall="${shift.id}"><span class="icon">✎</span> Muuda</button>
-            <button class="btn danger" data-delete-oncall="${shift.id}"><span class="icon">×</span> Kustuta</button>
+            <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
           </div>
         </div>
-      `).join("") || `<div class="mobile-card">Valveid ei ole sisestatud.</div>`;
+      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud.</div>`;
 
-      $$("[data-new-oncall-person]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(btn.dataset.newOncallPerson)));
-      $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
-      $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
+      $$('[data-edit-oncall]').forEach(btn => btn.addEventListener('click', () => openOnCallModal(null, btn.dataset.editOncall)));
+      $$('[data-delete-oncall]').forEach(btn => btn.addEventListener('click', () => deleteOnCall(btn.dataset.deleteOncall)));
     }
 
     function renderClients() {
@@ -8853,7 +8866,6 @@ Summa: 2 075,34 €`;
     });
     on("#peopleStatusFilter", "change", renderAll);
     on("#vacationTypeFilter", "change", renderAll);
-    on("#onCallTechFilter", "change", renderAll);
     on("#clientStatusFilter", "change", renderAll);
     on("#clientSearchField", "input", renderAll);
     on("#objectSearchField", "input", renderAll);
