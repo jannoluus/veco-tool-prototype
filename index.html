@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- VECO index.html | v2026-05-31-03 | lazy external scripts + immediate cached render -->
 <html lang="et">
 <head>
   <meta charset="utf-8">
@@ -2614,159 +2615,6 @@
       height: 44px !important;
       min-height: 44px !important;
     }
-
-
-    /* Grouped sidebar navigation */
-    .nav-section-title {
-      margin: 12px 10px 3px;
-      padding-top: 10px;
-      border-top: 1px solid rgba(97,112,124,.22);
-      color: var(--sidebar-muted);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-    }
-
-    .nav-section-title:first-child {
-      margin-top: 0;
-      padding-top: 0;
-      border-top: 0;
-    }
-
-    body.theme-dark .nav-section-title {
-      border-top-color: rgba(255,255,255,.13);
-    }
-
-    @media (max-width: 1120px) {
-      .nav-section-title {
-        display: none;
-      }
-    }
-
-
-    /* Reworked calendar header: logo + context left, actions + navigation right */
-    #calendarView > .panel > .panel-head.calendar-head-reworked {
-      display: grid !important;
-      grid-template-columns: minmax(420px, 1fr) auto !important;
-      align-items: start !important;
-      gap: 18px 24px !important;
-      min-height: 0 !important;
-      padding: 14px 16px 12px !important;
-    }
-
-    .calendar-head-left,
-    .calendar-head-right {
-      display: grid;
-      align-content: start;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .calendar-head-right {
-      justify-items: end;
-    }
-
-    .calendar-brand-row,
-    .calendar-control-row,
-    .calendar-action-row,
-    .calendar-nav-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .calendar-action-row,
-    .calendar-nav-row {
-      justify-content: flex-end;
-    }
-
-    .calendar-brand-badge {
-      min-width: 92px;
-      height: 40px;
-      padding: 0 14px;
-      align-items: center;
-      justify-content: center;
-      border-radius: 9px;
-    }
-
-    .calendar-brand-badge .calendar-brand-wordmark {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      transform: scaleX(1.14) translateY(-1px);
-      transform-origin: center center;
-    }
-
-    .calendar-context-pill {
-      display: inline-flex !important;
-      align-items: center;
-      min-height: 34px;
-      width: fit-content;
-      max-width: 100%;
-      padding: 0 13px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255,255,255,.04);
-      font-size: 14px !important;
-      font-weight: 850;
-      line-height: 1.15 !important;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    body.theme-dark .calendar-context-pill {
-      background: #172129;
-      border-color: #34414a;
-    }
-
-    @media (max-width: 1180px) {
-      #calendarView > .panel > .panel-head.calendar-head-reworked {
-        grid-template-columns: minmax(0, 1fr) !important;
-      }
-
-      .calendar-head-right,
-      .calendar-action-row,
-      .calendar-nav-row {
-        justify-items: start;
-        justify-content: flex-start;
-      }
-    }
-
-    @media (max-width: 760px) {
-      #calendarView > .panel > .panel-head.calendar-head-reworked {
-        padding: 12px !important;
-      }
-
-      .calendar-brand-row,
-      .calendar-control-row,
-      .calendar-action-row,
-      .calendar-nav-row {
-        display: grid;
-        grid-template-columns: 1fr;
-        width: 100%;
-      }
-
-      .calendar-brand-badge,
-      .calendar-context-pill,
-      .calendar-head-left .btn,
-      .calendar-head-left .select,
-      .calendar-head-right .btn {
-        width: 100%;
-      }
-
-      .calendar-context-pill {
-        justify-content: center;
-        white-space: normal;
-        text-align: center;
-        min-height: 38px;
-      }
-    }
-
-
 </style>
 </head>
 <body>
@@ -2781,29 +2629,25 @@
         <input id="importDataFile" type="file" accept="application/json" class="hidden">
       </div>
       <nav class="nav" aria-label="Põhivaated">
-        <div class="nav-section-title">Töö</div>
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
+        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
         <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
         <button data-view="oncall"><span class="icon">☎</span> Valvegraafik</button>
-
-        <div class="nav-section-title">Haldus</div>
-        <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
-        <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
-        <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
-
-        <div class="nav-section-title">Arendus</div>
-        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
-        <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
-        <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
-
-        <div class="nav-section-title">Süsteem</div>
-        <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
-        <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
-        <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
-        <label class="nav-file-action" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
+        <button id="moreNavBtn" type="button" aria-expanded="false"><span class="icon">⋯</span> Veel</button>
+        <div class="nav-more" id="moreNav" hidden>
+          <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
+          <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
+          <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
+          <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
+          <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
+          <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
+          <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
+          <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
+          <label class="nav-file-action" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
+        </div>
       </nav>
     </aside>
 
@@ -2893,35 +2737,27 @@
 
       <section class="content" id="calendarView">
         <div class="panel">
-          <div class="panel-head calendar-head-reworked">
-            <div class="calendar-head-left">
-              <div class="calendar-brand-row">
-                <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
-                <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
-              </div>
-              <div class="calendar-control-row">
-                <select class="select" id="technicianFilter" aria-label="Tehniku filter">
-                  <option value="all">Kõik tehnikud</option>
-                </select>
-                <select class="select" id="calendarMode" aria-label="Kalendri vaade">
-                  <option value="week">Nädal</option>
-                  <option value="month">Kuu</option>
-                  <option value="year">Aasta</option>
-                </select>
-                <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
-              </div>
-              <h2 class="calendar-context-pill" id="calendarTitle">Nädal 20 · 2026</h2>
+          <div class="panel-head">
+            <div class="panel-title-inline calendar-title-line">
+              <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
+              <h2 id="calendarTitle">Nädal 20 · 2026</h2>
             </div>
-            <div class="calendar-head-right">
-              <div class="calendar-action-row">
-                <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-                <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
-              </div>
-              <div class="calendar-nav-row">
-                <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
-                <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
-                <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
-              </div>
+            <div class="filters">
+              <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+              <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+              <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+              <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
+              <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
+              <select class="select" id="calendarMode" aria-label="Kalendri vaade">
+                <option value="week">Nädal</option>
+                <option value="month">Kuu</option>
+                <option value="year">Aasta</option>
+              </select>
+              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
             </div>
           </div>
           <div class="calendar">
@@ -3017,7 +2853,7 @@
               <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
                 <option value="all">Kõik tehnikud</option>
               </select>
-              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Muuda rotatsiooni</button>
+              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Loo rotatsioon</button>
             </div>
           </div>
           <div class="detail-body">
@@ -3543,7 +3379,7 @@
   <div class="modal" id="onCallRotationModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
       <div class="dialog-head">
-        <h2 id="onCallRotationModalTitle">Muuda valve rotatsiooni</h2>
+        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
         <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
       </div>
       <form id="onCallRotationForm">
@@ -3563,7 +3399,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta rotatsioon</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo rotatsioon</button>
         </div>
       </form>
     </div>
@@ -3666,8 +3502,8 @@
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script id="supabaseScript" defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script id="tesseractScript" defer src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs" type="module"></script>
   <script>
     let people = [
@@ -3840,6 +3676,8 @@
     let importedFileNames = [];
     let importedImageDataUrl = "";
     let emailAgentDraftId = null;
+    const APP_VERSION = "2026-05-31-03-lazy-scripts-immediate-render";
+    window.VECO_APP_VERSION = APP_VERSION;
     const STORAGE_KEY = "vecoPilotDataV1";
     const SUPABASE_CONFIG_KEY = "vecoSupabaseConfigV1";
     const THEME_KEY = "vecoThemeV1";
@@ -6891,7 +6729,7 @@
     }
 
     function renderAll() {
-      const activeViewId = document.querySelector("main > section.content:not(.hidden)")?.id || "calendarView";
+      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
@@ -9064,7 +8902,7 @@ Summa: 2 075,34 €`;
         const url = new URL(window.location.href);
         url.searchParams.set("view", targetView);
         window.history.replaceState({}, "", url.toString());
-      }
+      }      renderAll();
     }
 
     function toggleSidebar() {
@@ -9095,6 +8933,38 @@ Summa: 2 075,34 €`;
       renderAll();
     }
 
+
+    function initRemoteDataAfterInitialRender() {
+      const config = readSupabaseConfig();
+
+      if (!config.url || !config.anonKey) {
+        initSupabaseClient();
+        return;
+      }
+
+      const connectAndLoad = () => {
+        if (!initSupabaseClient()) return;
+        loadPilotDataFromDatabase(false).then(() => {
+          applyTechnicianFromUrl();
+          renderAll();
+        });
+      };
+
+      if (window.supabase) {
+        connectAndLoad();
+        return;
+      }
+
+      const supabaseScript = document.getElementById("supabaseScript") || document.querySelector('script[src*="@supabase/supabase-js"]');
+      if (supabaseScript) {
+        supabaseScript.addEventListener("load", connectAndLoad, { once: true });
+        supabaseScript.addEventListener("error", () => {
+          databaseStatus = "Andmebaasi moodulit ei saanud laadida";
+          renderDatabaseStatus();
+        }, { once: true });
+      }
+    }
+
     fillSelects();
     loadPilotData();
     normalizeLegacyJobIds();
@@ -9105,13 +8975,7 @@ Summa: 2 075,34 €`;
     setDetailCollapsed(true);
     switchView(currentUrlView(), false);
     renderAll();
-    initSupabaseClient();
-    if (supabaseClient) {
-      loadPilotDataFromDatabase(false).then(() => {
-        applyTechnicianFromUrl();
-        renderAll();
-      });
-    }
+    initRemoteDataAfterInitialRender();
     loadLatestNewsHeadline();
     loadTallinnWeather();
     window.setInterval(loadTallinnWeather, 30 * 60 * 1000);
