@@ -2644,6 +2644,129 @@
       }
     }
 
+
+    /* Reworked calendar header: logo + context left, actions + navigation right */
+    #calendarView > .panel > .panel-head.calendar-head-reworked {
+      display: grid !important;
+      grid-template-columns: minmax(420px, 1fr) auto !important;
+      align-items: start !important;
+      gap: 18px 24px !important;
+      min-height: 0 !important;
+      padding: 14px 16px 12px !important;
+    }
+
+    .calendar-head-left,
+    .calendar-head-right {
+      display: grid;
+      align-content: start;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .calendar-head-right {
+      justify-items: end;
+    }
+
+    .calendar-brand-row,
+    .calendar-control-row,
+    .calendar-action-row,
+    .calendar-nav-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .calendar-action-row,
+    .calendar-nav-row {
+      justify-content: flex-end;
+    }
+
+    .calendar-brand-badge {
+      min-width: 92px;
+      height: 40px;
+      padding: 0 14px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9px;
+    }
+
+    .calendar-brand-badge .calendar-brand-wordmark {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      transform: scaleX(1.14) translateY(-1px);
+      transform-origin: center center;
+    }
+
+    .calendar-context-pill {
+      display: inline-flex !important;
+      align-items: center;
+      min-height: 34px;
+      width: fit-content;
+      max-width: 100%;
+      padding: 0 13px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255,255,255,.04);
+      font-size: 14px !important;
+      font-weight: 850;
+      line-height: 1.15 !important;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    body.theme-dark .calendar-context-pill {
+      background: #172129;
+      border-color: #34414a;
+    }
+
+    @media (max-width: 1180px) {
+      #calendarView > .panel > .panel-head.calendar-head-reworked {
+        grid-template-columns: minmax(0, 1fr) !important;
+      }
+
+      .calendar-head-right,
+      .calendar-action-row,
+      .calendar-nav-row {
+        justify-items: start;
+        justify-content: flex-start;
+      }
+    }
+
+    @media (max-width: 760px) {
+      #calendarView > .panel > .panel-head.calendar-head-reworked {
+        padding: 12px !important;
+      }
+
+      .calendar-brand-row,
+      .calendar-control-row,
+      .calendar-action-row,
+      .calendar-nav-row {
+        display: grid;
+        grid-template-columns: 1fr;
+        width: 100%;
+      }
+
+      .calendar-brand-badge,
+      .calendar-context-pill,
+      .calendar-head-left .btn,
+      .calendar-head-left .select,
+      .calendar-head-right .btn {
+        width: 100%;
+      }
+
+      .calendar-context-pill {
+        justify-content: center;
+        white-space: normal;
+        text-align: center;
+        min-height: 38px;
+      }
+    }
+
+
 </style>
 </head>
 <body>
@@ -2770,27 +2893,35 @@
 
       <section class="content" id="calendarView">
         <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title-inline calendar-title-line">
-              <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
-              <h2 id="calendarTitle">Nädal 20 · 2026</h2>
+          <div class="panel-head calendar-head-reworked">
+            <div class="calendar-head-left">
+              <div class="calendar-brand-row">
+                <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
+                <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+              </div>
+              <div class="calendar-control-row">
+                <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+                  <option value="all">Kõik tehnikud</option>
+                </select>
+                <select class="select" id="calendarMode" aria-label="Kalendri vaade">
+                  <option value="week">Nädal</option>
+                  <option value="month">Kuu</option>
+                  <option value="year">Aasta</option>
+                </select>
+                <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
+              </div>
+              <h2 class="calendar-context-pill" id="calendarTitle">Nädal 20 · 2026</h2>
             </div>
-            <div class="filters">
-              <select class="select" id="technicianFilter" aria-label="Tehniku filter">
-                <option value="all">Kõik tehnikud</option>
-              </select>
-              <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-              <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
-              <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
-              <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
-              <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
-              <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
-              <select class="select" id="calendarMode" aria-label="Kalendri vaade">
-                <option value="week">Nädal</option>
-                <option value="month">Kuu</option>
-                <option value="year">Aasta</option>
-              </select>
-              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
+            <div class="calendar-head-right">
+              <div class="calendar-action-row">
+                <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+                <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+              </div>
+              <div class="calendar-nav-row">
+                <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+                <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
+                <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
+              </div>
             </div>
           </div>
           <div class="calendar">
@@ -2886,7 +3017,7 @@
               <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
                 <option value="all">Kõik tehnikud</option>
               </select>
-              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Loo rotatsioon</button>
+              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Muuda rotatsiooni</button>
             </div>
           </div>
           <div class="detail-body">
@@ -3412,7 +3543,7 @@
   <div class="modal" id="onCallRotationModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
       <div class="dialog-head">
-        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
+        <h2 id="onCallRotationModalTitle">Muuda valve rotatsiooni</h2>
         <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
       </div>
       <form id="onCallRotationForm">
@@ -3432,7 +3563,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo rotatsioon</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta rotatsioon</button>
         </div>
       </form>
     </div>
