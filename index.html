@@ -2616,185 +2616,31 @@
     }
 
 
-    /* Calendar header layout: context/filter left, actions/navigation right */
-    #calendarView > .panel > .calendar-dashboard-head {
-      display: grid !important;
-      grid-template-columns: minmax(460px, 1fr) auto !important;
-      align-items: start !important;
-      gap: 18px !important;
-      min-height: 0 !important;
-      padding: 14px 16px !important;
-    }
-
-    .calendar-head-left {
-      min-width: 0;
-      display: grid;
-      align-content: start;
-      justify-items: start;
-      gap: 10px;
-    }
-
-    .calendar-head-left .calendar-title-line {
-      display: flex !important;
-      gap: 0 !important;
-      margin: 0;
-    }
-
-    .calendar-head-left #calendarTitle {
-      margin: 0;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      line-height: 1.25;
-      font-size: 15px;
+    /* Grouped sidebar navigation */
+    .nav-section-title {
+      margin: 12px 10px 3px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(97,112,124,.22);
+      color: var(--sidebar-muted);
+      font-size: 11px;
       font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
     }
 
-    .calendar-control-row,
-    .calendar-action-row,
-    .calendar-nav-row {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
+    .nav-section-title:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
     }
 
-    .calendar-control-row .select,
-    .calendar-control-row .btn,
-    .calendar-action-row .btn,
-    .calendar-nav-row .btn {
-      height: 38px;
+    body.theme-dark .nav-section-title {
+      border-top-color: rgba(255,255,255,.13);
     }
 
-    .calendar-head-right {
-      display: grid;
-      justify-items: end;
-      align-content: start;
-      gap: 10px;
-      min-width: 0;
-    }
-
-    .calendar-action-row,
-    .calendar-nav-row {
-      justify-content: flex-end;
-    }
-
-    @media (max-width: 1180px) {
-      #calendarView > .panel > .calendar-dashboard-head {
-        grid-template-columns: 1fr !important;
-      }
-
-      .calendar-head-right {
-        justify-items: start;
-      }
-
-      .calendar-action-row,
-      .calendar-nav-row {
-        justify-content: flex-start;
-      }
-    }
-
-    @media (max-width: 760px) {
-      #calendarView > .panel > .calendar-dashboard-head {
-        padding: 12px !important;
-      }
-
-      .calendar-control-row,
-      .calendar-action-row,
-      .calendar-nav-row {
-        display: grid;
-        grid-template-columns: 1fr;
-        width: 100%;
-      }
-
-      .calendar-control-row .select,
-      .calendar-control-row .btn,
-      .calendar-action-row .btn,
-      .calendar-nav-row .btn {
-        width: 100%;
-        justify-content: center;
-      }
-
-      .calendar-head-left #calendarTitle {
-        white-space: normal;
-      }
-    }
-
-
-    /* Calendar header polish: centered VECO logo, theme next to logo, context as pill */
-    .calendar-logo-row {
-      display: inline-flex;
-      align-items: center;
-      justify-content: flex-start;
-      gap: 8px;
-      min-width: 0;
-    }
-
-    #calendarView .calendar-brand-badge {
-      height: 40px;
-      min-width: 96px;
-      padding: 0 16px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 10px;
-      line-height: 1;
-    }
-
-    #calendarView .calendar-brand-badge .calendar-brand-wordmark {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
-      transform: scaleX(1.14) translateY(1px);
-      transform-origin: center center;
-      text-align: center;
-    }
-
-    #calendarView .calendar-context-pill {
-      display: inline-flex !important;
-      align-items: center;
-      justify-content: center;
-      min-height: 38px;
-      max-width: 100%;
-      margin: 0 !important;
-      padding: 0 14px;
-      border: 1px solid var(--line);
-      border-radius: 9px;
-      background: rgba(255,255,255,.06);
-      color: var(--ink);
-      font-size: 14px;
-      font-weight: 900;
-      line-height: 1.2;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    body.theme-dark #calendarView .calendar-context-pill,
-    body.theme-dark #calendarView .calendar-brand-badge {
-      background: rgba(255,255,255,.06);
-      border-color: rgba(255,255,255,.13);
-    }
-
-    @media (max-width: 760px) {
-      .calendar-logo-row {
-        display: grid;
-        grid-template-columns: 1fr;
-        width: 100%;
-      }
-
-      .calendar-logo-row .btn,
-      #calendarView .calendar-brand-badge,
-      #calendarView .calendar-context-pill {
-        width: 100%;
-      }
-
-      #calendarView .calendar-context-pill {
-        white-space: normal;
-        text-align: center;
-        padding-block: 8px;
+    @media (max-width: 1120px) {
+      .nav-section-title {
+        display: none;
       }
     }
 
@@ -2812,25 +2658,29 @@
         <input id="importDataFile" type="file" accept="application/json" class="hidden">
       </div>
       <nav class="nav" aria-label="Põhivaated">
+        <div class="nav-section-title">Töö</div>
         <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
         <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
-        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
         <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
         <button data-view="projects"><span class="icon">▣</span> Projektid</button>
         <button data-view="acts"><span class="icon">▧</span> Aktid</button>
         <button data-view="oncall"><span class="icon">☎</span> Valvegraafik</button>
-        <button id="moreNavBtn" type="button" aria-expanded="false"><span class="icon">⋯</span> Veel</button>
-        <div class="nav-more" id="moreNav" hidden>
-          <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
-          <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
-          <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
-          <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
-          <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
-          <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
-          <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
-          <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
-          <label class="nav-file-action" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
-        </div>
+
+        <div class="nav-section-title">Haldus</div>
+        <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
+        <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
+        <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
+
+        <div class="nav-section-title">Arendus</div>
+        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
+        <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
+        <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
+
+        <div class="nav-section-title">Süsteem</div>
+        <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
+        <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
+        <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
+        <label class="nav-file-action" for="importDataFile"><span class="icon">⇧</span> Taasta</label>
       </nav>
     </aside>
 
@@ -2920,35 +2770,27 @@
 
       <section class="content" id="calendarView">
         <div class="panel">
-          <div class="panel-head calendar-dashboard-head">
-            <div class="calendar-head-left">
-              <div class="calendar-logo-row" aria-label="VECO ja välimus">
-                <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
-                <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
-              </div>
-              <div class="calendar-control-row" aria-label="Kalendri filtrid">
-                <select class="select" id="technicianFilter" aria-label="Tehniku filter">
-                  <option value="all">Kõik tehnikud</option>
-                </select>
-                <select class="select" id="calendarMode" aria-label="Kalendri vaade">
-                  <option value="week">Nädal</option>
-                  <option value="month">Kuu</option>
-                  <option value="year">Aasta</option>
-                </select>
-                <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
-              </div>
-              <h2 id="calendarTitle" class="calendar-context-pill">Nädal 20 · 2026</h2>
+          <div class="panel-head">
+            <div class="panel-title-inline calendar-title-line">
+              <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
+              <h2 id="calendarTitle">Nädal 20 · 2026</h2>
             </div>
-            <div class="calendar-head-right">
-              <div class="calendar-action-row" aria-label="Kalendri tegevused">
-                <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-                <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
-              </div>
-              <div class="calendar-nav-row" aria-label="Kalendri navigeerimine">
-                <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
-                <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
-                <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
-              </div>
+            <div class="filters">
+              <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+              <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+              <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+              <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
+              <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
+              <select class="select" id="calendarMode" aria-label="Kalendri vaade">
+                <option value="week">Nädal</option>
+                <option value="month">Kuu</option>
+                <option value="year">Aasta</option>
+              </select>
+              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
             </div>
           </div>
           <div class="calendar">
@@ -6918,7 +6760,7 @@
     }
 
     function renderAll() {
-      const activeViewId = $(".content:not(.hidden)")?.id || "calendarView";
+      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
@@ -9092,7 +8934,6 @@ Summa: 2 075,34 €`;
         url.searchParams.set("view", targetView);
         window.history.replaceState({}, "", url.toString());
       }
-      renderAll();
     }
 
     function toggleSidebar() {
