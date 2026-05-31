@@ -2614,65 +2614,6 @@
       height: 44px !important;
       min-height: 44px !important;
     }
-
-    /* Clean on-call dashboard */
-    #onCallView {
-      grid-template-columns: minmax(0, 1fr) 390px;
-    }
-
-    #onCallView #onCallGrid.people-grid {
-      grid-template-columns: repeat(2, minmax(320px, 1fr));
-      align-items: stretch;
-    }
-
-    #onCallView .oncall-main-card {
-      min-height: 218px;
-      align-content: start;
-    }
-
-    #onCallView .oncall-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-top: 4px;
-    }
-
-    #onCallView .oncall-actions .btn {
-      justify-content: center;
-      min-width: 0;
-      padding-inline: 10px;
-      white-space: nowrap;
-    }
-
-    #onCallView .event-row .person-top {
-      align-items: flex-start;
-    }
-
-    #onCallView .event-row .person-top span:not(.status) {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    @media (max-width: 1180px) {
-      #onCallView {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 760px) {
-      #onCallView #onCallGrid.people-grid {
-        grid-template-columns: 1fr;
-      }
-
-      #onCallView .oncall-main-card {
-        min-height: 0;
-      }
-
-      #onCallView .oncall-actions {
-        grid-template-columns: 1fr;
-      }
-    }
-
 </style>
 </head>
 <body>
@@ -2908,7 +2849,10 @@
           <div class="panel-head">
             <h2>Valvegraafik</h2>
             <div class="filters">
-              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Muuda rotatsiooni</button>
+              <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Loo rotatsioon</button>
             </div>
           </div>
           <div class="detail-body">
@@ -3454,7 +3398,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta rotatsioon</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Loo rotatsioon</button>
         </div>
       </form>
     </div>
@@ -5614,91 +5558,54 @@
     }
 
     function renderOnCall() {
-      const today = dateKey(new Date());
-      const activePeople = people
+      const filter = $("#onCallTechFilter")?.value || "all";
+      const visiblePeople = people
         .filter(person => person.active)
+        .filter(person => filter === "all" || person.id === filter)
         .sort((a, b) => a.name.localeCompare(b.name, "et"));
-
-      const activePersonIds = new Set(activePeople.map(person => person.id));
       const visibleShifts = onCallShifts
-        .filter(shift => activePersonIds.has(shift.personId))
+        .filter(shift => filter === "all" || shift.personId === filter)
         .slice()
-        .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
+        .sort((a, b) => a.start.localeCompare(b.start));
+      const today = dateKey(new Date());
 
-      const current = visibleShifts.find(shift => shift.start <= today && shift.end >= today) || null;
-      const next = visibleShifts.find(shift => shift.start > today) || null;
-      const upcoming = visibleShifts.filter(shift => shift.end >= today);
-
-      const shiftStartDate = (shift) => new Date(`${shift.start}T12:00:00`);
-      const shiftWeekLabel = (shift) => {
-        if (!shift) return "-";
-        const start = shiftStartDate(shift);
-        return `Nädal ${weekNumber(start)}`;
-      };
-      const shiftRangeLabel = (shift) => shift ? `${formatDateEt(shift.start)} – ${formatDateEt(shift.end)}` : "-";
-      const shiftStatusLabel = (shift) => {
-        if (!shift) return "";
-        if (shift.start <= today && shift.end >= today) return "Hetkel valves";
-        return "Planeeritud";
-      };
-
-      const summaryCard = (title, shift, emptyText) => {
-        const person = shift ? (people.find(item => item.id === shift.personId) || {}) : {};
+      $("#onCallGrid").innerHTML = visiblePeople.map(person => {
+        const shifts = visibleShifts.filter(shift => shift.personId === person.id);
+        const current = shifts.find(shift => shift.start <= today && shift.end >= today);
+        const next = shifts.find(shift => shift.start > today);
         return `
-          <div class="mobile-card oncall-main-card">
+          <div class="person-card">
             <div class="person-top">
               <div>
-                <strong>${escapeHtml(title)}</strong>
-                ${shift ? `<div class="job-meta">${escapeHtml(shiftWeekLabel(shift))}</div>` : ""}
+                <h3>${escapeHtml(person.name)}</h3>
+                <div class="job-meta">${escapeHtml(person.role)} · ${escapeHtml(person.region || "-")}</div>
               </div>
-              ${shift ? `<span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${escapeHtml(shiftStatusLabel(shift))}</span>` : ""}
+              <span class="status ${current ? "töös" : "planeeritud"}">${current ? "Hetkel valves" : "Ei ole valves"}</span>
             </div>
-            ${shift ? `
-              <span class="oncall-badge">${escapeHtml(person.name || "Tundmatu")}</span>
-              <div class="kv"><span>Periood</span><strong>${escapeHtml(shiftRangeLabel(shift))}</strong></div>
-              <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
-              <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
-              <div class="person-actions oncall-actions">
-                <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
-                <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
-              </div>
-            ` : `<span class="job-meta">${escapeHtml(emptyText)}</span>`}
+            <div class="kv"><span>Praegune valve</span><strong>${current ? `${escapeHtml(current.start)} kuni ${escapeHtml(current.end)}` : "puudub"}</strong></div>
+            <div class="kv"><span>Järgmine valve</span><strong>${next ? `${escapeHtml(next.start)} kuni ${escapeHtml(next.end)}` : "planeerimata"}</strong></div>
+            <div class="person-actions">
+              ${current ? `<button class="btn" data-edit-oncall="${current.id}" title="Muuda praegust valvet"><span class="icon">✎</span> Praegune</button>` : ""}
+              ${next ? `<button class="btn" data-edit-oncall="${next.id}" title="Muuda järgmist valvet"><span class="icon">✎</span> Järgmine</button>` : ""}
+              <button class="btn" data-new-oncall-person="${person.id}"><span class="icon">＋</span> Lisa valve</button>
+            </div>
           </div>
         `;
-      };
+      }).join("") || `<div class="mobile-card">Aktiivseid tehnikuid ei leitud.</div>`;
 
-      const grid = $("#onCallGrid");
-      if (grid) {
-        grid.innerHTML = `
-          ${summaryCard("Praegune valve", current, "Praegu aktiivset valvekirjet ei ole.")}
-          ${summaryCard("Järgmine valve", next, "Järgmist valvekirjet ei ole.")}
-        `;
-      }
+      $("#onCallTimeline").innerHTML = visibleShifts.map(shift => `
+        <div class="event-row">
+          <strong>${escapeHtml(personName(shift.personId))}</strong>
+          <span>${escapeHtml(shift.start)} kuni ${escapeHtml(shift.end)}</span>
+          <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
+          <div class="person-actions">
+            <button class="btn" data-edit-oncall="${shift.id}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn danger" data-delete-oncall="${shift.id}"><span class="icon">×</span> Kustuta</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Valveid ei ole sisestatud.</div>`;
 
-      const timeline = $("#onCallTimeline");
-      if (timeline) {
-        timeline.innerHTML = upcoming.map(shift => {
-          const person = people.find(item => item.id === shift.personId) || {};
-          const isCurrent = shift.start <= today && shift.end >= today;
-          return `
-            <div class="event-row">
-              <div class="person-top">
-                <div>
-                  <strong>${escapeHtml(person.name || "Tundmatu")}</strong>
-                  <span>${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</span>
-                </div>
-                <span class="status ${isCurrent ? "töös" : "planeeritud"}">${isCurrent ? "Praegu" : "Tulekul"}</span>
-              </div>
-              <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
-              <div class="person-actions oncall-actions">
-                <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
-                <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
-              </div>
-            </div>
-          `;
-        }).join("") || `<div class="mobile-card">Tulevasi valvesid ei ole sisestatud.</div>`;
-      }
-
+      $$("[data-new-oncall-person]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(btn.dataset.newOncallPerson)));
       $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
       $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
     }
@@ -6819,7 +6726,7 @@
     }
 
     function renderAll() {
-      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
+      const activeViewId = $(".content:not(.hidden)")?.id || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
@@ -8035,6 +7942,7 @@ Summa: 2 075,34 €`;
       } else {
         people.push({ id: nextPersonId(), ...data });
       }
+      savePilotData();
       closeModal("personModal");
       renderAll();
     }
@@ -8043,6 +7951,7 @@ Summa: 2 075,34 €`;
       const person = people.find(item => item.id === id);
       if (!person) return;
       person.active = !person.active;
+      savePilotData();
       renderAll();
     }
 
@@ -8060,6 +7969,7 @@ Summa: 2 075,34 €`;
         peopleEvents = peopleEvents.filter(event => event.personId !== id);
         onCallShifts = onCallShifts.filter(shift => shift.personId !== id);
       }
+      savePilotData();
       renderAll();
     }
 
@@ -8088,6 +7998,7 @@ Summa: 2 075,34 €`;
       } else {
         peopleEvents.push({ id: nextEventId(), ...data });
       }
+      savePilotData();
       closeModal("eventModal");
       editingEventId = null;
       renderAll();
@@ -8099,6 +8010,7 @@ Summa: 2 075,34 €`;
       const ok = window.confirm(`Kas kustutada kirje?\n\n${personName(item.personId)} · ${item.type} · ${item.start} kuni ${item.end}`);
       if (!ok) return;
       peopleEvents = peopleEvents.filter(event => event.id !== id);
+      savePilotData();
       renderAll();
     }
 
@@ -8170,6 +8082,7 @@ Summa: 2 075,34 €`;
       } else {
         onCallShifts.push({ id: nextOnCallId(), ...data });
       }
+      savePilotData();
       closeModal("onCallModal");
       editingOnCallId = null;
       renderAll();
