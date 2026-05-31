@@ -2614,6 +2614,63 @@
       height: 44px !important;
       min-height: 44px !important;
     }
+
+    /* Calendar header fixed navigation group */
+    @media (min-width: 1000px) {
+      #calendarView > .panel > .panel-head {
+        display: grid !important;
+        grid-template-columns: minmax(360px, 1fr) auto !important;
+        align-items: start !important;
+        column-gap: 22px !important;
+      }
+
+      #calendarView > .panel > .panel-head .filters {
+        display: grid !important;
+        grid-template-columns: 170px 120px 82px 132px 92px 86px 104px !important;
+        grid-template-rows: 38px 38px !important;
+        grid-template-areas:
+          "tech import theme newjob prev today next"
+          "mode weekend empty empty empty2 empty3 empty4" !important;
+        gap: 8px !important;
+        align-items: start !important;
+        justify-content: end !important;
+        min-width: 0 !important;
+      }
+
+      #calendarView #technicianFilter { grid-area: tech !important; width: 170px !important; }
+      #calendarView #importJobBtn { grid-area: import !important; width: 120px !important; }
+      #calendarView #themeToggleBtn { grid-area: theme !important; width: 82px !important; }
+      #calendarView #newJobBtn { grid-area: newjob !important; width: 132px !important; }
+      #calendarView #prevPeriodBtn { grid-area: prev !important; width: 92px !important; }
+      #calendarView #todayBtn { grid-area: today !important; width: 86px !important; }
+      #calendarView #nextPeriodBtn { grid-area: next !important; width: 104px !important; }
+      #calendarView #calendarMode { grid-area: mode !important; width: 82px !important; }
+      #calendarView #toggleWeekendBtn { grid-area: weekend !important; width: 104px !important; }
+
+      #calendarView #prevPeriodBtn,
+      #calendarView #todayBtn,
+      #calendarView #nextPeriodBtn {
+        justify-content: center !important;
+        margin: 0 !important;
+      }
+    }
+
+    @media (min-width: 1000px) and (max-width: 1320px) {
+      #calendarView > .panel > .panel-head {
+        grid-template-columns: minmax(280px, 1fr) auto !important;
+      }
+      #calendarView > .panel > .panel-head .filters {
+        grid-template-columns: 150px 108px 76px 122px 88px 82px 98px !important;
+      }
+      #calendarView #technicianFilter { width: 150px !important; }
+      #calendarView #importJobBtn { width: 108px !important; }
+      #calendarView #themeToggleBtn { width: 76px !important; }
+      #calendarView #newJobBtn { width: 122px !important; }
+      #calendarView #prevPeriodBtn { width: 88px !important; }
+      #calendarView #todayBtn { width: 82px !important; }
+      #calendarView #nextPeriodBtn { width: 98px !important; }
+    }
+
 </style>
 </head>
 <body>
