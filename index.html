@@ -2615,153 +2615,83 @@
       min-height: 44px !important;
     }
 
-
-    /* v2026-05-31-04: grouped sidebar + restored compact calendar header */
-    .nav-grouped {
-      gap: 16px;
-      align-content: start;
+    /* On-call MVP layout and button sizing */
+    #oncallView {
+      grid-template-columns: minmax(0, 1fr) !important;
     }
 
-    .nav-section {
-      display: grid;
-      gap: 7px;
-      padding-top: 2px;
+    #oncallView > .panel {
+      grid-column: 1 / -1;
     }
 
-    .nav-section + .nav-section {
-      border-top: 1px solid var(--line);
-      padding-top: 14px;
-    }
-
-    .nav-section-title {
-      padding: 0 10px 4px;
-      color: var(--sidebar-muted);
-      font-size: 11px;
-      font-weight: 900;
-      letter-spacing: .07em;
-      text-transform: uppercase;
-    }
-
-    .calendar-head-reworked {
-      display: grid !important;
-      grid-template-columns: minmax(360px, 1fr) auto !important;
-      align-items: start !important;
-      gap: 16px 22px !important;
-      min-height: 118px !important;
-      padding: 14px 16px !important;
-    }
-
-    .calendar-head-left,
-    .calendar-head-right {
-      display: grid;
-      gap: 10px;
-      align-content: start;
-    }
-
-    .calendar-head-right {
-      justify-items: end;
-    }
-
-    .calendar-brand-row,
-    .calendar-filter-row,
-    .calendar-action-row,
-    .calendar-nav-row {
-      display: flex;
+    #oncallView .panel-head {
       align-items: center;
-      gap: 8px;
       flex-wrap: wrap;
     }
 
-    .calendar-brand-row {
-      flex-wrap: nowrap;
+    #oncallView .panel-head .filters {
+      justify-content: flex-end;
+      flex: 1 1 auto;
     }
 
-    .calendar-brand-badge {
-      background: rgba(23,105,170,.10) !important;
-      border-color: var(--line) !important;
-      min-width: 96px;
-      height: 40px;
+    #oncallView .people-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     }
 
-    .calendar-brand-badge .calendar-brand-wordmark {
-      line-height: 1 !important;
-      transform-origin: center center !important;
-    }
-
-    .calendar-context-pill {
-      display: inline-flex !important;
-      align-items: center;
-      min-height: 34px;
-      width: fit-content;
-      max-width: 100%;
-      margin: 0 !important;
-      padding: 0 12px;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      background: rgba(255,255,255,.06);
-      font-size: 14px !important;
-      font-weight: 900;
-      white-space: nowrap;
-    }
-
-    body.theme-dark .calendar-context-pill {
-      background: rgba(255,255,255,.05);
-    }
-
-    .team-head-reworked {
+    #oncallView .person-actions {
       display: flex !important;
-      align-items: center !important;
-      justify-content: space-between !important;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      grid-template-columns: none !important;
     }
 
-    .app.sidebar-collapsed .nav-section {
-      display: none !important;
+    #oncallView .person-actions .btn,
+    #oncallView .filters .btn,
+    #oncallView .timeline .btn {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: max-content;
+      max-width: 100%;
+      padding: 9px 14px;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.2;
     }
 
-    @media (max-width: 1120px) {
-      .nav-grouped {
-        display: flex;
-        gap: 8px;
-      }
-      .nav-section {
-        display: flex;
-        min-width: max-content;
-        padding-top: 0;
-      }
-      .nav-section + .nav-section {
-        border-top: 0;
-        padding-top: 0;
-      }
-      .nav-section-title {
-        display: none;
-      }
-      .calendar-head-reworked {
-        grid-template-columns: 1fr !important;
-      }
-      .calendar-head-right {
-        justify-items: start;
-      }
+    #oncallView .person-actions .btn .icon,
+    #oncallView .filters .btn .icon,
+    #oncallView .timeline .btn .icon {
+      flex: 0 0 auto;
+    }
+
+    #oncallView .oncall-stat-card .kv {
+      grid-template-columns: 130px minmax(0, 1fr);
     }
 
     @media (max-width: 760px) {
-      .calendar-head-reworked {
-        min-height: 0 !important;
+      #oncallView .panel-head .filters {
+        justify-content: stretch;
       }
-      .calendar-brand-row,
-      .calendar-filter-row,
-      .calendar-action-row,
-      .calendar-nav-row {
-        display: grid;
+
+      #oncallView .filters,
+      #oncallView .person-actions {
+        display: grid !important;
         grid-template-columns: 1fr;
-        width: 100%;
       }
-      .calendar-brand-row {
-        grid-template-columns: auto 1fr;
-      }
-      .calendar-context-pill {
+
+      #oncallView .person-actions .btn,
+      #oncallView .filters .btn,
+      #oncallView .filters .select,
+      #oncallView .timeline .btn {
         width: 100%;
+        justify-content: center;
+        min-width: 0;
+        white-space: normal;
       }
     }
+
 </style>
 </head>
 <body>
@@ -2775,33 +2705,21 @@
         </details>
         <input id="importDataFile" type="file" accept="application/json" class="hidden">
       </div>
-      <nav class="nav nav-grouped" aria-label="Põhivaated">
-        <div class="nav-section">
-          <div class="nav-section-title">Töö</div>
-          <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
-          <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
-          <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
-          <button data-view="projects"><span class="icon">▣</span> Projektid</button>
-          <button data-view="acts"><span class="icon">▧</span> Aktid</button>
-          <button data-view="oncall"><span class="icon">☎</span> Valvegraafik</button>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Haldus</div>
+      <nav class="nav" aria-label="Põhivaated">
+        <button class="active" data-view="calendar"><span class="icon">▦</span> Kalender</button>
+        <button data-view="team"><span class="icon">◫</span> Tiimivaade</button>
+        <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
+        <button data-view="objects"><span class="icon">⌂</span> Objektid</button>
+        <button data-view="projects"><span class="icon">▣</span> Projektid</button>
+        <button data-view="acts"><span class="icon">▧</span> Aktid</button>
+        <button data-view="oncall"><span class="icon">☎</span> Valvegraafik</button>
+        <button id="moreNavBtn" type="button" aria-expanded="false"><span class="icon">⋯</span> Veel</button>
+        <div class="nav-more" id="moreNav" hidden>
+          <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
           <button data-view="people"><span class="icon">☷</span> Tehnikud</button>
           <button data-view="vacations"><span class="icon">▤</span> Puhkused</button>
           <button data-view="clients"><span class="icon">▥</span> Kliendid</button>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Arendus</div>
-          <button data-view="mobile"><span class="icon">▤</span> Tehniku vaade</button>
-          <button data-view="pilot"><span class="icon">✓</span> Piloodi MVP</button>
           <button data-view="ai"><span class="icon">✦</span> AI planeerimine</button>
-        </div>
-
-        <div class="nav-section">
-          <div class="nav-section-title">Süsteem</div>
           <button data-view="ezefs"><span class="icon">↔</span> EZEFSi valmidus</button>
           <button type="button" id="databaseBtn"><span class="icon">↔</span> Andmebaas</button>
           <button type="button" id="exportDataBtn"><span class="icon">⇩</span> Varukoopia</button>
@@ -2896,35 +2814,27 @@
 
       <section class="content" id="calendarView">
         <div class="panel">
-          <div class="panel-head calendar-head-reworked">
-            <div class="calendar-head-left">
-              <div class="calendar-brand-row">
-                <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
-                <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
-              </div>
-              <div class="calendar-filter-row">
-                <select class="select" id="technicianFilter" aria-label="Tehniku filter">
-                  <option value="all">Kõik tehnikud</option>
-                </select>
-                <select class="select" id="calendarMode" aria-label="Kalendri vaade">
-                  <option value="week">Nädal</option>
-                  <option value="month">Kuu</option>
-                  <option value="year">Aasta</option>
-                </select>
-                <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
-              </div>
-              <h2 id="calendarTitle" class="calendar-context-pill">Nädal 20 · 2026</h2>
+          <div class="panel-head">
+            <div class="panel-title-inline calendar-title-line">
+              <span class="calendar-brand-badge" aria-label="VECO"><span class="calendar-brand-wordmark">VECO</span></span>
+              <h2 id="calendarTitle">Nädal 20 · 2026</h2>
             </div>
-            <div class="calendar-head-right">
-              <div class="calendar-action-row">
-                <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
-                <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
-              </div>
-              <div class="calendar-nav-row">
-                <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
-                <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
-                <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
-              </div>
+            <div class="filters">
+              <select class="select" id="technicianFilter" aria-label="Tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn" id="importJobBtn"><span class="icon">▧</span> Impordi töö</button>
+              <button class="btn ghost" id="themeToggleBtn"><span class="icon">◐</span> Tume</button>
+              <button class="btn primary" id="newJobBtn"><span class="icon">＋</span> Lisa töökäsk</button>
+              <button class="btn nav-soft" id="prevPeriodBtn"><span class="icon">‹</span> Eelmine</button>
+              <button class="btn primary" id="todayBtn"><span class="icon">⌖</span> Täna</button>
+              <button class="btn nav-soft" id="nextPeriodBtn">Järgmine <span class="icon">›</span></button>
+              <select class="select" id="calendarMode" aria-label="Kalendri vaade">
+                <option value="week">Nädal</option>
+                <option value="month">Kuu</option>
+                <option value="year">Aasta</option>
+              </select>
+              <button class="btn ghost" id="toggleWeekendBtn"><span class="icon">▦</span> Näita L/P</button>
             </div>
           </div>
           <div class="calendar">
@@ -2954,9 +2864,10 @@
 
       <section class="content hidden" id="teamView">
         <div class="panel">
-          <div class="panel-head team-head-reworked">
+          <div class="panel-head">
             <div class="panel-title-inline">
               <h2 id="teamTitle">Tiimivaade</h2>
+              <select class="select oncall-inline-select" id="teamOnCallSelect" aria-label="Tiimivaate valve"></select>
             </div>
             <div class="filters">
               <button class="btn nav-soft" id="teamPrevBtn"><span class="icon">‹</span> Eelmine</button>
@@ -3015,21 +2926,21 @@
         <div class="panel">
           <div class="panel-head">
             <h2>Valvegraafik</h2>
-
+            <div class="filters">
+              <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn ghost" id="onCallThemeToggleBtn" type="button"><span class="icon">◐</span> Hele</button>
+              <button class="btn" id="newOnCallRotationBtn" type="button"><span class="icon">↻</span> Muuda rotatsiooni</button>
+              <button class="btn primary" id="newOnCallBtn" type="button"><span class="icon">＋</span> Lisa valve</button>
+            </div>
           </div>
           <div class="detail-body">
             <div class="people-grid" id="onCallGrid"></div>
-          </div>
-        </div>
-        <aside class="panel detail">
-          <div class="panel-head">
-            <h2>Valved</h2>
-            <button class="btn primary" id="newOnCallBtn"><span class="icon">＋</span> Lisa valve</button>
-          </div>
-          <div class="detail-body">
+            <p class="section-title">Tulevased valved</p>
             <div class="timeline" id="onCallTimeline"></div>
           </div>
-        </aside>
+        </div>
       </section>
 
       <section class="content hidden" id="mobileView">
@@ -3540,7 +3451,7 @@
   <div class="modal" id="onCallRotationModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
       <div class="dialog-head">
-        <h2 id="onCallRotationModalTitle">Muuda valve rotatsiooni</h2>
+        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
         <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
       </div>
       <form id="onCallRotationForm">
@@ -5721,13 +5632,17 @@
 
     function renderOnCall() {
       const today = dateKey(new Date());
+      const filter = $("#onCallTechFilter")?.value || "all";
       const activePeople = people
         .filter(person => person.active)
         .sort((a, b) => a.name.localeCompare(b.name, "et"));
+
       const visibleShifts = onCallShifts
         .filter(shift => activePeople.some(person => person.id === shift.personId))
+        .filter(shift => filter === "all" || shift.personId === filter)
         .slice()
         .sort((a, b) => a.start.localeCompare(b.start));
+
       const current = visibleShifts.find(shift => shift.start <= today && shift.end >= today) || null;
       const next = visibleShifts.find(shift => shift.start > today) || null;
       const upcoming = visibleShifts.filter(shift => shift.end >= today);
@@ -5738,9 +5653,22 @@
         return `Nädal ${weekNumber(start)}`;
       };
       const shiftRangeLabel = (shift) => shift ? `${shift.start} kuni ${shift.end}` : "planeerimata";
-      const shiftPersonCard = (shift, emptyText) => {
-        if (!shift) return `<div class="mobile-card"><strong>${escapeHtml(emptyText)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+
+      const summaryCard = (title, shift, emptyText) => `
+        <div class="mobile-card oncall-stat-card">
+          <strong>${escapeHtml(title)}</strong>
+          <span class="job-meta">${shift ? `${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}` : escapeHtml(emptyText)}</span>
+          ${shift ? `<span class="oncall-badge">${escapeHtml(personName(shift.personId))}</span>` : ""}
+          ${shift ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button><button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button></div>` : ""}
+        </div>
+      `;
+
+      const personCard = (shift, emptyTitle) => {
+        if (!shift) {
+          return `<div class="mobile-card oncall-stat-card"><strong>${escapeHtml(emptyTitle)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+        }
         const person = people.find(item => item.id === shift.personId) || {};
+        const isCurrent = shift.start <= today && shift.end >= today;
         return `
           <div class="person-card">
             <div class="person-top">
@@ -5748,9 +5676,10 @@
                 <h3>${escapeHtml(person.name || "Tundmatu")}</h3>
                 <div class="job-meta">${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</div>
               </div>
-              <span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${shift.start <= today && shift.end >= today ? "Hetkel valves" : "Järgmine valve"}</span>
+              <span class="status ${isCurrent ? "töös" : "planeeritud"}">${isCurrent ? "Hetkel valves" : "Järgmine valve"}</span>
             </div>
             <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
+            <div class="kv"><span>E-post</span><strong>${escapeHtml(person.email || "-")}</strong></div>
             <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
             <div class="person-actions">
               <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
@@ -5760,20 +5689,21 @@
         `;
       };
 
+      const loadByPerson = activePeople.map(person => {
+        const count = visibleShifts.filter(shift => shift.personId === person.id && shift.end >= today).length;
+        return `<div class="kv"><span>${escapeHtml(person.name)}</span><strong>${count} valvekirjet</strong></div>`;
+      }).join("");
+
       $("#onCallGrid").innerHTML = `
-        <div class="mobile-card">
-          <strong>Praegune valve</strong>
-          <span class="job-meta">${current ? `${escapeHtml(shiftWeekLabel(current))} · ${escapeHtml(shiftRangeLabel(current))}` : "Praegu aktiivset valvekirjet ei ole."}</span>
-          ${current ? `<span class="oncall-badge">${escapeHtml(personName(current.personId))}</span>` : ""}
+        ${summaryCard("Praegune valve", current, "Praegu aktiivset valvekirjet ei ole.")}
+        ${summaryCard("Järgmine valve", next, "Järgmist valvekirjet ei ole.")}
+        ${personCard(current, "Praegune valve puudub")}
+        ${personCard(next, "Järgmine valve puudub")}
+        <div class="mobile-card oncall-stat-card">
+          <strong>Rotatsiooni ülevaade</strong>
+          <span class="job-meta">Kasuta nuppu “Muuda rotatsiooni”, et valida osalejad ja genereerida valveperioodid.</span>
+          ${loadByPerson || `<span class="job-meta">Aktiivseid tehnikuid ei ole.</span>`}
         </div>
-        <div class="mobile-card">
-          <strong>Järgmine valve</strong>
-          <span class="job-meta">${next ? `${escapeHtml(shiftWeekLabel(next))} · ${escapeHtml(shiftRangeLabel(next))}` : "Järgmist valvekirjet ei ole."}</span>
-          ${next ? `<span class="oncall-badge">${escapeHtml(personName(next.personId))}</span>` : ""}
-          ${next ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(next.id)}"><span class="icon">✎</span> Muuda järgmist valvet</button><button class="btn danger" data-delete-oncall="${escapeAttr(next.id)}"><span class="icon">×</span> Kustuta järgmine valve</button></div>` : ""}
-        </div>
-        ${shiftPersonCard(current, "Praegune valve puudub")}
-        ${shiftPersonCard(next, "Järgmine valve puudub")}
       `;
 
       $("#onCallTimeline").innerHTML = upcoming.map(shift => `
@@ -5786,10 +5716,10 @@
             <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
           </div>
         </div>
-      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud.</div>`;
+      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud. Lisa käsitsi valve või loo rotatsioon.</div>`;
 
-      $$('[data-edit-oncall]').forEach(btn => btn.addEventListener('click', () => openOnCallModal(null, btn.dataset.editOncall)));
-      $$('[data-delete-oncall]').forEach(btn => btn.addEventListener('click', () => deleteOnCall(btn.dataset.deleteOncall)));
+      $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
+      $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
     }
 
     function renderClients() {
@@ -6832,6 +6762,11 @@
           ? `<span class="icon">◐</span> Hele`
           : `<span class="icon">◐</span> Tume`;
       }
+      const onCallThemeButton = $("#onCallThemeToggleBtn");
+      if (onCallThemeButton) {
+        const isDark = document.body.classList.contains("theme-dark");
+        onCallThemeButton.innerHTML = isDark ? `<span class="icon">◐</span> Hele` : `<span class="icon">◐</span> Tume`;
+      }
     }
 
     function toggleTheme() {
@@ -6908,7 +6843,7 @@
     }
 
     function renderAll() {
-      const activeViewId = $(".content:not(.hidden)")?.id || "calendarView";
+      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
@@ -9044,7 +8979,85 @@ Summa: 2 075,34 €`;
       align-items: flex-start !important;
     }
 
-  </style>
+  
+    /* On-call MVP layout and button sizing */
+    #oncallView {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    #oncallView > .panel {
+      grid-column: 1 / -1;
+    }
+
+    #oncallView .panel-head {
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #oncallView .panel-head .filters {
+      justify-content: flex-end;
+      flex: 1 1 auto;
+    }
+
+    #oncallView .people-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    #oncallView .person-actions {
+      display: flex !important;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      grid-template-columns: none !important;
+    }
+
+    #oncallView .person-actions .btn,
+    #oncallView .filters .btn,
+    #oncallView .timeline .btn {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: max-content;
+      max-width: 100%;
+      padding: 9px 14px;
+      white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.2;
+    }
+
+    #oncallView .person-actions .btn .icon,
+    #oncallView .filters .btn .icon,
+    #oncallView .timeline .btn .icon {
+      flex: 0 0 auto;
+    }
+
+    #oncallView .oncall-stat-card .kv {
+      grid-template-columns: 130px minmax(0, 1fr);
+    }
+
+    @media (max-width: 760px) {
+      #oncallView .panel-head .filters {
+        justify-content: stretch;
+      }
+
+      #oncallView .filters,
+      #oncallView .person-actions {
+        display: grid !important;
+        grid-template-columns: 1fr;
+      }
+
+      #oncallView .person-actions .btn,
+      #oncallView .filters .btn,
+      #oncallView .filters .select,
+      #oncallView .timeline .btn {
+        width: 100%;
+        justify-content: center;
+        min-width: 0;
+        white-space: normal;
+      }
+    }
+
+</style>
         </head>
         <body>
           <div class="act-window-toolbar">
@@ -9082,7 +9095,6 @@ Summa: 2 075,34 €`;
         url.searchParams.set("view", targetView);
         window.history.replaceState({}, "", url.toString());
       }
-      renderAll();
     }
 
     function toggleSidebar() {
@@ -9136,6 +9148,7 @@ Summa: 2 075,34 €`;
 
     on("#brandRefreshBtn", "click", refreshFromBrand);
     on("#themeToggleBtn", "click", toggleTheme);
+    on("#onCallThemeToggleBtn", "click", toggleTheme);
     on("#moreNavBtn", "click", toggleMoreNav);
     on("#newJobBtn", "click", () => {
       if ($("#mobileView") && !$("#mobileView").classList.contains("hidden")) {
