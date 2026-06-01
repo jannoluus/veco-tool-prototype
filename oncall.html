@@ -2394,9 +2394,31 @@
       }
     }
   
+    
+    /* On-call MVP layout and button sizing */
+    #oncallView {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
 
-    /* On-call button sizing fix */
-    #onCallView .person-actions {
+    #oncallView > .panel {
+      grid-column: 1 / -1;
+    }
+
+    #oncallView .panel-head {
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    #oncallView .panel-head .filters {
+      justify-content: flex-end;
+      flex: 1 1 auto;
+    }
+
+    #oncallView .people-grid {
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    }
+
+    #oncallView .person-actions {
       display: flex !important;
       flex-wrap: wrap;
       align-items: center;
@@ -2404,10 +2426,9 @@
       grid-template-columns: none !important;
     }
 
-    #onCallView .person-actions .btn,
-    #onCallView .filters .btn,
-    #onCallView .panel-head .btn,
-    #onCallView .timeline .btn {
+    #oncallView .person-actions .btn,
+    #oncallView .filters .btn,
+    #oncallView .timeline .btn {
       flex: 0 0 auto;
       width: auto;
       min-width: max-content;
@@ -2419,31 +2440,31 @@
       line-height: 1.2;
     }
 
-    #onCallView .person-actions .btn .icon,
-    #onCallView .filters .btn .icon,
-    #onCallView .timeline .btn .icon {
+    #oncallView .person-actions .btn .icon,
+    #oncallView .filters .btn .icon,
+    #oncallView .timeline .btn .icon {
       flex: 0 0 auto;
     }
 
-    #onCallView .oncall-stat-card {
-      min-width: 0;
-      max-width: 100%;
-    }
-
-    #onCallView .oncall-stat-card .kv {
+    #oncallView .oncall-stat-card .kv {
       grid-template-columns: 130px minmax(0, 1fr);
     }
 
-    #onCallView .oncall-stat-card .kv strong {
-      min-width: 0;
-      overflow-wrap: anywhere;
-    }
-
     @media (max-width: 760px) {
-      #onCallView .person-actions .btn,
-      #onCallView .filters .btn,
-      #onCallView .panel-head .btn,
-      #onCallView .timeline .btn {
+      #oncallView .panel-head .filters {
+        justify-content: stretch;
+      }
+
+      #oncallView .filters,
+      #oncallView .person-actions {
+        display: grid !important;
+        grid-template-columns: 1fr;
+      }
+
+      #oncallView .person-actions .btn,
+      #oncallView .filters .btn,
+      #oncallView .filters .select,
+      #oncallView .timeline .btn {
         width: 100%;
         justify-content: center;
         min-width: 0;
@@ -2451,7 +2472,7 @@
       }
     }
 
-    /* V3 split-page cleanup */
+/* V3 split-page cleanup */
     body[data-page-view="calendar"] #calendarView { grid-template-columns: minmax(0, 1fr) !important; }
     body[data-page-view="calendar"] #calendarView > aside.detail { display:none !important; }
     body[data-page-view="calendar"] #calendarView > .panel { min-height: calc(100vh - 28px); }
@@ -2694,22 +2715,20 @@
           <div class="panel-head">
             <h2>Valvegraafik</h2>
             <div class="filters">
-              <button class="btn" id="newOnCallRotationBtn"><span class="icon">↻</span> Muuda rotatsiooni</button>
+              <select class="select" id="onCallTechFilter" aria-label="Valve tehniku filter">
+                <option value="all">Kõik tehnikud</option>
+              </select>
+              <button class="btn ghost" id="onCallThemeToggleBtn" type="button"><span class="icon">◐</span> Hele</button>
+              <button class="btn" id="newOnCallRotationBtn" type="button"><span class="icon">↻</span> Muuda rotatsiooni</button>
+              <button class="btn primary" id="newOnCallBtn" type="button"><span class="icon">＋</span> Lisa valve</button>
             </div>
           </div>
           <div class="detail-body">
             <div class="people-grid" id="onCallGrid"></div>
-          </div>
-        </div>
-        <aside class="panel detail">
-          <div class="panel-head">
-            <h2>Valved</h2>
-            <button class="btn primary" id="newOnCallBtn"><span class="icon">＋</span> Lisa valve</button>
-          </div>
-          <div class="detail-body">
+            <p class="section-title">Tulevased valved</p>
             <div class="timeline" id="onCallTimeline"></div>
           </div>
-        </aside>
+        </div>
       </section>
 
       <section class="content hidden" id="mobileView">
@@ -3220,7 +3239,7 @@
   <div class="modal" id="onCallRotationModal" aria-hidden="true">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="onCallRotationModalTitle">
       <div class="dialog-head">
-        <h2 id="onCallRotationModalTitle">Muuda valve rotatsiooni</h2>
+        <h2 id="onCallRotationModalTitle">Loo valve rotatsioon</h2>
         <button class="btn ghost" data-close="onCallRotationModal"><span class="icon">×</span> Sulge</button>
       </div>
       <form id="onCallRotationForm">
@@ -3240,7 +3259,7 @@
         </div>
         <div class="dialog-actions">
           <button class="btn ghost" type="button" data-close="onCallRotationModal">Tühista</button>
-          <button class="btn primary" type="submit"><span class="icon">✓</span> Salvesta rotatsioon</button>
+          <button class="btn primary" type="submit"><span class="icon">✓</span> Muuda rotatsiooni</button>
         </div>
       </form>
     </div>
@@ -4462,7 +4481,11 @@
         $("#actsTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${techOptions}`;
         $("#actsTechFilter").value = technicians().includes(selectedActsTech) ? selectedActsTech : "all";
       }
-
+      if ($("#onCallTechFilter")) {
+        const selectedOnCallTech = $("#onCallTechFilter").value || "all";
+        $("#onCallTechFilter").innerHTML = `<option value="all">Kõik tehnikud</option>${people.filter(person => person.active).map(person => `<option value="${person.id}">${escapeHtml(person.name)}</option>`).join("")}`;
+        $("#onCallTechFilter").value = people.some(person => person.id === selectedOnCallTech) ? selectedOnCallTech : "all";
+      }
       const allMobileTechsSelected = mobileTechs.length === technicians().length;
       if ($("#mobileTechSummary")) $("#mobileTechSummary").textContent = allMobileTechsSelected ? "Kõik tehnikud" : (mobileTechs.length === 1 ? mobileTechs[0] : `${mobileTechs.length} tehnikut`);
       if ($("#mobileTechChecks")) $("#mobileTechChecks").innerHTML = `
@@ -5403,13 +5426,17 @@
 
     function renderOnCall() {
       const today = dateKey(new Date());
+      const filter = $("#onCallTechFilter")?.value || "all";
       const activePeople = people
         .filter(person => person.active)
         .sort((a, b) => a.name.localeCompare(b.name, "et"));
+
       const visibleShifts = onCallShifts
         .filter(shift => activePeople.some(person => person.id === shift.personId))
+        .filter(shift => filter === "all" || shift.personId === filter)
         .slice()
         .sort((a, b) => a.start.localeCompare(b.start));
+
       const current = visibleShifts.find(shift => shift.start <= today && shift.end >= today) || null;
       const next = visibleShifts.find(shift => shift.start > today) || null;
       const upcoming = visibleShifts.filter(shift => shift.end >= today);
@@ -5420,9 +5447,22 @@
         return `Nädal ${weekNumber(start)}`;
       };
       const shiftRangeLabel = (shift) => shift ? `${shift.start} kuni ${shift.end}` : "planeerimata";
-      const shiftPersonCard = (shift, emptyText) => {
-        if (!shift) return `<div class="mobile-card"><strong>${escapeHtml(emptyText)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+
+      const summaryCard = (title, shift, emptyText) => `
+        <div class="mobile-card oncall-stat-card">
+          <strong>${escapeHtml(title)}</strong>
+          <span class="job-meta">${shift ? `${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}` : escapeHtml(emptyText)}</span>
+          ${shift ? `<span class="oncall-badge">${escapeHtml(personName(shift.personId))}</span>` : ""}
+          ${shift ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button><button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button></div>` : ""}
+        </div>
+      `;
+
+      const personCard = (shift, emptyTitle) => {
+        if (!shift) {
+          return `<div class="mobile-card oncall-stat-card"><strong>${escapeHtml(emptyTitle)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+        }
         const person = people.find(item => item.id === shift.personId) || {};
+        const isCurrent = shift.start <= today && shift.end >= today;
         return `
           <div class="person-card">
             <div class="person-top">
@@ -5430,9 +5470,10 @@
                 <h3>${escapeHtml(person.name || "Tundmatu")}</h3>
                 <div class="job-meta">${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</div>
               </div>
-              <span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${shift.start <= today && shift.end >= today ? "Hetkel valves" : "Järgmine valve"}</span>
+              <span class="status ${isCurrent ? "töös" : "planeeritud"}">${isCurrent ? "Hetkel valves" : "Järgmine valve"}</span>
             </div>
             <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
+            <div class="kv"><span>E-post</span><strong>${escapeHtml(person.email || "-")}</strong></div>
             <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
             <div class="person-actions">
               <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
@@ -5442,20 +5483,21 @@
         `;
       };
 
+      const loadByPerson = activePeople.map(person => {
+        const count = visibleShifts.filter(shift => shift.personId === person.id && shift.end >= today).length;
+        return `<div class="kv"><span>${escapeHtml(person.name)}</span><strong>${count} valvekirjet</strong></div>`;
+      }).join("");
+
       $("#onCallGrid").innerHTML = `
-        <div class="mobile-card">
-          <strong>Praegune valve</strong>
-          <span class="job-meta">${current ? `${escapeHtml(shiftWeekLabel(current))} · ${escapeHtml(shiftRangeLabel(current))}` : "Praegu aktiivset valvekirjet ei ole."}</span>
-          ${current ? `<span class="oncall-badge">${escapeHtml(personName(current.personId))}</span>` : ""}
+        ${summaryCard("Praegune valve", current, "Praegu aktiivset valvekirjet ei ole.")}
+        ${summaryCard("Järgmine valve", next, "Järgmist valvekirjet ei ole.")}
+        ${personCard(current, "Praegune valve puudub")}
+        ${personCard(next, "Järgmine valve puudub")}
+        <div class="mobile-card oncall-stat-card">
+          <strong>Rotatsiooni ülevaade</strong>
+          <span class="job-meta">Kasuta nuppu “Muuda rotatsiooni”, et valida osalejad ja genereerida valveperioodid.</span>
+          ${loadByPerson || `<span class="job-meta">Aktiivseid tehnikuid ei ole.</span>`}
         </div>
-        <div class="mobile-card">
-          <strong>Järgmine valve</strong>
-          <span class="job-meta">${next ? `${escapeHtml(shiftWeekLabel(next))} · ${escapeHtml(shiftRangeLabel(next))}` : "Järgmist valvekirjet ei ole."}</span>
-          ${next ? `<span class="oncall-badge">${escapeHtml(personName(next.personId))}</span>` : ""}
-          ${next ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(next.id)}"><span class="icon">✎</span> Muuda järgmist valvet</button><button class="btn danger" data-delete-oncall="${escapeAttr(next.id)}"><span class="icon">×</span> Kustuta järgmine valve</button></div>` : ""}
-        </div>
-        ${shiftPersonCard(current, "Praegune valve puudub")}
-        ${shiftPersonCard(next, "Järgmine valve puudub")}
       `;
 
       $("#onCallTimeline").innerHTML = upcoming.map(shift => `
@@ -5468,10 +5510,10 @@
             <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
           </div>
         </div>
-      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud.</div>`;
+      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud. Lisa käsitsi valve või loo rotatsioon.</div>`;
 
-      $$('[data-edit-oncall]').forEach(btn => btn.addEventListener('click', () => openOnCallModal(null, btn.dataset.editOncall)));
-      $$('[data-delete-oncall]').forEach(btn => btn.addEventListener('click', () => deleteOnCall(btn.dataset.deleteOncall)));
+      $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
+      $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
     }
 
     function renderClients() {
@@ -6513,6 +6555,11 @@
         btn.innerHTML = theme === "dark"
           ? `<span class="icon">◐</span> Hele`
           : `<span class="icon">◐</span> Tume`;
+      }
+      const onCallThemeButton = $("#onCallThemeToggleBtn");
+      if (onCallThemeButton) {
+        const isDark = document.body.classList.contains("theme-dark");
+        onCallThemeButton.innerHTML = isDark ? `<span class="icon">◐</span> Hele` : `<span class="icon">◐</span> Tume`;
       }
     }
 
@@ -8760,6 +8807,7 @@ Summa: 2 075,34 €`;
 
     on("#brandRefreshBtn", "click", refreshFromBrand);
     on("#themeToggleBtn", "click", toggleTheme);
+    on("#onCallThemeToggleBtn", "click", toggleTheme);
     on("#moreNavBtn", "click", toggleMoreNav);
     on("#newJobBtn", "click", () => {
       if ($("#mobileView") && !$("#mobileView").classList.contains("hidden")) {
@@ -8923,6 +8971,7 @@ Summa: 2 075,34 €`;
     });
     on("#peopleStatusFilter", "change", renderAll);
     on("#vacationTypeFilter", "change", renderAll);
+    on("#onCallTechFilter", "change", renderAll);
     on("#clientStatusFilter", "change", renderAll);
     on("#clientSearchField", "input", renderAll);
     on("#objectSearchField", "input", renderAll);
