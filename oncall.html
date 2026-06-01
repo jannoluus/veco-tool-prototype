@@ -2395,104 +2395,59 @@
     }
   
 
-    /* On-call page cleanup */
-    #oncallView .people-grid {
-      grid-template-columns: repeat(2, minmax(280px, 1fr));
-      align-items: stretch;
+    /* On-call button sizing fix */
+    #onCallView .person-actions {
+      display: flex !important;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      grid-template-columns: none !important;
     }
 
-    #oncallView .oncall-main-card {
-      min-height: 210px;
-      align-content: start;
-    }
-
-    #oncallView .oncall-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-top: 4px;
-    }
-
-    #oncallView .oncall-actions .btn {
-      justify-content: center;
-      min-width: 0;
-      padding-inline: 10px;
+    #onCallView .person-actions .btn,
+    #onCallView .filters .btn,
+    #onCallView .panel-head .btn,
+    #onCallView .timeline .btn {
+      flex: 0 0 auto;
+      width: auto;
+      min-width: max-content;
+      max-width: 100%;
+      padding: 9px 14px;
       white-space: nowrap;
+      overflow: visible;
+      text-overflow: clip;
+      line-height: 1.2;
     }
 
-    #oncallView .event-row .oncall-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+    #onCallView .person-actions .btn .icon,
+    #onCallView .filters .btn .icon,
+    #onCallView .timeline .btn .icon {
+      flex: 0 0 auto;
+    }
+
+    #onCallView .oncall-stat-card {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    #onCallView .oncall-stat-card .kv {
+      grid-template-columns: 130px minmax(0, 1fr);
+    }
+
+    #onCallView .oncall-stat-card .kv strong {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
 
     @media (max-width: 760px) {
-      #oncallView .people-grid {
-        grid-template-columns: 1fr;
-      }
-
-      #oncallView .oncall-main-card {
-        min-height: 0;
-      }
-
-      #oncallView .oncall-actions,
-      #oncallView .event-row .oncall-actions {
-        grid-template-columns: 1fr;
-      }
-    }
-
-
-    /* Clean on-call dashboard */
-    #onCallView {
-      grid-template-columns: minmax(0, 1fr) 390px;
-    }
-
-    #onCallView #onCallGrid.people-grid {
-      grid-template-columns: repeat(2, minmax(320px, 1fr));
-      align-items: stretch;
-    }
-
-    #onCallView .oncall-main-card {
-      min-height: 218px;
-      align-content: start;
-    }
-
-    #onCallView .oncall-actions {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      margin-top: 4px;
-    }
-
-    #onCallView .oncall-actions .btn {
-      justify-content: center;
-      min-width: 0;
-      padding-inline: 10px;
-      white-space: nowrap;
-    }
-
-    #onCallView .event-row .person-top {
-      align-items: flex-start;
-    }
-
-    #onCallView .event-row .person-top span:not(.status) {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 3px;
-    }
-
-    @media (max-width: 1180px) {
-      #onCallView {
-        grid-template-columns: 1fr;
-      }
-    }
-
-    @media (max-width: 760px) {
-      #onCallView #onCallGrid.people-grid {
-        grid-template-columns: 1fr;
-      }
-
-      #onCallView .oncall-main-card {
-        min-height: 0;
-      }
-
-      #onCallView .oncall-actions {
-        grid-template-columns: 1fr;
+      #onCallView .person-actions .btn,
+      #onCallView .filters .btn,
+      #onCallView .panel-head .btn,
+      #onCallView .timeline .btn {
+        width: 100%;
+        justify-content: center;
+        min-width: 0;
+        white-space: normal;
       }
     }
 
@@ -5451,89 +5406,72 @@
       const activePeople = people
         .filter(person => person.active)
         .sort((a, b) => a.name.localeCompare(b.name, "et"));
-
-      const activePersonIds = new Set(activePeople.map(person => person.id));
       const visibleShifts = onCallShifts
-        .filter(shift => activePersonIds.has(shift.personId))
+        .filter(shift => activePeople.some(person => person.id === shift.personId))
         .slice()
-        .sort((a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end));
-
+        .sort((a, b) => a.start.localeCompare(b.start));
       const current = visibleShifts.find(shift => shift.start <= today && shift.end >= today) || null;
       const next = visibleShifts.find(shift => shift.start > today) || null;
       const upcoming = visibleShifts.filter(shift => shift.end >= today);
 
-      const shiftStartDate = (shift) => new Date(`${shift.start}T12:00:00`);
       const shiftWeekLabel = (shift) => {
         if (!shift) return "-";
-        const start = shiftStartDate(shift);
+        const start = new Date(`${shift.start}T12:00:00`);
         return `Nädal ${weekNumber(start)}`;
       };
-      const shiftRangeLabel = (shift) => shift ? `${formatDateEt(shift.start)} – ${formatDateEt(shift.end)}` : "-";
-      const shiftStatusLabel = (shift) => {
-        if (!shift) return "";
-        if (shift.start <= today && shift.end >= today) return "Hetkel valves";
-        return "Planeeritud";
-      };
-
-      const summaryCard = (title, shift, emptyText) => {
-        const person = shift ? (people.find(item => item.id === shift.personId) || {}) : {};
+      const shiftRangeLabel = (shift) => shift ? `${shift.start} kuni ${shift.end}` : "planeerimata";
+      const shiftPersonCard = (shift, emptyText) => {
+        if (!shift) return `<div class="mobile-card"><strong>${escapeHtml(emptyText)}</strong><span class="job-meta">Valvekirjet ei ole.</span></div>`;
+        const person = people.find(item => item.id === shift.personId) || {};
         return `
-          <div class="mobile-card oncall-main-card">
+          <div class="person-card">
             <div class="person-top">
               <div>
-                <strong>${escapeHtml(title)}</strong>
-                ${shift ? `<div class="job-meta">${escapeHtml(shiftWeekLabel(shift))}</div>` : ""}
+                <h3>${escapeHtml(person.name || "Tundmatu")}</h3>
+                <div class="job-meta">${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</div>
               </div>
-              ${shift ? `<span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${escapeHtml(shiftStatusLabel(shift))}</span>` : ""}
+              <span class="status ${shift.start <= today && shift.end >= today ? "töös" : "planeeritud"}">${shift.start <= today && shift.end >= today ? "Hetkel valves" : "Järgmine valve"}</span>
             </div>
-            ${shift ? `
-              <span class="oncall-badge">${escapeHtml(person.name || "Tundmatu")}</span>
-              <div class="kv"><span>Periood</span><strong>${escapeHtml(shiftRangeLabel(shift))}</strong></div>
-              <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
-              <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
-              <div class="person-actions oncall-actions">
-                <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
-                <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
-              </div>
-            ` : `<span class="job-meta">${escapeHtml(emptyText)}</span>`}
+            <div class="kv"><span>Telefon</span><strong>${escapeHtml(person.phone || "-")}</strong></div>
+            <div class="kv"><span>Märkus</span><strong>${escapeHtml(shift.note || "Telefonivalve")}</strong></div>
+            <div class="person-actions">
+              <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
+              <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
+            </div>
           </div>
         `;
       };
 
-      const grid = $("#onCallGrid");
-      if (grid) {
-        grid.innerHTML = `
-          ${summaryCard("Praegune valve", current, "Praegu aktiivset valvekirjet ei ole.")}
-          ${summaryCard("Järgmine valve", next, "Järgmist valvekirjet ei ole.")}
-        `;
-      }
+      $("#onCallGrid").innerHTML = `
+        <div class="mobile-card">
+          <strong>Praegune valve</strong>
+          <span class="job-meta">${current ? `${escapeHtml(shiftWeekLabel(current))} · ${escapeHtml(shiftRangeLabel(current))}` : "Praegu aktiivset valvekirjet ei ole."}</span>
+          ${current ? `<span class="oncall-badge">${escapeHtml(personName(current.personId))}</span>` : ""}
+        </div>
+        <div class="mobile-card">
+          <strong>Järgmine valve</strong>
+          <span class="job-meta">${next ? `${escapeHtml(shiftWeekLabel(next))} · ${escapeHtml(shiftRangeLabel(next))}` : "Järgmist valvekirjet ei ole."}</span>
+          ${next ? `<span class="oncall-badge">${escapeHtml(personName(next.personId))}</span>` : ""}
+          ${next ? `<div class="person-actions"><button class="btn" data-edit-oncall="${escapeAttr(next.id)}"><span class="icon">✎</span> Muuda järgmist valvet</button><button class="btn danger" data-delete-oncall="${escapeAttr(next.id)}"><span class="icon">×</span> Kustuta järgmine valve</button></div>` : ""}
+        </div>
+        ${shiftPersonCard(current, "Praegune valve puudub")}
+        ${shiftPersonCard(next, "Järgmine valve puudub")}
+      `;
 
-      const timeline = $("#onCallTimeline");
-      if (timeline) {
-        timeline.innerHTML = upcoming.map(shift => {
-          const person = people.find(item => item.id === shift.personId) || {};
-          const isCurrent = shift.start <= today && shift.end >= today;
-          return `
-            <div class="event-row">
-              <div class="person-top">
-                <div>
-                  <strong>${escapeHtml(person.name || "Tundmatu")}</strong>
-                  <span>${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(shiftRangeLabel(shift))}</span>
-                </div>
-                <span class="status ${isCurrent ? "töös" : "planeeritud"}">${isCurrent ? "Praegu" : "Tulekul"}</span>
-              </div>
-              <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
-              <div class="person-actions oncall-actions">
-                <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
-                <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
-              </div>
-            </div>
-          `;
-        }).join("") || `<div class="mobile-card">Tulevasi valvesid ei ole sisestatud.</div>`;
-      }
+      $("#onCallTimeline").innerHTML = upcoming.map(shift => `
+        <div class="event-row">
+          <strong>${escapeHtml(shiftWeekLabel(shift))} · ${escapeHtml(personName(shift.personId))}</strong>
+          <span>${escapeHtml(shiftRangeLabel(shift))}</span>
+          <span class="job-meta">${escapeHtml(shift.note || "Telefonivalve")}</span>
+          <div class="person-actions">
+            <button class="btn" data-edit-oncall="${escapeAttr(shift.id)}"><span class="icon">✎</span> Muuda</button>
+            <button class="btn danger" data-delete-oncall="${escapeAttr(shift.id)}"><span class="icon">×</span> Kustuta</button>
+          </div>
+        </div>
+      `).join("") || `<div class="mobile-card">Tulevasi valveid ei ole sisestatud.</div>`;
 
-      $$("[data-edit-oncall]").forEach(btn => btn.addEventListener("click", () => openOnCallModal(null, btn.dataset.editOncall)));
-      $$("[data-delete-oncall]").forEach(btn => btn.addEventListener("click", () => deleteOnCall(btn.dataset.deleteOncall)));
+      $$('[data-edit-oncall]').forEach(btn => btn.addEventListener('click', () => openOnCallModal(null, btn.dataset.editOncall)));
+      $$('[data-delete-oncall]').forEach(btn => btn.addEventListener('click', () => deleteOnCall(btn.dataset.deleteOncall)));
     }
 
     function renderClients() {
