@@ -7188,7 +7188,7 @@
     }
 
     function renderAll() {
-      const activeViewId = $(".view:not(.hidden)")?.id || "calendarView";
+      const activeViewId = $("section.content:not(.hidden)")?.id || "calendarView";
       fillSelects();
       renderCalendar();
       renderDetail();
